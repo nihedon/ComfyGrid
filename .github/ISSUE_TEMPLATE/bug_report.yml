@@ -1,0 +1,79 @@
+name: Bug Report
+description: Create a report to help us improve ComfyGrid
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for reporting an issue! Please fill out the details below to help us investigate.
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug description
+      description: A clear and concise description of what the bug is.
+      placeholder: What happened?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce
+      description: How can we reproduce this bug?
+      placeholder: |
+        1. Go to '...'
+        2. Click on '....'
+        3. See error
+    validations:
+      required: true
+  - type: input
+    id: os
+    attributes:
+      label: Operating System
+      description: What OS are you using? (e.g., Windows 11)
+      placeholder: Windows 11
+    validations:
+      required: true
+  - type: input
+    id: comfyui_version
+    attributes:
+      label: ComfyUI (Portable) Version
+      description: Which version of ComfyUI are you using? (e.g., 0.24.x)
+      placeholder: 0.24.x
+    validations:
+      required: true
+  - type: input
+    id: browser
+    attributes:
+      label: Browser
+      description: What browser are you using? (e.g., Chrome, Edge)
+      placeholder: Google Chrome
+    validations:
+      required: true
+  - type: textarea
+    id: console_logs
+    attributes:
+      label: Browser Console Logs
+      description: |
+        Please check if there are any errors in the browser's developer tools console (Press F12 to open). 
+        If there are any errors, please paste them below.
+      placeholder: Paste console logs here...
+    validations:
+      required: false
+  - type: textarea
+    id: backend_logs
+    attributes:
+      label: Terminal / Command Prompt Logs (comfygrid.exe)
+      description: |
+        Please check the black terminal/command prompt window that stays open while running `comfygrid.exe`.
+        If there are any errors or crash logs displayed there, please copy and paste them below.
+      placeholder: Paste terminal logs here...
+    validations:
+      required: false
+  - type: textarea
+    id: additional_context
+    attributes:
+      label: Additional Context
+      description: Add any other context about the problem here (e.g., screenshots, terminal output from comfygrid.exe).
+    validations:
+      required: false

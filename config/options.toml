@@ -1,0 +1,70 @@
+[language]
+type = "dropdown"
+choices = ["auto", "en", "ja"]
+default = "auto"
+
+[color_theme]
+type = "dropdown"
+choices = ["auto", "light", "dark"]
+default = "auto"
+
+[save_directory]
+type = "text"
+default = "save"
+
+[create_subdirectory]
+type = "checkbox"
+default = true
+
+[subdirectory_name_format]
+type = "text"
+default = "{date}"
+
+[save_image_filename_format]
+type = "text"
+default = "[{ckpt_name}]_{datetime}_({seed})"
+
+[node_color]
+type = "radio"
+default = "group"
+choices = ["none", "node", "group", "node_priority"]
+
+[group_tabify]
+type = "dropdown"
+choices = ["none", "all_top_groups", "tab_groups_only"]
+default = "all_top_groups"
+
+[model_thumbnail_width]
+type = "slider"
+default = "160"
+minimum = "128"
+maximum = "256"
+step = "8"
+
+[gallery_image_max_size]
+type = "slider"
+default = "448"
+minimum = "256"
+maximum = "768"
+step = "8"
+
+[save_image_format]
+type = "dropdown"
+choices = ["original", "png", "webp", "jpeg", "jxl"]
+default = "original"
+
+[save_image_quality]
+type = "slider"
+default = "90"
+minimum = "1"
+maximum = "100"
+step = "1"
+
+[save_image_embed_metadata]
+type = "checkbox"
+default = true
+
+[system_monitor]
+type = "radio"
+default = "top"
+choices = ["none", "top", "left"]

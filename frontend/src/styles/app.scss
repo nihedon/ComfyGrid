@@ -1,0 +1,201 @@
+@use 'bootstrap/dist/css/bootstrap.min.css';
+@use 'gridstack/dist/gridstack.min.css';
+@use 'primeicons/primeicons.css';
+@use 'bootstrap-icons/font/bootstrap-icons.css';
+
+@layer base, utilities, components;
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+@layer base {
+    html {
+        font-size: 0.84em;
+        overflow: hidden;
+        height: 100%;
+        width: 100%;
+    }
+    body {
+        overflow-y: clip;
+        min-width: 640px;
+        height: 100%;
+        width: 100%;
+        margin: 0;
+        position: fixed;
+    }
+    :root {
+        --backdrop-bg: rgba(0, 0, 0, 0.7);
+        --backdrop-opacity: 1;
+        --error-border-width: 1.5px;
+    }
+    textarea {
+        line-height: 1.1 !important;
+        font-family: 'Fira Code', monospace, Consolas, 'Courier New' !important;
+    }
+    .grid-stack-item textarea {
+        resize: none !important;
+    }
+
+    .modal-backdrop {
+        --bs-backdrop-bg: var(--backdrop-bg) !important;
+        --bs-backdrop-opacity: var(--backdrop-opacity) !important;
+    }
+}
+
+@layer utilities {
+    .fs-7 {
+        font-size: 0.75rem !important;
+    }
+
+    .nav.nav-tabs {
+        align-items: flex-end !important;
+    }
+
+    .nav-item button {
+        white-space: nowrap;
+    }
+
+    .checkerboard {
+        background-image:
+            linear-gradient(45deg, #ccc 25%, transparent 25%), linear-gradient(-45deg, #ccc 25%, transparent 25%),
+            linear-gradient(45deg, transparent 75%, #ccc 75%), linear-gradient(-45deg, transparent 75%, #ccc 75%);
+        background-size: 16px 16px;
+        background-position:
+            0 0,
+            0 8px,
+            8px -8px,
+            -8px 0px;
+        background-color: #fff;
+    }
+
+    .text-error {
+        color: var(--bs-red) !important;
+    }
+
+    .text-fatal {
+        color: #8b0000 !important;
+    }
+
+    .fullscreen-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background-color: var(--backdrop-bg);
+        z-index: 1030;
+        cursor: zoom-out;
+    }
+
+    .fullscreen-image {
+        max-width: 98%;
+        max-height: 98%;
+        object-fit: contain;
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.5);
+    }
+}
+
+@layer components {
+    .dropdown-item {
+        cursor: default;
+    }
+
+    .widget-stack {
+        @extend .vstack;
+        @extend .overflow-auto;
+        @extend .h-100;
+        @extend .py-1;
+        @extend .px-2;
+        @extend .gap-1;
+        > *,
+        .widget {
+            @extend .m-0;
+            @extend .d-flex;
+            @extend .align-items-center;
+            @extend .justify-content-center;
+        }
+    }
+
+    .node-widget {
+        * {
+            scrollbar-width: thin;
+        }
+
+        .form-control {
+            padding: 0.15rem 0.75rem !important;
+        }
+
+        .form-select {
+            padding: 0.15rem 2.25rem 0.15rem 0.75rem !important;
+        }
+
+        > .card-header {
+            @extend .d-flex;
+            @extend .flex-nowrap;
+            @extend .justify-content-between;
+            @extend .align-items-center;
+        }
+    }
+
+    .btn.btn-xs {
+        --bs-btn-padding-y: 0.15rem !important;
+        --bs-btn-padding-x: 0.3rem !important;
+        --bs-btn-font-size: 0.7rem !important;
+    }
+
+    .tooltip {
+        pointer-events: none;
+    }
+
+    .dropdown-menu {
+        z-index: 9999 !important;
+    }
+
+    .nav-item.executing > button {
+        box-shadow: inset 0 0 0px 2px var(--bs-teal) !important;
+        z-index: 100 !important;
+        border-radius: 0.375rem 0.375rem 0 0 !important;
+    }
+
+    .node-group:has(.node-widget.executing) {
+        box-shadow:
+            0 0 0px 4px var(--bs-body-bg),
+            0 0 0px 6px var(--bs-teal) !important;
+        z-index: 100 !important;
+        border-radius: 0.375rem !important;
+    }
+
+    .accordion > .node-group:has(.node-widget.executing) {
+        box-shadow:
+            0 0 0px 1px var(--bs-body-bg),
+            0 0 0px 3px var(--bs-teal) !important;
+        z-index: 100 !important;
+        border-radius: 0.375rem !important;
+    }
+
+    .node-widget.executing {
+        box-shadow:
+            0 0 0px 1px var(--bs-body-bg),
+            0 0 0px 3px var(--bs-teal) !important;
+        z-index: 100 !important;
+    }
+
+    .nav-item.is-invalid > button {
+        box-shadow: 0 0 0 var(--error-border-width) var(--bs-form-invalid-border-color) !important;
+        border-radius: 0.375rem 0.375rem 0 0 !important;
+    }
+
+    .node-group:has(.node-widget.normal .is-invalid),
+    .node-group:has(.node-widget.is-invalid) {
+        box-shadow: 0 0 0 var(--error-border-width) var(--bs-form-invalid-border-color) !important;
+        border-radius: var(--bs-border-radius) 0.375rem;
+    }
+    .node-widget.normal:has(.is-invalid) {
+        box-shadow: 0 0 0 var(--error-border-width) var(--bs-form-invalid-border-color) !important;
+    }
+    :not(.nav-item).is-invalid {
+        box-shadow: 0 0 0 var(--error-border-width) var(--bs-form-invalid-border-color) !important;
+    }
+    .is-invalid {
+        border: inherit !important;
+    }
+}

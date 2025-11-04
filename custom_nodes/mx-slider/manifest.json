@@ -1,0 +1,17 @@
+{
+  "name": "mx-slider",
+  "version": "1.0.0",
+  "description": "Custom slider widget for mxSlider node",
+  "assets": {
+    "scripts": ["widget.js"],
+    "templates": ["template.html"],
+    "styles": []
+  },
+  "widgets": [
+    {
+      "match": { "node_comfy_class": "mxSlider", "widget_name": "Xi" },
+      "custom_element": "mx-slider"
+    }
+  ],
+  "ignore": []
+}

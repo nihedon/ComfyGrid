@@ -1,0 +1,29 @@
+.ui-sortable-placeholder {
+  visibility: visible !important;
+  box-sizing: border-box;
+  min-height: 2rem;
+  border: 1px dashed var(--bs-primary);
+  background-color: rgba(var(--bs-primary-rgb), 0.08);
+}
+
+.comfygrid-lora-handle {
+  cursor: grab;
+  opacity: 0.5;
+  padding: 0.25rem;
+  font-size: 0.875rem;
+}
+
+.comfygrid-lora-handle:hover {
+  opacity: 1;
+}
+
+.comfygrid-remove-btn {
+  cursor: pointer;
+  opacity: 0.5;
+  padding: 0.25rem;
+  font-size: 0.875rem;
+}
+
+.comfygrid-remove-btn:hover {
+  opacity: 1;
+}

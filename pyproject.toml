@@ -1,0 +1,41 @@
+[project]
+name = "ComfyGrid"
+version = "0.1.0"
+description = "ComfyUI wrapper for DOM-based operation"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.10"
+dependencies = [
+    "charset-normalizer>=3.0",
+    "fastapi>=0.115,<1",
+    "httptools>=0.6",
+    "httpx>=0.27",
+    "imagecodecs>=2024.1",
+    "lmdb>=1.5",
+    "mutagen>=1.47",
+    "numpy>=1.26",
+    "opencv-python>=4.10",
+    "orjson>=3.11.9",
+    "piexif>=1.1",
+    "pillow>=10.0",
+    "pillow-jxl-plugin>=1.2",
+    "polars>=1.0",
+    "nvidia-ml-py>=13.610.43",
+    "python-dotenv>=1.0",
+    "python-multipart>=0.0.18",
+    "PyYAML>=6.0",
+    "requests>=2.32",
+    "setuptools>=65.0",
+    "sse-starlette>=2.0",
+    "toml>=0.10",
+    "tqdm>=4.66",
+    "uvicorn[standard]>=0.30",
+    "watchfiles>=1.0",
+    "websockets>=13.0",
+    "psutil==7.2.2",
+    "python-socketio>=5.11",
+    "python-engineio>=4.13",
+]
+
+[tool.setuptools.packages.find]
+include = ["comfygrid*"]

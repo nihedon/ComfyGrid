@@ -1,0 +1,8 @@
+from .hook import hook_comfygrid
+
+hook_comfygrid()
+
+WEB_DIRECTORY = "./js"
+NODE_CLASS_MAPPINGS = {}
+NODE_DISPLAY_NAME_MAPPINGS = {}
+__all__ = ["NODE_CLASS_MAPPINGS", "NODE_DISPLAY_NAME_MAPPINGS", "WEB_DIRECTORY"]

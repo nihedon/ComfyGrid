@@ -1,0 +1,94 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: "pip"
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 9
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "pnpm"
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - name: Install frontend dependencies
+        run: pnpm install --frozen-lockfile
+        working-directory: frontend
+
+      - name: Build frontend
+        run: pnpm run build
+        working-directory: frontend
+
+      - name: Install backend dependencies and PyInstaller
+        run: |
+          python -m pip install --upgrade pip
+          pip install .
+          pip install pyinstaller
+
+      - name: Build executable with PyInstaller
+        shell: cmd
+        run: |
+          mkdir release
+          mkdir release\config
+          mkdir release\frontend
+          python -m PyInstaller --name comfygrid --icon=frontend/public/icon.ico --onefile --console --distpath release ^
+            --hidden-import uvicorn.logging ^
+            --hidden-import uvicorn.loops ^
+            --hidden-import uvicorn.loops.auto ^
+            --hidden-import uvicorn.protocols ^
+            --hidden-import uvicorn.protocols.http ^
+            --hidden-import uvicorn.protocols.http.auto ^
+            --hidden-import uvicorn.protocols.websockets ^
+            --hidden-import uvicorn.protocols.websockets.auto ^
+            --hidden-import uvicorn.lifespan.on ^
+            --hidden-import uvicorn.lifespan.off ^
+            main.py
+
+      - name: Assemble Release Folder
+        shell: cmd
+        run: |
+          copy Caddyfile release\
+          xcopy config release\config /E /I /Q
+          xcopy frontend\dist release\frontend /E /I /Q
+
+      - name: Create zip archives
+        run: |
+          Compress-Archive -Path release\* -DestinationPath ComfyGrid-${{ github.ref_name }}.zip
+          Compress-Archive -Path frontend\dist -DestinationPath frontend-dist-${{ github.ref_name }}.zip
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            ComfyGrid-${{ github.ref_name }}.zip
+            frontend-dist-${{ github.ref_name }}.zip
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

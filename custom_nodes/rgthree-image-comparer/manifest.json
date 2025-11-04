@@ -1,0 +1,17 @@
+{
+  "name": "rgthree-image-comparer",
+  "version": "1.0.0",
+  "description": "rgthree Image Comparer",
+  "assets": {
+    "scripts": ["widget.js"],
+    "templates": ["template.html"],
+    "styles": []
+  },
+  "widgets": [
+    {
+      "match": { "widget_class_name": "RgthreeImageComparerWidget" },
+      "custom_element": "rgthree-image-comparer"
+    }
+  ],
+  "ignore": []
+}

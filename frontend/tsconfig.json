@@ -1,0 +1,39 @@
+{
+    "compilerOptions": {
+        "target": "ES2024",
+        "lib": ["ES2024", "DOM", "DOM.Iterable"],
+        "module": "ESNext",
+        "moduleResolution": "bundler",
+
+        "useDefineForClassFields": true,
+        "skipLibCheck": true,
+        "allowImportingTsExtensions": true,
+        "resolveJsonModule": true,
+        "isolatedModules": true,
+        "noEmit": true,
+        "allowArbitraryExtensions": true,
+
+        "noUnusedLocals": true,
+        "noUnusedParameters": true,
+        "noFallthroughCasesInSwitch": true,
+        "verbatimModuleSyntax": true,
+        "sourceMap": true,
+        "esModuleInterop": true,
+
+        "baseUrl": ".",
+        "paths": {
+            "@/*": ["src/*"],
+            "$states/*": ["src/states/*"],
+            "$components/*": ["src/components/*"],
+            "$types/*": ["src/types/*"],
+            "$bridge/*": ["src/bridge/*"],
+            "$managers/*": ["src/managers/*"],
+            "$services/*": ["src/services/*"],
+            "$utils/*": ["src/utils/*"],
+            "$i18n/*": ["src/i18n/*"]
+        },
+        "types": ["vite/client", "svelte", "jquery"]
+    },
+    "include": ["src/**/*", "src/**/*.svelte", "src/**/*.svelte.ts"],
+    "exclude": ["node_modules"]
+}

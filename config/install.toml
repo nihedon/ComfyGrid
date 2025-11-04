@@ -1,0 +1,10 @@
+[ffmpeg]
+url = "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip"
+bin_dir = "bin/ffmpeg"
+
+[caddy]
+url_windows = "https://github.com/caddyserver/caddy/releases/download/v2.11.3/caddy_2.11.3_windows_amd64.zip"
+url_linux = "https://github.com/caddyserver/caddy/releases/download/v2.11.3/caddy_2.11.3_linux_amd64.tar.gz"
+url_macos = "https://github.com/caddyserver/caddy/releases/download/v2.11.3/caddy_2.11.3_mac_amd64.tar.gz"
+bin_dir = "bin/caddy"
+caddyfile = "Caddyfile"

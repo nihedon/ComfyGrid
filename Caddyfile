@@ -1,0 +1,17 @@
+http://127.0.0.1:{$COMFYGRID_PROXY_PORT:6210} {
+    redir /comfygrid /comfygrid/
+
+    handle_path /comfygrid/* {
+        root * {$COMFYGRID_FRONTEND_DIR:./frontend/dist}
+        file_server
+    }
+    handle /comfygrid/api/* {
+        reverse_proxy 127.0.0.1:{$COMFYGRID_SERVER_PORT:8000}
+    }
+    handle /comfygrid/ws/* {
+        reverse_proxy 127.0.0.1:{$COMFYGRID_SERVER_PORT:8000}
+    }
+    handle {
+        reverse_proxy 127.0.0.1:{$COMFYUI_PORT:8188}
+    }
+}
