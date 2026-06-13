@@ -253,7 +253,7 @@ class ComfyUIService:
         """Monitor ComfyUI availability via its /ws WebSocket endpoint."""
         while True:
             try:
-                async with websockets.connect(ws_url, open_timeout=5) as ws:
+                async with websockets.connect(ws_url, open_timeout=5, ping_interval=120, ping_timeout=120) as ws:
                     if not self.started:
                         self.started = True
                         logging.info("ComfyUI started successfully.")
