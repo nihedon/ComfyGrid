@@ -4,6 +4,8 @@
 
   const uiState = appState.uiState;
 
+  let imageFileInput = $state<HTMLInputElement>()!;
+
   let metadataJson = $state({});
   let imageSrc: string | null = $state(null);
   let jsonEditor: JSONEditor;
@@ -11,7 +13,10 @@
   async function handleDrop(event: DragEvent) {
     event.preventDefault();
     const file = event.dataTransfer!.files[0];
+    openFile(file);
+  }
 
+  async function openFile(file: File) {
     const formData = new FormData();
     formData.append('file', file);
 
@@ -101,10 +106,24 @@
       return item?.text !== 'table';
     });
   }
+
+  function handleImageSelected(event: Event) {
+    const file = (event.target as HTMLInputElement).files![0];
+    openFile(file);
+    imageFileInput.value = '';
+  }
 </script>
 
 <div class="h-100" style:display={uiState.activePageId === 'image-info' ? '' : 'none'}>
   <div class="d-flex h-100 w-100">
+    <input
+      type="file"
+      accept="image/*"
+      style:display="none"
+      bind:this={imageFileInput}
+      onchange={handleImageSelected}
+    />
+    <!-- svelte-ignore a11y_click_events_have_key_events -->
     <div
       class="p-2 h-100"
       aria-label="Image Drop Zone"
@@ -112,6 +131,9 @@
       tabindex="0"
       ondragover={handleDragOver}
       ondrop={handleDrop}
+      onclick={() => {
+        imageFileInput.click();
+      }}
     >
       <div
         class="d-flex align-items-center justify-content-center"
