@@ -449,7 +449,7 @@
           ><i class="pi pi-save"></i> (ctrl + s)</button
         >
         <button
-          class="btn btn-secondary"
+          class="btn btn-primary"
           aria-label="Download"
           onclick={() => galleryManager.downloadImage(getMetadata())}
           ><i class="pi pi-download"></i></button
@@ -459,6 +459,12 @@
           aria-label="Upload to input"
           title={$t('gallery.upload_to_input')}
           onclick={() => galleryManager.uploadToInput()}><i class="pi pi-upload"></i></button
+        >
+        <button
+          class="btn btn-secondary"
+          aria-label="Send to Image Info"
+          title={$t('gallery.send_to_image_info')}
+          onclick={() => galleryManager.sendToImageInfo()}><i class="pi pi-info-circle"></i></button
         >
       {:else}
         <div class="flex-grow-1"></div>

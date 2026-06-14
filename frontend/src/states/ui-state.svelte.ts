@@ -4,6 +4,7 @@ class UIState {
     #activePageId: PageId = $state('grid');
     #isDragging: boolean = $state(false);
     #needRefresh: boolean = $state(false);
+    #fileToOpenInImageInfo: File | null = $state(null);
 
     get activePageId(): PageId {
         return this.#activePageId;
@@ -24,6 +25,13 @@ class UIState {
     }
     set isDragging(isDragging: boolean) {
         this.#isDragging = isDragging;
+    }
+
+    get fileToOpenInImageInfo(): File | null {
+        return this.#fileToOpenInImageInfo;
+    }
+    set fileToOpenInImageInfo(file: File | null) {
+        this.#fileToOpenInImageInfo = file;
     }
 }
 

@@ -4,6 +4,13 @@
 
   const uiState = appState.uiState;
 
+  $effect(() => {
+    if (uiState.fileToOpenInImageInfo) {
+      openFile(uiState.fileToOpenInImageInfo);
+      uiState.fileToOpenInImageInfo = null; // Reset after reading
+    }
+  });
+
   let imageFileInput = $state<HTMLInputElement>()!;
 
   let metadataJson = $state({});
