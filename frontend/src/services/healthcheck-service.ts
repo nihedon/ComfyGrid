@@ -57,7 +57,7 @@ export class ComfyUIHealthCheckService {
         if (!appState.comfyUiState.started) return;
         appState.comfyUiState.started = false;
         appState.comfyUiState.graphReady = false;
-        appState.executionState.clear();
+        appState.executionState.clearQueueJobIds();
         location.reload();
     }
 

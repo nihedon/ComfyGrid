@@ -1,11 +1,18 @@
 <script lang="ts">
   import { appState } from '@/states/app-state.svelte';
   import type { ComfyWindow } from '@/states/comfyui-state.svelte';
+  import { executionState } from '@/states/execution-state.svelte';
 
   let iframeRef: HTMLIFrameElement;
 
   const uiState = appState.uiState;
   const comfyUiState = appState.comfyUiState;
+
+  async function getQueue() {
+    const res = await fetch('/api/queue');
+    const json = await res.json();
+    return json;
+  }
 
   function injectBridge() {
     const iframeDoc = iframeRef.contentDocument || iframeRef.contentWindow?.document;
@@ -13,6 +20,15 @@
 
     comfyUiState.iframe = iframeRef;
     comfyUiState.window = iframeRef.contentWindow as ComfyWindow;
+
+    getQueue().then(async (json) => {
+      for (const jobId of json.queue_pending.map((j: Array<string>) => j[1])) {
+        if (!executionState.lastProcessedJobId) {
+          executionState.lastProcessedJobId = jobId;
+        }
+        executionState.addQueueJobId(jobId as string, 'external');
+      }
+    });
   }
 </script>
 

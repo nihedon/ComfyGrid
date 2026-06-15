@@ -58,6 +58,25 @@ class GalleryManager {
             logger.error('Failed to upload to input', e);
         }
     }
+
+    async sendToImageInfo() {
+        const { url } = this.#currentNodeUrl();
+        if (!url) return;
+
+        try {
+            const params = new URL(url).searchParams;
+            const filename = params.get('filename') ?? 'image.png';
+
+            const res = await fetch(url);
+            const blob = await res.blob();
+            const file = new File([blob], filename, { type: blob.type });
+
+            appState.uiState.fileToOpenInImageInfo = file;
+            appState.uiState.activePageId = 'image-info';
+        } catch (e) {
+            logger.error('Failed to send image to info', e);
+        }
+    }
 }
 
 export const galleryManager = new GalleryManager();

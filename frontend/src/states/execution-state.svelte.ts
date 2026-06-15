@@ -1,7 +1,7 @@
 import { SvelteMap, SvelteSet } from 'svelte/reactivity';
 import { appState } from './app-state.svelte';
 
-type Status = 'processing' | 'error' | 'interrupted' | 'busy' | null;
+type Status = 'processing' | 'error' | 'interrupted' | null;
 
 class Progress {
     #status = $state<Status>(null);
@@ -114,7 +114,7 @@ class ExecutionState {
     #lastProcessedJobId = $state('');
     #executingNodeId = $state<string | null>();
     #batchCount = $state<number>(1);
-    #queueCount = $state<number>(0);
+    readonly #queueJobIds = $state<SvelteMap<string, 'owned' | 'external'>>(new SvelteMap());
 
     readonly #sanitizedNodeId = $derived(this.#executingNodeId?.split('.')?.at(-1) ?? null);
     readonly runningNodeId = $derived(this.#sanitizedNodeId?.split(':')?.at(0) ?? null);
@@ -168,8 +168,8 @@ class ExecutionState {
     get batchCount(): Readonly<number> {
         return this.#batchCount;
     }
-    get queueCount(): Readonly<number> {
-        return this.#queueCount;
+    get queueJobIds(): ReadonlyMap<string, 'owned' | 'external'> {
+        return this.#queueJobIds;
     }
 
     set lastProcessedJobId(id: string) {
@@ -181,12 +181,14 @@ class ExecutionState {
     set batchCount(batchCount: number) {
         this.#batchCount = batchCount;
     }
-    set queueCount(queueCount: number) {
-        this.#queueCount = queueCount;
+    addQueueJobId(jobId: string, owner: 'owned' | 'external') {
+        this.#queueJobIds.set(jobId, owner);
     }
-
-    clear() {
-        this.#queueCount = 0;
+    deleteQueueJobId(jobId: string): boolean {
+        return this.#queueJobIds.delete(jobId);
+    }
+    clearQueueJobIds() {
+        this.#queueJobIds.clear();
         this.#progress.clear();
         this.#lastProcessedJobId = '';
     }
@@ -199,9 +201,17 @@ class ExecutionState {
         appState.bridge?.interrupt();
     }
 
+    deleteQueue(jobId: string) {
+        this.#progress.deleteNodeSet(jobId);
+        this.#progress.deleteExecutedNodeSet(jobId);
+        appState.bridge?.deleteQueue(jobId);
+    }
+
     clearQueue() {
-        if (this.#queueCount > 0) {
-            this.#queueCount = 1;
+        if (this.#queueJobIds.size > 0) {
+            const [jobId, owner] = this.#queueJobIds.entries().next().value;
+            this.#queueJobIds.clear();
+            this.#queueJobIds.set(jobId, owner);
             const jobIds = this.#progress.nodeSet.keys();
             for (const jobId of jobIds) {
                 if (jobId === this.#lastProcessedJobId) {
