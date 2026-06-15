@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount, tick } from 'svelte';
+  import { tick } from 'svelte';
   import { t } from '@/i18n/i18n';
   import { callLayoutChangedCallbacks } from '@/services/callback-service';
   import { saveLayoutObject, updateBoardFloatingState } from '@/services/gridstack-service';
@@ -113,7 +113,7 @@
     });
   }
 
-  onMount(() => {
+  $effect(() => {
     widget.textarea = textareaElement;
   });
 </script>
