@@ -113,7 +113,7 @@
         });
       });
       popoverEl.classList.add('listener-attached');
-      
+
       // Delay attaching to prevent immediate trigger from the same click event
       setTimeout(() => document.addEventListener('click', handleDocumentClick), 0);
     };

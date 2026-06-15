@@ -24,7 +24,7 @@
     };
 
     const handleHidden = () => descriptionState.close();
-    
+
     modalElement.addEventListener('shown.bs.modal', handleShown);
     modalElement.addEventListener('hidden.bs.modal', handleHidden);
     return () => {
