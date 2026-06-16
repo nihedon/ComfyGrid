@@ -1,3 +1,4 @@
+import { comfyGridApiClient } from '@/api/api-client';
 import logger from '@/utils/logger';
 
 async function loadExtensionModule(jsUrl: string, { useCache = false } = {}): Promise<void> {
@@ -23,23 +24,20 @@ function addStyle(cssUrl: string, { useCache = false } = {}) {
 
 export async function loadExtensions() {
     try {
-        const resp = await fetch('/comfygrid/api/extension/resources');
-        if (!resp.ok) {
-            throw new Error(`HTTP error! status: ${resp.status}`);
+        const res = await comfyGridApiClient.getExtensionResources();
+        if (!res.ok) {
+            throw new Error(`HTTP error! status: ${res.status}`);
         }
-        const resources = await resp.json();
-        if (Array.isArray(resources)) {
-            const promises: Promise<void>[] = [];
-            resources.forEach((resource) => {
-                if (resource.toLowerCase().endsWith('.js')) {
-                    promises.push(loadExtensionModule(resource, { useCache: false }));
-                } else if (resource.toLowerCase().endsWith('.css')) {
-                    addStyle(resource, { useCache: false });
-                }
-            });
-            await Promise.all(promises);
-            logger.log('All extension scripts loaded.');
-        }
+        const promises: Promise<void>[] = [];
+        res.json.forEach((resource) => {
+            if (resource.toLowerCase().endsWith('.js')) {
+                promises.push(loadExtensionModule(resource, { useCache: false }));
+            } else if (resource.toLowerCase().endsWith('.css')) {
+                addStyle(resource, { useCache: false });
+            }
+        });
+        await Promise.all(promises);
+        logger.log('All extension scripts loaded.');
     } catch (error) {
         logger.error('Failed to fetch extension JS:', error);
     }

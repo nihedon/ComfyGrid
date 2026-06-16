@@ -1,4 +1,5 @@
 import { SvelteMap, SvelteSet } from 'svelte/reactivity';
+import { comfyUiApiClient } from '@/api/api-client';
 import { appState } from './app-state.svelte';
 
 type Status = 'processing' | 'error' | 'interrupted' | null;
@@ -198,13 +199,13 @@ class ExecutionState {
     }
 
     interrupt() {
-        appState.bridge?.interrupt();
+        comfyUiApiClient.interrupt();
     }
 
     deleteQueue(jobId: string) {
         this.#progress.deleteNodeSet(jobId);
         this.#progress.deleteExecutedNodeSet(jobId);
-        appState.bridge?.deleteQueue(jobId);
+        comfyUiApiClient.deleteQueues([jobId]);
     }
 
     clearQueue() {
@@ -221,7 +222,7 @@ class ExecutionState {
                 this.#progress.deleteExecutedNodeSet(jobId);
             }
         }
-        appState.bridge?.clearQueue();
+        comfyUiApiClient.clearQueues();
     }
 }
 

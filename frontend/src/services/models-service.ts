@@ -1,3 +1,4 @@
+import { comfyGridApiClient } from '@/api/api-client';
 import { appState } from '@/states/app-state.svelte';
 import type { Model, ModelDirs, ModelTypes } from '@/states/storage-state.svelte';
 import { modelTypes } from '@/states/storage-state.svelte';
@@ -31,13 +32,9 @@ async function fetchModels(key: ModelTypes): Promise<void> {
 
     try {
         const config = modelConfigs[key];
-        const params = new URLSearchParams({
-            dir_name: config.dir,
-            ext: config.extensions.join(','),
-        });
-        const resp = await fetch(`/comfygrid/api/list?${params.toString()}`);
-        if (!resp.ok) throw new Error(`${key} ${resp.status}`);
-        const models = await resp.json();
+        const res = await comfyGridApiClient.getList(config.dir, config.extensions);
+        if (!res.ok) throw new Error(`${key} ${res.status}`);
+        const models = res.json;
         storageState.clearFor(key);
         models.forEach((model: Model) => {
             storageState.setFor(key, model);

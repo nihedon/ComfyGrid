@@ -1,5 +1,6 @@
 <script lang="ts">
   import { JSONEditor } from 'svelte-jsoneditor';
+  import { comfyGridApiClient } from '@/api/api-client';
   import { appState } from '@/states/app-state.svelte';
 
   const uiState = appState.uiState;
@@ -27,30 +28,27 @@
     const formData = new FormData();
     formData.append('file', file);
 
-    const res = await fetch('/comfygrid/api/image_info', {
-      method: 'POST',
-      body: formData,
-    });
-    const json = await res.json();
-
-    if ('metadata' in json) {
-      const metadata = json['metadata'];
-      // Not a ComfyUI format
-      let [positivePrompt, tmp] = metadata.split('\nNegative prompt:');
-      let [negativePrompt, options] = tmp?.split('\nSteps:') || ['', ''];
-      if (options) {
-        options = 'Steps:' + options;
-        metadataJson = {
-          positive: positivePrompt?.trim(),
-          negative: negativePrompt?.trim(),
-          options: parseCustomString(options?.trim()),
-        };
-      } else {
-        metadataJson = { positive: positivePrompt?.trim(), negative: negativePrompt?.trim() };
+    const res = await comfyGridApiClient.postImageInfo(file);
+    if (res.ok) {
+      if (res.json['metadata']) {
+        const metadata = res.json['metadata'];
+        // Not a ComfyUI format
+        let [positivePrompt, tmp] = metadata.split('\nNegative prompt:');
+        let [negativePrompt, options] = tmp?.split('\nSteps:') || ['', ''];
+        if (options) {
+          options = 'Steps:' + options;
+          metadataJson = {
+            positive: positivePrompt?.trim(),
+            negative: negativePrompt?.trim(),
+            options: parseCustomString(options?.trim()),
+          };
+        } else {
+          metadataJson = { positive: positivePrompt?.trim(), negative: negativePrompt?.trim() };
+        }
+      } else if (res.json['prompt']) {
+        // ComfyUI format
+        metadataJson = JSON.parse(res.json['prompt']);
       }
-    } else if ('prompt' in json) {
-      // ComfyUI format
-      metadataJson = JSON.parse(json['prompt']);
     } else {
       metadataJson = { error: 'No recognizable prompt metadata found.' };
     }

@@ -1,4 +1,5 @@
 import { SvelteDate } from 'svelte/reactivity';
+import { comfyGridApiClient } from '@/api/api-client';
 import { appState } from '@/states/app-state.svelte';
 import type { GeneratedAssets } from '@/states/gallery-state.svelte';
 import type { JobInfo } from '@/states/job-state.svelte';
@@ -119,13 +120,14 @@ class JobManager {
 
     async #resizeImage(url: string, size: number) {
         try {
-            const r = await fetch(`/comfygrid/api/resize?url=${encodeURIComponent(url)}&size=${size}`);
-            if (!r.ok) return url;
-            return await r.blob();
+            const r = await comfyGridApiClient.getResize(url, size);
+            if (r.ok) {
+                return r.blob;
+            }
         } catch (e: unknown) {
             logger.error('Failed to resize image:', e);
-            return url;
         }
+        return url;
     }
 
     async #makeImageAssets(images: string[]): Promise<GeneratedAssets> {
@@ -158,12 +160,14 @@ class JobManager {
     async #makeVideoAssets(images: string[]): Promise<GeneratedAssets> {
         let thumbnail = '';
         try {
-            const thumbBlob = await fetch(`/comfygrid/api/video_thumbnail?url=${encodeURIComponent(images[0])}&size=120`).then((r) => r.blob());
-            thumbnail = await new Promise<string>((resolve) => {
-                const reader = new FileReader();
-                reader.onloadend = () => resolve(reader.result as string);
-                reader.readAsDataURL(thumbBlob);
-            });
+            const res = await comfyGridApiClient.getVideoThumbnail(images[0], 120);
+            if (res.ok) {
+                thumbnail = await new Promise<string>((resolve) => {
+                    const reader = new FileReader();
+                    reader.onloadend = () => resolve(reader.result as string);
+                    reader.readAsDataURL(res.blob);
+                });
+            }
         } catch (e) {
             logger.error('Failed to generate video thumbnail', e);
         }
@@ -233,13 +237,9 @@ class JobManager {
     }
 
     async saveImage(url: string, metadata: Record<string, string>): Promise<boolean> {
-        const ret = await fetch('/comfygrid/api/save_image', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ url, image_info: metadata }),
-        });
+        const ret = await comfyGridApiClient.postSaveImage(url, metadata);
         if (!ret.ok) {
-            logger.error('Failed to save image', await ret.text());
+            logger.error('Failed to save image', ret.text);
             return false;
         }
         return true;

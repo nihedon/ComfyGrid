@@ -1,3 +1,4 @@
+import { comfyGridApiClient } from '@/api/api-client';
 import { refreshModels } from '@/services/models-service';
 import { appState } from '@/states/app-state.svelte';
 import logger from '@/utils/logger';
@@ -44,14 +45,8 @@ class GalleryManager {
             const ext = originalFilename.substring(originalFilename.lastIndexOf('.')) || '.png';
             const filename = `gallery_${Date.now()}${ext}`;
 
-            const res = await fetch('/comfygrid/api/upload_to_input', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ url, filename }),
-            });
-
-            const { message } = await res.json();
-            if (message === 'uploaded') {
+            const res = await comfyGridApiClient.postUploadToInput(url, filename);
+            if (res.ok && res.json.message === 'uploaded') {
                 refreshModels('images');
             }
         } catch (e) {

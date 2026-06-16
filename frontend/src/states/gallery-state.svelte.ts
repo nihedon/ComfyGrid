@@ -1,5 +1,6 @@
 import { type IDBPDatabase, openDB } from 'idb';
 import { SvelteMap } from 'svelte/reactivity';
+import { comfyGridApiClient } from '@/api/api-client';
 import { appState } from './app-state.svelte';
 
 // ---------------------------------------------------------------------------
@@ -319,11 +320,18 @@ class GalleryState {
         if (node.assets.mediumSingle || node.assets.mediumCompare || node.assets.isVideo) return;
 
         if (node.assets.originalSingle) {
-            const blob = await fetch(`/comfygrid/api/resize?url=${encodeURIComponent(node.assets.originalSingle)}&size=1024`).then((r) => r.blob());
-            node.assets.mediumSingle = URL.createObjectURL(blob);
+            const res = await comfyGridApiClient.getResize(node.assets.originalSingle, 1024);
+            if (res.ok) {
+                node.assets.mediumSingle = URL.createObjectURL(res.blob);
+            }
         } else if (node.assets.originalCompare) {
             const blobs = await Promise.all(
-                node.assets.originalCompare.map((url) => fetch(`/comfygrid/api/resize?url=${encodeURIComponent(url)}&size=1024`).then((r) => r.blob())),
+                node.assets.originalCompare.map(async (url) => {
+                    const res = await comfyGridApiClient.getResize(url, 1024);
+                    if (res.ok) {
+                        return res.blob;
+                    }
+                }),
             );
             node.assets.mediumCompare = blobs.map((b) => URL.createObjectURL(b));
         }

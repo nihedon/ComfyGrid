@@ -1,3 +1,4 @@
+import { comfyGridApiClient } from '@/api/api-client';
 import type { Model, ModelTypes } from '@/states/storage-state.svelte';
 import logger from '@/utils/logger';
 
@@ -101,21 +102,15 @@ class InpaintModalState {
             }
             filename += '.png';
 
-            // Create FormData
-            const formData = new FormData();
-            formData.append('file', imageBlob, 'original.png');
-            formData.append('mask', maskBlob, 'mask.png');
-            formData.append('filename', filename);
-            formData.append('subfolder', this.#baseImage.subfolder);
-
             // Upload to apply mask endpoint
-            const res = await fetch('/comfygrid/api/apply_mask', {
-                method: 'POST',
-                body: formData,
+            const res = await comfyGridApiClient.postApplyMask({
+                file: { blob: imageBlob, filename: 'original.png' },
+                mask: { blob: maskBlob, filename: 'mask.png' },
+                filename,
+                subfolder: this.#baseImage.subfolder,
             });
 
-            const { message } = await res.json();
-            if (message === 'uploaded') {
+            if (res.ok && res.json?.message === 'uploaded') {
                 this.handleUpload?.(filename);
             }
         } catch (e) {
