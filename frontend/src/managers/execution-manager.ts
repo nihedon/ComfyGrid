@@ -220,19 +220,28 @@ class ExecutionManager {
         appState.executionState.lastProcessedJobId = '';
     }
 
+    private notifyTimeout: number | null = null;
+
     private notifyTaskFinished() {
-        Notification.requestPermission().then((permission) => {
-            if (permission === 'granted') {
-                const notif: { body: string; icon?: string } = {
-                    body: 'Generation completed',
-                };
-                const thumbnail = jobManager.getLastThumbnail();
-                if (thumbnail) {
-                    notif.icon = thumbnail;
+        if (this.notifyTimeout !== null) {
+            globalThis.clearTimeout(this.notifyTimeout);
+        }
+
+        this.notifyTimeout = globalThis.setTimeout(() => {
+            Notification.requestPermission().then((permission) => {
+                if (permission === 'granted') {
+                    const notif: { body: string; icon?: string } = {
+                        body: 'Generation completed',
+                    };
+                    const thumbnail = jobManager.getLastThumbnail();
+                    if (thumbnail) {
+                        notif.icon = thumbnail;
+                    }
+                    new Notification('ComfyGrid', notif);
                 }
-                new Notification('ComfyGrid', notif);
-            }
-        });
+            });
+            this.notifyTimeout = null;
+        }, 500);
     }
 }
 

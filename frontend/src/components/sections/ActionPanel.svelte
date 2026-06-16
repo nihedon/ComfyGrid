@@ -25,7 +25,9 @@
   }
 
   function handleDeleteJob(jobId: string) {
-    if (executionState.deleteQueueJobId(jobId)) {
+    if (executionState.lastProcessedJobId === jobId) {
+      handleCancel();
+    } else if (executionState.deleteQueueJobId(jobId)) {
       executionState.deleteQueue(jobId);
     }
   }

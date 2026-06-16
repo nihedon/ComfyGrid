@@ -86,5 +86,8 @@
     "toast.workflow_applied": "Workflow applied to ComfyUI",
     "toast.workflow_apply_failed": "Failed to apply workflow to ComfyUI",
     "toast.no_layout_found": "No layout information found in image",
-    "toast.layout_applied": "Layout is applied to ComfyGrid"
+    "toast.layout_applied": "Layout is applied to ComfyGrid",
+    "toast.append_lora_tag_to_positive_prompt": "LoRA tag appended to positive prompt",
+    "toast.append_embedding_tag_to_positive_prompt": "Embedding tag appended to positive prompt",
+    "toast.append_hypernetwork_tag_to_positive_prompt": "Hypernetwork tag appended to positive prompt"
 }

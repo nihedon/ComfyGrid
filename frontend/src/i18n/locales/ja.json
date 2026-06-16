@@ -86,5 +86,8 @@
     "toast.workflow_applied": "ComfyUIにワークフローを反映しました",
     "toast.workflow_apply_failed": "ComfyUIへのワークフロー反映に失敗しました",
     "toast.no_layout_found": "ComfyGridレイアウト情報が見つかりません",
-    "toast.layout_applied": "ComfyGridレイアウトを反映しました"
+    "toast.layout_applied": "ComfyGridレイアウトを反映しました",
+    "toast.append_lora_tag_to_positive_prompt": "ポジティブプロンプトにLoRAタグを追加しました",
+    "toast.append_embedding_tag_to_positive_prompt": "ポジティブプロンプトにEmbeddingタグを追加しました",
+    "toast.append_hypernetwork_tag_to_positive_prompt": "ポジティブプロンプトにHypernetworkタグを追加しました"
 }
