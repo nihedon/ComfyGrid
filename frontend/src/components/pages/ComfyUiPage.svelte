@@ -1,8 +1,7 @@
 <script lang="ts">
-  import { comfyUiApiClient } from '@/api/api-client';
+  import { executionManager } from '@/managers/execution-manager';
   import { appState } from '@/states/app-state.svelte';
   import type { ComfyWindow } from '@/states/comfyui-state.svelte';
-  import { executionState } from '@/states/execution-state.svelte';
 
   let iframeRef: HTMLIFrameElement;
 
@@ -15,16 +14,7 @@
 
     comfyUiState.iframe = iframeRef;
     comfyUiState.window = iframeRef.contentWindow as ComfyWindow;
-
-    const res = await comfyUiApiClient.queue();
-    if (res.ok) {
-      for (const jobId of res.json.queue_pending.map((j: Array<string>) => j[1])) {
-        if (!executionState.lastProcessedJobId) {
-          executionState.lastProcessedJobId = jobId;
-        }
-        executionState.addQueueJobId(jobId as string, 'external');
-      }
-    }
+    await executionManager.syncStateFromComfyUi();
   }
 </script>
 

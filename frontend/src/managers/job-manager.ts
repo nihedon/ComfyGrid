@@ -29,9 +29,9 @@ class JobManager {
         appState.galleryState.upsertJob(jobId, { metadata: jobInfo.metadata });
     }
 
-    async onPreviewUpdated(blob: Blob) {
-        const jobId = appState.executionState.lastProcessedJobId;
-        const nodeId = appState.executionState.executingNodeId;
+    async onPreviewUpdated(payload: { blob: Blob; jobId?: string; nodeId?: string }) {
+        const jobId = payload.jobId ?? appState.executionState.lastProcessedJobId;
+        const nodeId = payload.nodeId ?? appState.executionState.executingNodeId;
         if (!jobId || !nodeId) {
             logger.error('Job ID and node ID are required to update preview');
             return;
@@ -47,7 +47,7 @@ class JobManager {
         if (nodeImageData.previewUrl) {
             URL.revokeObjectURL(nodeImageData.previewUrl);
         }
-        const dataUrl = URL.createObjectURL(blob);
+        const dataUrl = URL.createObjectURL(payload.blob);
         nodeImageData.previewUrl = dataUrl;
 
         const nodeName = appState.workspaceState.getRealNode(nodeId)?.title ?? nodeId;

@@ -48,7 +48,6 @@
         "bootstrap-icons": "^1.13.1",
         "es-toolkit": "^1.42.0",
         "gridstack": "^12.3.3",
-        "idb": "^8.0.3",
         "jquery": "^4.0.0",
         "jquery-ui": "^1.14.2",
         "lit-html": "^3.3.2",

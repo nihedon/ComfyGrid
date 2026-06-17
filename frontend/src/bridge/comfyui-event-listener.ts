@@ -53,13 +53,34 @@ export class ComfyUiEventListener {
             executionManager.handleSamplingInfo({ jobId, ...metadata });
         });
 
+        api.addEventListener('comfygrid.update_preview', async (data: CustomEvent<{ job_id: string; node_id: string; timestamp: number }>) => {
+            const { job_id: jobId, node_id: nodeId, timestamp } = data.detail;
+            if (appState.executionState.queueJobIds.get(jobId) === 'external') {
+                const res = await api.fetchApi(`/comfygrid/preview?t=${timestamp}`);
+                if (res.ok) {
+                    const blob = await res.blob();
+                    executionManager.handleUpdatePreview({ blob, jobId, nodeId });
+                }
+            }
+        });
+
+        api.addEventListener('comfygrid.image_generated', (data: CustomEvent<{ job_id: string; node_id: string; images: string[][] }>) => {
+            const { job_id: jobId, node_id: nodeId, images: rootPathes } = data.detail;
+            if (appState.executionState.queueJobIds.get(jobId) === 'external') {
+                const url = globalThis.location.origin;
+                const images = rootPathes.map((o) => o.map((o2) => url + o2));
+                executionManager.handleImageGenerated({ jobId, nodeId, images });
+            }
+        });
+
         api.addEventListener('execution_start', (e: CustomEvent<ExecutionStartPayload>) => {
             this.#currentJobId = e.detail.prompt_id || null;
             executionManager.handleExecutionStart({ jobId: this.#currentJobId });
         });
 
-        api.addEventListener('execution_success', () => {
-            executionManager.handleExecutionSuccess({ jobId: this.#currentJobId });
+        api.addEventListener('execution_success', (e: CustomEvent<{ prompt_id?: string }>) => {
+            const jobId = e.detail?.prompt_id || this.#currentJobId || appState.executionState.lastProcessedJobId;
+            executionManager.handleExecutionSuccess({ jobId });
         });
 
         api.addEventListener('execution_error', (e: CustomEvent<ExecutionErrorPayload>) => {
@@ -82,7 +103,8 @@ export class ComfyUiEventListener {
                 nodeNames[node.id] = node.title;
             }
 
-            executionManager.handleExecuting({ jobId: this.#currentJobId, nodeIds: [nodeId], nodeNames });
+            const jobId = this.#currentJobId || appState.executionState.lastProcessedJobId;
+            executionManager.handleExecuting({ jobId, nodeIds: [nodeId], nodeNames });
         });
 
         api.addEventListener('executed', (e: CustomEvent<ExecutedPayload>) => {

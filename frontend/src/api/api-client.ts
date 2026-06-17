@@ -1,5 +1,6 @@
 import type { Model } from '@/states/storage-state.svelte';
 import type { ExtensionManifestJson } from '@/types/manifest';
+import type { ImageInfo } from '@/types/model-shared';
 import type { SetupConfig } from '@/types/setup';
 import type { Version } from '@/types/verion';
 import logger from '@/utils/logger';
@@ -92,7 +93,7 @@ class ComfyGridApiClient {
         return await fetchApiJson(`/comfygrid/api/model_info=${modelInfo}`);
     }
 
-    async deleteImage<T = unknown>(payload: { type: string; filename: string; subfolder: string }): Promise<ApiResultJson<T>> {
+    async deleteImage<T = unknown>(payload: ImageInfo): Promise<ApiResultJson<T>> {
         const query = new URLSearchParams({
             type: payload.type,
             filename: payload.filename,
@@ -120,6 +121,40 @@ class ComfyGridApiClient {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ title, filetypes, initial_dir: initialDir || '' }),
+        });
+    }
+
+    async getJobs(jobId: string): Promise<
+        ApiResultJson<{
+            jobId: string;
+            nodeIds: string[];
+            prompt: string;
+            workflow: string;
+            ckpt_name: string;
+        }>
+    > {
+        return await fetchApiJson(`/comfygrid/api/jobs/${jobId}`);
+    }
+
+    async postJobs(jobId: string, nodeIds: string[], prompt: string, workflow: string, ckpt_name: string) {
+        return await fetchApiJson(`/comfygrid/api/jobs/${jobId}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ jobId, nodeIds, prompt, workflow, ckpt_name, viewed: false }),
+        });
+    }
+
+    async getAllJobs(): Promise<
+        ApiResultJson<Record<string, { jobId: string; nodeIds: string[]; prompt: string; workflow: string; ckpt_name: string; viewed?: boolean }>>
+    > {
+        return await fetchApiJson('/comfygrid/api/jobs');
+    }
+
+    async patchJobViewed(jobId: string): Promise<ApiResultJson> {
+        return await fetchApiJson(`/comfygrid/api/jobs/${jobId}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ viewed: true }),
         });
     }
 
@@ -207,7 +242,11 @@ class ComfyGridApiClient {
 }
 
 class ComfyUiApiClient {
-    async queue(): Promise<ApiResultJson<{ queue_pending: Array<Array<string>> }>> {
+    async history(): Promise<ApiResultJson<Record<string, { outputs: Record<string, { images: ImageInfo[] }> }>>> {
+        return await fetchApiJson('/api/history');
+    }
+
+    async queue(): Promise<ApiResultJson<{ queue_running: Array<Array<string>>; queue_pending: Array<Array<string>> }>> {
         return await fetchApiJson('/api/queue');
     }
 
