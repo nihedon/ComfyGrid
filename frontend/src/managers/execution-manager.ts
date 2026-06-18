@@ -1,6 +1,6 @@
 import { comfyGridApiClient, comfyUiApiClient } from '@/api/api-client';
 import { appState } from '@/states/app-state.svelte';
-import { type DialogType } from '@/states/dialog-state.svelte';
+import type { DialogType } from '@/states/dialog-state.svelte';
 import type { JobInfo } from '@/states/job-state.svelte';
 import type { ImageInfo } from '@/types/model-shared';
 import logger from '@/utils/logger';
@@ -20,6 +20,9 @@ import { mediaProcessor } from './media-processor';
  */
 
 class ExecutionManager {
+    #lastQueueRemaining: number = -1;
+    #isRestoring = false;
+
     handleSamplingInfo(payload: { jobId: string; [key: string]: string }) {
         const { jobId, ...metadata } = payload;
         const jobInfo = appState.jobState.jobs.get(jobId);
@@ -58,19 +61,18 @@ class ExecutionManager {
         appState.executionState.progress.setNodeSet(jobId, nodeIds);
     }
 
-    #lastQueueRemaining: number = -1;
-    #isRestoring = false;
-
     handleStatus(payload: { queueRemaining: number }) {
         const queueRemaining = payload.queueRemaining;
         const queueJobIds = appState.executionState.queueJobIds;
         const jobId = appState.executionState.processingJobId;
 
-        if (this.#lastQueueRemaining !== -1 && queueRemaining < this.#lastQueueRemaining) {
-            const owner = queueJobIds.get(jobId);
-            if (owner === 'external' && jobId) {
-                this.handleExecutionSuccess({ jobId });
-            }
+        const owner = queueJobIds.get(jobId);
+        if (owner === 'external' && jobId) {
+            this.#checkJobStatus().then((jobs) => {
+                if (!jobs[jobId]) {
+                    this.handleExecutionSuccess({ jobId });
+                }
+            });
         }
         this.#lastQueueRemaining = queueRemaining;
 
@@ -226,6 +228,7 @@ class ExecutionManager {
         gallerySession.clearTrackedJobs();
         appState.executionState.progress.clear();
         appState.executionState.executingNodeId = null;
+        appState.executionState.clearQueueJobIds();
         appState.executionState.setProcessingJobId('');
     }
 
@@ -278,6 +281,34 @@ class ExecutionManager {
             appState.galleryState.deleteJob(id);
         });
         appState.galleryState.deleteJob(jobId);
+    }
+
+    async #checkJobStatus(): Promise<{ [jobId: string]: 'pending' | 'in_progress' }> {
+        let res = {};
+        const jobsRes = await comfyUiApiClient.jobs({ sort_order: 'asc', status: 'in_progress,pending' });
+        if (jobsRes.ok) {
+            const { jobs } = jobsRes.json;
+            res = jobs.reduce((acc, job) => {
+                acc[job.id] = job.status;
+                return acc;
+            }, {});
+        } else {
+            const queueRes = await comfyUiApiClient.queue();
+            if (queueRes.ok) {
+                const { queue_running, queue_pending } = queueRes.json;
+                res = {
+                    ...queue_running.reduce((acc, job) => {
+                        acc[job[1]] = 'in_progress';
+                        return acc;
+                    }, {}),
+                    ...queue_pending.reduce((acc, job) => {
+                        acc[job[1]] = 'pending';
+                        return acc;
+                    }, {}),
+                };
+            }
+        }
+        return res;
     }
 
     // -----------------------------------------------------------------------
@@ -353,25 +384,14 @@ class ExecutionManager {
     }
 
     async #appendQueueFromComfyUi() {
-        const res = await comfyUiApiClient.queue();
-        if (!res.ok) return;
+        const json = await this.#checkJobStatus();
 
-        const json = res.json;
-        for (const jobId of json.queue_running.map((j) => j[1])) {
-            const queueData = await this.#makePromptQueueData(jobId);
-            this.#restoreJobWithoutBatchClear(jobId, {
-                nodeIds: queueData?.nodeIds ?? [],
-                ckpt_name: queueData?.ckpt_name,
-                prompt: queueData?.prompt,
-                workflow: queueData?.workflow,
-                owner: 'external',
-            });
-            if (!appState.executionState.processingJobId) {
-                appState.executionState.setProcessingJobId(jobId);
-            }
+        if (this.#lastQueueRemaining === 0) {
+            return;
         }
 
-        for (const jobId of json.queue_pending.map((j) => j[1])) {
+        for (const [jobId, status] of Object.entries(json)) {
+            if (status === 'completed') continue;
             const queueData = await this.#makePromptQueueData(jobId);
             this.#restoreJobWithoutBatchClear(jobId, {
                 nodeIds: queueData?.nodeIds ?? [],
@@ -380,7 +400,7 @@ class ExecutionManager {
                 workflow: queueData?.workflow,
                 owner: 'external',
             });
-            if (!appState.executionState.processingJobId) {
+            if (status === 'in_progress') {
                 appState.executionState.setProcessingJobId(jobId);
             }
         }

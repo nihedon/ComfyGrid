@@ -1,4 +1,5 @@
 import type { Model } from '@/states/storage-state.svelte';
+import type { Job } from '@/types/job';
 import type { ExtensionManifestJson } from '@/types/manifest';
 import type { ImageInfo } from '@/types/model-shared';
 import type { SetupConfig } from '@/types/setup';
@@ -26,7 +27,8 @@ async function fetchApiJson<T = unknown>(url: string, options: RequestInit = {})
     try {
         const res = await fetch(url, options);
         if (res.ok) {
-            return { ok: true, status: res.status, json: await res.json() };
+            const json = await res.json().catch(() => ({}) as T);
+            return { ok: true, status: res.status, json };
         }
         return { ok: false, status: res.status, json: {} as T };
     } catch (e) {
@@ -248,6 +250,14 @@ class ComfyUiApiClient {
 
     async queue(): Promise<ApiResultJson<{ queue_running: Array<Array<string>>; queue_pending: Array<Array<string>> }>> {
         return await fetchApiJson('/api/queue');
+    }
+
+    async jobs(params?: Record<string, string>): Promise<ApiResultJson<{ jobs: Job[] }>> {
+        let query = '';
+        if (params) {
+            query = new URLSearchParams(params).toString();
+        }
+        return await fetchApiJson(`/api/jobs?${query}`);
     }
 
     async deleteQueues(jobIds: string[]): Promise<ApiResultJson> {
