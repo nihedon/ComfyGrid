@@ -83,10 +83,7 @@ class GalleryState {
         const visibleNodes = record.nodes.filter((n) => n.assets?.thumbnail || n.previewUrl);
         if (visibleNodes.length === 0) return undefined;
 
-        const selected =
-            this.#selectedNodeIndex >= 0
-                ? (visibleNodes[this.#selectedNodeIndex] ?? visibleNodes.at(-1))
-                : visibleNodes.at(-1);
+        const selected = this.#selectedNodeIndex >= 0 ? (visibleNodes[this.#selectedNodeIndex] ?? visibleNodes.at(-1)) : visibleNodes.at(-1);
         if (!selected) return undefined;
 
         const thumbnail = selected.previewUrl ?? selected.assets?.thumbnail ?? '';
@@ -146,9 +143,7 @@ class GalleryState {
         return this.#makeGalleryNodes(record);
     });
 
-    readonly currentGalleryNode = $derived<GalleryNode | undefined>(
-        this.currentGalleryNodes[this.#selectedNodeIndex] ?? this.currentGalleryNodes.at(-1),
-    );
+    readonly currentGalleryNode = $derived<GalleryNode | undefined>(this.currentGalleryNodes[this.#selectedNodeIndex] ?? this.currentGalleryNodes.at(-1));
 
     // -----------------------------------------------------------------------
     // Selectors
@@ -186,10 +181,6 @@ class GalleryState {
         return [...this.#jobs.values()].filter((r) => !r.completed).map((r) => r.jobId);
     }
 
-    // -----------------------------------------------------------------------
-    // Sync methods – called by JobManager / ExecutionManager
-    // -----------------------------------------------------------------------
-
     upsertJob(jobId: string, partial: Partial<Omit<GalleryJobRecord, 'nodes'>>): void {
         const existing = this.#jobs.get(jobId);
         if (existing) {
@@ -210,9 +201,7 @@ class GalleryState {
     upsertNode(jobId: string, node: GalleryNodeRecord): void {
         const record = this.#jobs.get(jobId);
         if (!record) return;
-        const idx = record.nodes.findIndex(
-            (n) => n.nodeId === node.nodeId && n.batchJobIndex === node.batchJobIndex,
-        );
+        const idx = record.nodes.findIndex((n) => n.nodeId === node.nodeId && n.batchJobIndex === node.batchJobIndex);
         if (idx >= 0) {
             record.nodes[idx] = node;
         } else {

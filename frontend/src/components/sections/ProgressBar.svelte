@@ -20,7 +20,7 @@
 
   const busy = $derived(
     executionState.queueJobIds.size > 0 &&
-      executionState.queueJobIds.get(executionState.lastProcessedJobId) === 'external',
+      executionState.queueJobIds.get(executionState.processingJobId) === 'external',
   );
   const hidden = $derived(
     !busy &&

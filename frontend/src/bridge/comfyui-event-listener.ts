@@ -79,7 +79,7 @@ export class ComfyUiEventListener {
         });
 
         api.addEventListener('execution_success', (e: CustomEvent<{ prompt_id?: string }>) => {
-            const jobId = e.detail?.prompt_id || this.#currentJobId || appState.executionState.lastProcessedJobId;
+            const jobId = e.detail?.prompt_id || this.#currentJobId || appState.executionState.processingJobId;
             executionManager.handleExecutionSuccess({ jobId });
         });
 
@@ -103,7 +103,7 @@ export class ComfyUiEventListener {
                 nodeNames[node.id] = node.title;
             }
 
-            const jobId = this.#currentJobId || appState.executionState.lastProcessedJobId;
+            const jobId = this.#currentJobId || appState.executionState.processingJobId;
             executionManager.handleExecuting({ jobId, nodeIds: [nodeId], nodeNames });
         });
 

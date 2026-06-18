@@ -1,27 +1,31 @@
 import { comfyGridApiClient, comfyUiApiClient } from '@/api/api-client';
 import { appState } from '@/states/app-state.svelte';
 import { type DialogType } from '@/states/dialog-state.svelte';
+import type { JobInfo } from '@/states/job-state.svelte';
 import type { ImageInfo } from '@/types/model-shared';
 import logger from '@/utils/logger';
 import { gallerySession } from './gallery-session-manager';
-import { jobManager } from './job-manager';
+import { mediaProcessor } from './media-processor';
 
 /**
- * Maps ComfyGrid WebSocket execution events to UI state (`executionState`, workspace errors, dialogs)
- * and delegates gallery/job persistence to {@link JobManager}.
+ * Maps ComfyGrid WebSocket execution events to UI state and orchestrates the job lifecycle.
  *
- * **When `executionState` progress is reset (`onTaskFinished`):** the server reports an empty queue
- * (`onStatus`), or the last tracked job completes while the queue is empty (`onExecutionCompleted`),
- * or a new prompt is queued after no jobs were active (`onPromptQueued` via
- * {@link GallerySession.beginQueuedPrompt}). These paths clear {@link GallerySession} tracking,
- * wipe progress UI, and clear `lastProcessedJobId`.
+ * **Job lifecycle methods** (`#registerJob`, `#completeJob`, `#removeJob`) directly manage
+ * both {@link JobState} (in-progress tracking) and {@link GalleryState} (display state).
+ *
+ * **When `executionState` progress is reset (`handleTaskFinished`):** the server reports an empty
+ * queue (`handleStatus`), or the last tracked job completes while the queue is empty
+ * (`handleExecutionSuccess`), or a new prompt is queued after no jobs were active
+ * (`handlePromptQueued` via {@link GallerySession.beginQueuedPrompt}).
  */
 
 class ExecutionManager {
     handleSamplingInfo(payload: { jobId: string; [key: string]: string }) {
         const { jobId, ...metadata } = payload;
-
-        jobManager.appendJobMetadata(jobId, metadata);
+        const jobInfo = appState.jobState.jobs.get(jobId);
+        if (!jobInfo) return;
+        jobInfo.metadata = { ...jobInfo.metadata, ...metadata };
+        appState.galleryState.upsertJob(jobId, { metadata: { ...jobInfo.metadata } });
     }
 
     handlePromptQueued(payload: {
@@ -44,16 +48,11 @@ class ExecutionManager {
 
         if (gallerySession.beginQueuedPrompt()) {
             logger.debug('All jobs finished — clearing gallery for new batch');
-            jobManager.cleanupViewedJobs();
+            appState.galleryState.clearViewedJobs();
         }
         gallerySession.trackQueued(jobId);
 
-        jobManager.registerQueuedJob(jobId, {
-            ckpt_name: ckpt_name,
-            prompt: prompt,
-            workflow: workflow,
-            owner: owner,
-        });
+        this.#registerJob(jobId, { ckpt_name, prompt, workflow, owner });
 
         appState.executionState.progress.status = 'processing';
         appState.executionState.progress.setNodeSet(jobId, nodeIds);
@@ -65,7 +64,7 @@ class ExecutionManager {
     handleStatus(payload: { queueRemaining: number }) {
         const queueRemaining = payload.queueRemaining;
         const queueJobIds = appState.executionState.queueJobIds;
-        const jobId = appState.executionState.lastProcessedJobId;
+        const jobId = appState.executionState.processingJobId;
 
         if (this.#lastQueueRemaining !== -1 && queueRemaining < this.#lastQueueRemaining) {
             const owner = queueJobIds.get(jobId);
@@ -84,18 +83,14 @@ class ExecutionManager {
     }
 
     handleProgressState(payload: { jobId: string }) {
-        const jobId = payload.jobId;
-
-        appState.executionState.lastProcessedJobId = jobId;
+        appState.executionState.setProcessingJobId(payload.jobId);
     }
 
     handleExecutionStart(payload: { jobId: string }) {
         const jobId = payload.jobId;
 
-        appState.executionState.lastProcessedJobId = jobId;
-
-        jobManager.clearOtherPreviews(jobId);
-
+        appState.executionState.setProcessingJobId(jobId);
+        mediaProcessor.clearOtherPreviews(jobId);
         appState.executionState.progress.value = 0;
         appState.executionState.progress.status = 'processing';
         appState.workspaceState.clearErrorWidgets();
@@ -105,15 +100,13 @@ class ExecutionManager {
         const jobId = payload.jobId;
 
         appState.executionState.deleteQueueJobId(jobId);
-
         gallerySession.trackFinished(jobId);
-        jobManager.markJobCompleted(jobId);
-
+        this.#completeJob(jobId);
         appState.executionState.progress.toExecuted(jobId);
 
         if (!this.#isRestoring) {
             if (gallerySession.activeCount === 0 && appState.executionState.queueJobIds.size === 0) {
-                if (appState.executionState.lastProcessedJobId) {
+                if (appState.executionState.processingJobId) {
                     this.notifyTaskFinished();
                     this.handleTaskFinished();
                 }
@@ -133,10 +126,9 @@ class ExecutionManager {
 
         appState.executionState.deleteQueueJobId(jobId);
         gallerySession.trackFinished(jobId);
-        jobManager.removeJob(jobId);
+        this.#removeJob(jobId);
 
         appState.executionState.progress.status = 'error';
-
         appState.workspaceState.addErrorWidget(nodeId, '');
 
         const type = exceptionType || 'TypeError';
@@ -150,15 +142,14 @@ class ExecutionManager {
 
         appState.executionState.deleteQueueJobId(jobId);
         gallerySession.trackFinished(jobId);
-        jobManager.removeJob(jobId);
-
+        this.#removeJob(jobId);
         appState.executionState.progress.status = 'interrupted';
     }
 
     handleExecuting(payload: { jobId: string; nodeIds: string[]; nodeNames: Record<string, string> }) {
         const { jobId, nodeIds, nodeNames } = payload;
 
-        appState.executionState.lastProcessedJobId = jobId;
+        appState.executionState.setProcessingJobId(jobId);
 
         if (appState.executionState.executingNodeId) {
             appState.executionState.progress.addExecutedNodeSet(jobId, [appState.executionState.executingNodeId]);
@@ -175,7 +166,7 @@ class ExecutionManager {
         const { jobId, nodeNames, cached } = payload;
         let nodeIds = payload.nodeIds;
 
-        appState.executionState.lastProcessedJobId = jobId;
+        appState.executionState.setProcessingJobId(jobId);
 
         if (!cached) {
             const nodeId = nodeIds[0];
@@ -201,25 +192,23 @@ class ExecutionManager {
     }
 
     handleProgress(payload: { value: number; max: number }) {
-        const { value, max } = payload;
-        appState.executionState.progress.value = value;
-        appState.executionState.progress.maxValue = max;
+        appState.executionState.progress.value = payload.value;
+        appState.executionState.progress.maxValue = payload.max;
     }
 
     async handleUpdatePreview(payload: { blob: Blob; jobId?: string; nodeId?: string }) {
-        await jobManager.onPreviewUpdated(payload);
+        await mediaProcessor.onPreviewUpdated(payload);
     }
 
     async handleImageGenerated(payload: { jobId: string; nodeId: string; images: string[][] }) {
         const { jobId, nodeId, images } = payload;
-
-        const lastBatchJobId = await jobManager.onImageGenerated(jobId, nodeId, images);
+        const lastBatchJobId = await mediaProcessor.onImageGenerated(jobId, nodeId, images);
         if (lastBatchJobId) {
-            appState.executionState.lastProcessedJobId = lastBatchJobId;
+            appState.executionState.setProcessingJobId(lastBatchJobId);
         }
     }
 
-    private getModelName(nodeIds: string[]): string | null {
+    getModelName(nodeIds: string[]): string | null {
         const nodes = appState.workspaceState.getAllNodes(nodeIds);
         for (const node of nodes) {
             for (const widget of node.widgets) {
@@ -233,13 +222,11 @@ class ExecutionManager {
         return null;
     }
 
-    private handleTaskFinished() {
+    handleTaskFinished() {
         gallerySession.clearTrackedJobs();
-
         appState.executionState.progress.clear();
-
         appState.executionState.executingNodeId = null;
-        appState.executionState.lastProcessedJobId = '';
+        appState.executionState.setProcessingJobId('');
     }
 
     private notifyTimeout: number | null = null;
@@ -252,19 +239,50 @@ class ExecutionManager {
         this.notifyTimeout = globalThis.setTimeout(() => {
             Notification.requestPermission().then((permission) => {
                 if (permission === 'granted') {
-                    const notif: { body: string; icon?: string } = {
-                        body: 'Generation completed',
-                    };
-                    const thumbnail = jobManager.getLastThumbnail();
-                    if (thumbnail) {
-                        notif.icon = thumbnail;
-                    }
+                    const notif: { body: string; icon?: string } = { body: 'Generation completed' };
+                    const thumbnail = mediaProcessor.getLastThumbnail();
+                    if (thumbnail) notif.icon = thumbnail;
                     new Notification('ComfyGrid', notif);
                 }
             });
             this.notifyTimeout = null;
         }, 500);
     }
+
+    // -----------------------------------------------------------------------
+    // Job lifecycle – directly manages JobState and GalleryState
+    // -----------------------------------------------------------------------
+
+    #registerJob(jobId: string, meta: JobInfo['metadata']): void {
+        const createdAt = Date.now();
+        appState.jobState.setJob(jobId, { jobId, images: {}, createdAt, metadata: meta });
+        appState.galleryState.upsertJob(jobId, { metadata: meta, createdAt });
+    }
+
+    #completeJob(jobId: string): void {
+        const relatedIds = [...appState.jobState.jobs.keys()].filter((id) => id === jobId || id.startsWith(`${jobId}-`));
+        for (const id of relatedIds) {
+            const jobInfo = appState.jobState.jobs.get(id);
+            if (!jobInfo) continue;
+            const duration = Date.now() - jobInfo.createdAt;
+            appState.galleryState.markCompleted(id, duration);
+            appState.jobState.deleteJob(id);
+            logger.log(`Job ${id} completed in ${(duration / 1000).toFixed(2)}s`);
+        }
+    }
+
+    #removeJob(jobId: string): void {
+        const relatedIds = [...appState.jobState.jobs.keys()].filter((id) => id === jobId || id.startsWith(`${jobId}-`));
+        relatedIds.forEach((id) => {
+            appState.jobState.deleteJob(id);
+            appState.galleryState.deleteJob(id);
+        });
+        appState.galleryState.deleteJob(jobId);
+    }
+
+    // -----------------------------------------------------------------------
+    // Reload restoration
+    // -----------------------------------------------------------------------
 
     async syncStateFromComfyUi() {
         this.#isRestoring = true;
@@ -283,9 +301,7 @@ class ExecutionManager {
 
     async #makePromptQueueData(jobId: string) {
         const res = await comfyGridApiClient.getJobs(jobId);
-        if (!res.ok || Object.keys(res.json).length === 0) {
-            return null;
-        }
+        if (!res.ok || Object.keys(res.json).length === 0) return null;
         const data = res.json;
         return {
             jobId: data.jobId,
@@ -308,7 +324,7 @@ class ExecutionManager {
     ) {
         appState.executionState.addQueueJobId(jobId, data.owner);
         gallerySession.trackQueued(jobId);
-        jobManager.registerQueuedJob(jobId, {
+        this.#registerJob(jobId, {
             ckpt_name: data.ckpt_name,
             prompt: data.prompt,
             workflow: data.workflow,
@@ -350,8 +366,8 @@ class ExecutionManager {
                 workflow: queueData?.workflow,
                 owner: 'external',
             });
-            if (!appState.executionState.lastProcessedJobId) {
-                appState.executionState.lastProcessedJobId = jobId;
+            if (!appState.executionState.processingJobId) {
+                appState.executionState.setProcessingJobId(jobId);
             }
         }
 
@@ -364,17 +380,14 @@ class ExecutionManager {
                 workflow: queueData?.workflow,
                 owner: 'external',
             });
-            if (!appState.executionState.lastProcessedJobId) {
-                appState.executionState.lastProcessedJobId = jobId;
+            if (!appState.executionState.processingJobId) {
+                appState.executionState.setProcessingJobId(jobId);
             }
         }
     }
 
     async #restoreFromHistory() {
-        const [historyRes, allJobsRes] = await Promise.all([
-            comfyUiApiClient.history(),
-            comfyGridApiClient.getAllJobs(),
-        ]);
+        const [historyRes, allJobsRes] = await Promise.all([comfyUiApiClient.history(), comfyGridApiClient.getAllJobs()]);
         if (!historyRes.ok) return;
 
         const historyJson = historyRes.json;
@@ -432,7 +445,7 @@ class ExecutionManager {
         for (const jobId of appState.galleryState.getIncompleteJobIds()) {
             if (!appState.executionState.queueJobIds.has(jobId)) {
                 logger.debug(`Removing orphaned incomplete job ${jobId} (not in queue or history)`);
-                jobManager.removeJob(jobId);
+                this.#removeJob(jobId);
             }
         }
     }

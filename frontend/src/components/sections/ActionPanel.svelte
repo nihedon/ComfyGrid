@@ -25,7 +25,7 @@
   }
 
   function handleDeleteJob(jobId: string) {
-    if (executionState.lastProcessedJobId === jobId) {
+    if (executionState.processingJobId === jobId) {
       handleCancel();
     } else if (executionState.deleteQueueJobId(jobId)) {
       executionState.deleteQueue(jobId);
@@ -99,14 +99,13 @@
             title={jobId}
           >
             <span class="vstack justify-content-center" style="min-width: 1.2rem;"
-              >{#if executionState.lastProcessedJobId === jobId}<i
-                  class="spinner-grow spinner-grow-sm"
+              >{#if executionState.processingJobId === jobId}<i class="spinner-grow spinner-grow-sm"
                 ></i>{/if}</span
             >
             <div class="vstack justify-content-center">
               <span>{jobId}</span>
               <div class="w-100 progress" style="height: 4px;" role="progressbar">
-                {#if executionState.lastProcessedJobId === jobId}
+                {#if executionState.processingJobId === jobId}
                   <div class="progress-bar" style="width: {executionState.jobProgress}%"></div>
                 {/if}
               </div>

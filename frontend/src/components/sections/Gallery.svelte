@@ -2,7 +2,6 @@
   import { SvelteMap } from 'svelte/reactivity';
   import { t } from '@/i18n/i18n';
   import { galleryManager } from '@/managers/gallery-manager';
-  import { jobManager } from '@/managers/job-manager';
   import { appState } from '@/states/app-state.svelte';
   import type { GalleryJob, GalleryNode } from '@/states/gallery-state.svelte';
   import ImageCompare from '../widgets/ImageCompare.svelte';
@@ -46,7 +45,7 @@
   function deleteJob(e: Event) {
     if (!galleryState.currentGalleryJob) return;
     const oldIndex = galleryState.currentJobIndex;
-    jobManager.deleteJob(galleryState.currentGalleryJob.jobId);
+    galleryState.deleteJob(galleryState.currentGalleryJob.jobId);
 
     setTimeout(() => {
       const nextIndex = Math.min(galleryState.galleryJobs.length - 1, oldIndex);

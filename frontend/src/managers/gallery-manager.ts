@@ -2,8 +2,11 @@ import { comfyGridApiClient } from '@/api/api-client';
 import { refreshModels } from '@/services/models-service';
 import { appState } from '@/states/app-state.svelte';
 import logger from '@/utils/logger';
-import { jobManager } from './job-manager';
 
+/**
+ * Handles user-initiated actions on gallery images:
+ * save, download, upload to input, and send to image info.
+ */
 class GalleryManager {
     #currentNodeUrl() {
         const node = appState.galleryState.currentGalleryNode;
@@ -20,10 +23,12 @@ class GalleryManager {
         if (!node || !url) return;
 
         metadata.batchJobIndex = String(node.batchJobIndex);
-        const success = await jobManager.saveImage(url, metadata);
-        if (success) {
-            appState.galleryState.markSaved(node.jobId, node.nodeId, node.batchJobIndex);
+        const ret = await comfyGridApiClient.postSaveImage(url, metadata);
+        if (!ret.ok) {
+            logger.error('Failed to save image', ret.text);
+            return;
         }
+        appState.galleryState.markSaved(node.jobId, node.nodeId, node.batchJobIndex);
     }
 
     async downloadImage(metadata: Record<string, string>) {
@@ -31,7 +36,23 @@ class GalleryManager {
         if (!node || !url) return;
 
         metadata.batchJobIndex = String(node.batchJobIndex);
-        jobManager.downloadImage(url, metadata);
+
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '/comfygrid/api/download_image';
+        form.style.display = 'none';
+        form.target = '_blank';
+
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'form';
+        input.value = JSON.stringify({ url, image_info: metadata });
+        form.appendChild(input);
+
+        document.body.appendChild(form);
+        form.submit();
+        form.remove();
+
         appState.galleryState.markDownloaded(node.jobId, node.nodeId, node.batchJobIndex);
     }
 

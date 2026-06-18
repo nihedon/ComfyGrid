@@ -112,7 +112,7 @@ class Progress {
 
 class ExecutionState {
     readonly #progress = $state(new Progress());
-    #lastProcessedJobId = $state('');
+    #processingJobId = $state('');
     #executingNodeId = $state<string | null>();
     #batchCount = $state<number>(1);
     readonly #queueJobIds = $state<SvelteMap<string, 'owned' | 'external'>>(new SvelteMap());
@@ -122,7 +122,7 @@ class ExecutionState {
     readonly labelNodeId = $derived(this.#sanitizedNodeId?.split(':')?.at(-1) ?? null);
 
     readonly totalProgress = $derived.by(() => {
-        if (!this.lastProcessedJobId) {
+        if (!this.processingJobId) {
             return 0;
         }
         const totalCount = this.progress.totalCount;
@@ -136,14 +136,14 @@ class ExecutionState {
     });
 
     readonly jobProgress = $derived.by(() => {
-        const lastProcessedJobId = this.lastProcessedJobId;
-        if (!lastProcessedJobId) {
+        const processingJobId = this.processingJobId;
+        if (!processingJobId) {
             return 0;
         }
-        const jobTotalCount = this.progress.nodeSet.get(lastProcessedJobId)?.size ?? 0;
+        const jobTotalCount = this.progress.nodeSet.get(processingJobId)?.size ?? 0;
         if (jobTotalCount === 0) return 0;
 
-        let jobExecutedCount = this.progress.executedNodeSet.get(lastProcessedJobId)?.size ?? 0;
+        let jobExecutedCount = this.progress.executedNodeSet.get(processingJobId)?.size ?? 0;
         if (this.executingNodeId) {
             jobExecutedCount += 0.2;
         }
@@ -160,8 +160,8 @@ class ExecutionState {
     get progress(): Progress {
         return this.#progress;
     }
-    get lastProcessedJobId(): Readonly<string> {
-        return this.#lastProcessedJobId;
+    get processingJobId(): Readonly<string> {
+        return this.#processingJobId;
     }
     get executingNodeId(): Readonly<string | null> {
         return this.#executingNodeId;
@@ -173,8 +173,12 @@ class ExecutionState {
         return this.#queueJobIds;
     }
 
-    set lastProcessedJobId(id: string) {
-        this.#lastProcessedJobId = id;
+    setProcessingJobId(jobId: string) {
+        const processingJobId = this.#processingJobId;
+        if (processingJobId !== jobId) {
+            this.#queueJobIds.delete(processingJobId);
+            this.#processingJobId = jobId;
+        }
     }
     set executingNodeId(id: string) {
         this.#executingNodeId = id;
@@ -191,7 +195,7 @@ class ExecutionState {
     clearQueueJobIds() {
         this.#queueJobIds.clear();
         this.#progress.clear();
-        this.#lastProcessedJobId = '';
+        this.#processingJobId = '';
     }
 
     execute() {
@@ -215,7 +219,7 @@ class ExecutionState {
             this.#queueJobIds.set(jobId, owner);
             const jobIds = this.#progress.nodeSet.keys();
             for (const jobId of jobIds) {
-                if (jobId === this.#lastProcessedJobId) {
+                if (jobId === this.#processingJobId) {
                     continue;
                 }
                 this.#progress.deleteNodeSet(jobId);
