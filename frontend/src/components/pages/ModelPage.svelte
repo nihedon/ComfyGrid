@@ -3,6 +3,7 @@
   import { appState } from '@/states/app-state.svelte';
   import type { ComfyGridGroup, ComfyGridNode } from '@/states/model-state.svelte';
   import type { Model } from '@/states/storage-state.svelte';
+  import { toastState } from '@/states/toast-state.svelte';
   import Tab from '../common/InnerTab.svelte';
   import TabContainer from '../common/InnerTabContainer.svelte';
   import ModelList from '../common/ModelList.svelte';
@@ -25,19 +26,19 @@
       action: () => {},
     },
     loras: {
-      title: 'Lora',
+      title: 'LoRAs',
       subdirs: ['loras'],
-      action: (model: Model) => appendModelPromptForTag('lora', model),
+      action: (model: Model) => appendModelTagToPrompt('lora', model),
     },
     embeddings: {
       title: 'Embeddings',
       subdirs: ['embeddings'],
-      action: appendModelPromptForEmbeddings,
+      action: appendKeywordToPrompt,
     },
     hypernetworks: {
       title: 'Hypernetworks',
       subdirs: ['hypernetworks'],
-      action: (model: Model) => appendModelPromptForTag('hypernet', model),
+      action: (model: Model) => appendModelTagToPrompt('hypernet', model),
     },
   };
 
@@ -53,7 +54,7 @@
       .find((w) => w.id === workspaceState.layout.positivePromptWidgetId)?.textarea;
   });
 
-  function appendModelPromptForEmbeddings(model: Model) {
+  function appendKeywordToPrompt(model: Model) {
     const name = model.name;
     const textarea = positivePromptTextarea;
     if (!textarea) {
@@ -62,10 +63,14 @@
     } else {
       textarea.value += `, embedding:${name}`;
       textarea.dispatchEvent(new Event('input', { bubbles: true }));
+      toastState.addToast({
+        type: 'success',
+        message: $t('toast.append_embedding_tag_to_positive_prompt'),
+      });
     }
   }
 
-  function appendModelPromptForTag(tag: string, model: Model) {
+  function appendModelTagToPrompt(tag: string, model: Model) {
     const name = model.name;
     const textarea = positivePromptTextarea;
     if (!textarea) {
@@ -74,6 +79,17 @@
     } else {
       textarea.value += ` <${tag}:${name}:1>`;
       textarea.dispatchEvent(new Event('input', { bubbles: true }));
+      if (tag === 'lora') {
+        toastState.addToast({
+          type: 'success',
+          message: $t('toast.append_lora_tag_to_positive_prompt'),
+        });
+      } else {
+        toastState.addToast({
+          type: 'success',
+          message: $t('toast.append_hypernetwork_tag_to_positive_prompt'),
+        });
+      }
     }
   }
 </script>

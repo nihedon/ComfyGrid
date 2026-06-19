@@ -79,11 +79,15 @@
     "gallery.clear_viewed": "Clear Viewed Images",
     "gallery.clear_all": "Clear All Images",
     "gallery.upload_to_input": "Upload to Input",
+    "gallery.send_to_image_info": "Send to Image Info",
     "toast.metadata_load_failed": "Failed to load metadata",
     "toast.unsupported_file_type": "Unsupported file type",
     "toast.no_workflow_found": "No workflow information found in file",
     "toast.workflow_applied": "Workflow applied to ComfyUI",
     "toast.workflow_apply_failed": "Failed to apply workflow to ComfyUI",
     "toast.no_layout_found": "No layout information found in image",
-    "toast.layout_applied": "Layout is applied to ComfyGrid"
+    "toast.layout_applied": "Layout is applied to ComfyGrid",
+    "toast.append_lora_tag_to_positive_prompt": "LoRA tag appended to positive prompt",
+    "toast.append_embedding_tag_to_positive_prompt": "Embedding tag appended to positive prompt",
+    "toast.append_hypernetwork_tag_to_positive_prompt": "Hypernetwork tag appended to positive prompt"
 }

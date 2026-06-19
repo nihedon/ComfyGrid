@@ -93,6 +93,20 @@ export class ComfyUiBridge {
     }
 
     /**
+     * Handle delete queue command from ComfyGrid
+     * @param jobId - Job ID to delete
+     */
+    async deleteQueue(jobId: string): Promise<void> {
+        await fetch('/queue', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ delete: [jobId] }),
+        });
+    }
+
+    /**
      * Handle clear queue command from ComfyGrid
      * @param _e - Message event (unused)
      */

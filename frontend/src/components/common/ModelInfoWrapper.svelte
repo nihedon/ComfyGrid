@@ -1,9 +1,9 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
-  import * as bootstrap from 'bootstrap';
   import { appState } from '@/states/app-state.svelte';
   import type { Model } from '@/states/storage-state.svelte';
   import logger from '@/utils/logger';
+  import SelectablePopover from './SelectablePopover.svelte';
 
   let {
     model,
@@ -12,7 +12,8 @@
   }: { model: Model; showMenuIcons?: boolean; children: Snippet } = $props();
 
   let triggerWordsPopoverElement = $state<HTMLElement | null>(null);
-  let menuIconsContainerElement = $state<HTMLElement | null>(null);
+  let containerElement = $state<HTMLElement | null>(null);
+  let triggerWordsElement = $state<HTMLElement | null>(null);
 
   const sizeUnits = ['B', 'KB', 'MB', 'GB', 'TB'];
   const sizeWithUnit = $derived.by(() => {
@@ -62,81 +63,8 @@
     }
   }
 
-  function buildTriggerWordItem(tag: string): string {
-    return `<span class="list-group-item d-flex align-items-center gap-3">
-              <span class="tag flex-grow-1">${tag}</span>
-              <a class="btn py-0 px-1"><i class="pi pi-copy"></i></a>
-            </span>`;
-  }
-
-  function buildTriggerWordsContent(tags: string[]): string {
-    return `<div class="list-group">
-              ${tags.map(buildTriggerWordItem).join('')}
-            </div>`;
-  }
-
   $effect(() => {
-    if (!triggerWordsPopoverElement || triggerWords.length === 0) return;
-
-    const popover = new bootstrap.Popover(triggerWordsPopoverElement);
-
-    const handleShow = () => {
-      const popoverElements = document.querySelectorAll('[data-bs-toggle="popover"]');
-      popoverElements.forEach((el) => {
-        if (el !== triggerWordsPopoverElement) {
-          const instance = bootstrap.Popover.getInstance(el);
-          instance?.hide();
-        }
-      });
-    };
-
-    const handleDocumentClick = (e: MouseEvent) => {
-      const popoverEl = document.querySelector('.trigger-words.popover.show');
-      if (
-        popoverEl &&
-        !popoverEl.contains(e.target as Node) &&
-        !triggerWordsPopoverElement?.contains(e.target as Node)
-      ) {
-        popover.hide();
-      }
-    };
-
-    const handleShown = () => {
-      const popoverEl = document.querySelector<HTMLElement>(
-        '.trigger-words.popover:not(.listener-attached)',
-      );
-      if (!popoverEl) return;
-      popoverEl.querySelectorAll<HTMLElement>('.popover-body .tag').forEach((el) => {
-        const aTag = el.nextElementSibling!;
-        aTag.addEventListener('click', () => {
-          navigator.clipboard.writeText(el.innerText ?? '');
-        });
-      });
-      popoverEl.classList.add('listener-attached');
-      
-      // Delay attaching to prevent immediate trigger from the same click event
-      setTimeout(() => document.addEventListener('click', handleDocumentClick), 0);
-    };
-
-    const handleHidden = () => {
-      document.removeEventListener('click', handleDocumentClick);
-    };
-
-    triggerWordsPopoverElement.addEventListener('show.bs.popover', handleShow);
-    triggerWordsPopoverElement.addEventListener('shown.bs.popover', handleShown);
-    triggerWordsPopoverElement.addEventListener('hidden.bs.popover', handleHidden);
-
-    return () => {
-      document.removeEventListener('click', handleDocumentClick);
-      triggerWordsPopoverElement?.removeEventListener('show.bs.popover', handleShow);
-      triggerWordsPopoverElement?.removeEventListener('shown.bs.popover', handleShown);
-      triggerWordsPopoverElement?.removeEventListener('hidden.bs.popover', handleHidden);
-      popover.dispose();
-    };
-  });
-
-  $effect(() => {
-    if (menuIconsContainerElement) {
+    if (containerElement) {
       const callback = (entries: IntersectionObserverEntry[], observer: IntersectionObserver) => {
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
@@ -147,7 +75,7 @@
       };
 
       const observer = new IntersectionObserver(callback);
-      observer.observe(menuIconsContainerElement);
+      observer.observe(containerElement);
     }
   });
 </script>
@@ -159,13 +87,14 @@
 {@render children()}
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
+
 <div
   class="frosted-glass vstack position-absolute w-100 fw-bold bottom-0 start-0 text-white text-break pt-1"
   onmouseenter={fetchDetails}
+  bind:this={containerElement}
 >
-  {console.info(model)}
   {#if showMenuIcons}
-    <div class="d-flex px-1 menu-icon" bind:this={menuIconsContainerElement}>
+    <div class="d-flex px-1 menu-icon">
       {#if model.description}
         <!-- svelte-ignore a11y_invalid_attribute -->
         <a href="#" aria-label="Show description" onclick={showDescription}>
@@ -189,17 +118,36 @@
         <a
           href="#"
           aria-label="Show trigger words"
-          data-bs-toggle="popover"
-          data-bs-content={buildTriggerWordsContent(triggerWords)}
-          data-bs-custom-class="trigger-words fs-6"
-          data-bs-placement="top"
-          data-bs-container="body"
-          data-bs-html="true"
           onclick={(e) => e.stopPropagation()}
           bind:this={triggerWordsPopoverElement}
         >
           <i class="pi pi-tag text-white"></i>
         </a>
+
+        <div class="d-none">
+          <div class="list-group overflow-y-auto fs-6" bind:this={triggerWordsElement}>
+            {#each triggerWords as tag (tag)}
+              <span class="list-group-item d-flex align-items-center gap-3">
+                <span class="tag flex-grow-1">{tag}</span>
+                <!-- svelte-ignore a11y_click_events_have_key_events -->
+                <!-- svelte-ignore a11y_missing_attribute -->
+                <a
+                  class="btn py-0 px-1"
+                  aria-label="Copy trigger word"
+                  onclick={() => navigator.clipboard.writeText(tag)}
+                >
+                  <i class="pi pi-copy"></i>
+                </a>
+              </span>
+            {/each}
+          </div>
+        </div>
+        <SelectablePopover
+          triggerElement={triggerWordsPopoverElement}
+          contentsElement={triggerWordsElement}
+          placement="top"
+          customClass="trigger-words"
+        ></SelectablePopover>
       {/if}
     </div>
   {/if}
@@ -229,10 +177,7 @@
 
   :global(.popover.trigger-words) {
     --bs-popover-max-width: 700px;
-  }
-
-  :global(.trigger-words .popover-body) {
-    overflow-y: auto;
-    padding: 0;
+    --bs-popover-body-padding-x: 0 !important;
+    --bs-popover-body-padding-y: 0 !important;
   }
 </style>

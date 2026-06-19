@@ -15,13 +15,17 @@ import { jobManager } from './job-manager';
  * wipe progress UI, and clear `lastProcessedJobId`.
  */
 class ExecutionManager {
-    handleSamplingInfo(metadata: { jobId: string; [key: string]: string }) {
-        const { jobId, ...meta } = metadata;
-        jobManager.appendJobMetadata(jobId, meta);
+    handleSamplingInfo(payload: { jobId: string; [key: string]: string }) {
+        const { jobId, ...metadata } = payload;
+
+        jobManager.appendJobMetadata(jobId, metadata);
     }
 
     handlePromptQueued(payload: { jobId: string; nodeIds: string[]; prompt?: string; workflow?: string }) {
-        const { jobId, nodeIds, prompt, workflow } = payload;
+        const { nodeIds, prompt, workflow } = payload;
+        const jobId = payload.jobId;
+
+        appState.executionState.addQueueJobId(jobId, 'owned');
 
         if (gallerySession.beginQueuedPrompt()) {
             logger.debug('All jobs finished — clearing gallery for new batch');
@@ -40,13 +44,18 @@ class ExecutionManager {
     }
 
     handleStatus(payload: { queueRemaining: number }) {
-        const queueCount = payload.queueRemaining;
-        appState.executionState.queueCount = queueCount;
-        if (!appState.executionState.lastProcessedJobId) {
-            appState.executionState.progress.status = 'busy';
+        const queueRemaining = payload.queueRemaining;
+        const queueJobIds = appState.executionState.queueJobIds;
+        const jobId = appState.executionState.lastProcessedJobId;
+
+        const owner = queueJobIds.get(jobId);
+        if (owner === 'external') {
+            if (queueJobIds.size > queueRemaining) {
+                appState.executionState.deleteQueueJobId(jobId);
+            }
         }
-        if (queueCount === 0) {
-            if (appState.executionState.lastProcessedJobId) {
+        if (queueRemaining === 0) {
+            if (jobId) {
                 this.handleTaskFinished();
                 this.notifyTaskFinished();
             }
@@ -54,11 +63,14 @@ class ExecutionManager {
     }
 
     handleProgressState(payload: { jobId: string }) {
-        appState.executionState.lastProcessedJobId = payload.jobId;
+        const jobId = payload.jobId;
+
+        appState.executionState.lastProcessedJobId = jobId;
     }
 
     handleExecutionStart(payload: { jobId: string }) {
-        const jobId = payload.jobId || appState.executionState.lastProcessedJobId;
+        const jobId = payload.jobId;
+
         appState.executionState.lastProcessedJobId = jobId;
 
         jobManager.clearOtherPreviews(jobId);
@@ -69,14 +81,16 @@ class ExecutionManager {
     }
 
     handleExecutionSuccess(payload: { jobId: string }) {
-        const jobId = payload.jobId || appState.executionState.lastProcessedJobId;
+        const jobId = payload.jobId;
+
+        appState.executionState.deleteQueueJobId(jobId);
 
         gallerySession.trackFinished(jobId);
         jobManager.markJobCompleted(jobId);
 
         appState.executionState.progress.toExecuted(jobId);
 
-        if (gallerySession.activeCount === 0 && appState.executionState.queueCount === 0) {
+        if (gallerySession.activeCount === 0 && appState.executionState.queueJobIds.size === 0) {
             if (appState.executionState.lastProcessedJobId) {
                 this.notifyTaskFinished();
                 this.handleTaskFinished();
@@ -92,9 +106,9 @@ class ExecutionManager {
         exceptionMessage: string;
         traceback: string[];
     }) {
-        const { jobId: _jobId, nodeId, exceptionType, nodeType, exceptionMessage, traceback } = payload;
+        const { jobId, nodeId, exceptionType, nodeType, exceptionMessage, traceback } = payload;
 
-        const jobId = _jobId ?? appState.executionState.lastProcessedJobId;
+        appState.executionState.deleteQueueJobId(jobId);
         gallerySession.trackFinished(jobId);
         jobManager.removeJob(jobId);
 
@@ -109,8 +123,9 @@ class ExecutionManager {
     }
 
     handleExecutionInterrupted(payload: { jobId: string }) {
-        const jobId = payload.jobId || appState.executionState.lastProcessedJobId;
+        const jobId = payload.jobId;
 
+        appState.executionState.deleteQueueJobId(jobId);
         gallerySession.trackFinished(jobId);
         jobManager.removeJob(jobId);
 
@@ -119,6 +134,7 @@ class ExecutionManager {
 
     handleExecuting(payload: { jobId: string; nodeIds: string[]; nodeNames: Record<string, string> }) {
         const { jobId, nodeIds, nodeNames } = payload;
+
         appState.executionState.lastProcessedJobId = jobId;
 
         if (appState.executionState.executingNodeId) {
@@ -204,19 +220,28 @@ class ExecutionManager {
         appState.executionState.lastProcessedJobId = '';
     }
 
+    private notifyTimeout: number | null = null;
+
     private notifyTaskFinished() {
-        Notification.requestPermission().then((permission) => {
-            if (permission === 'granted') {
-                const notif: { body: string; icon?: string } = {
-                    body: 'Generation completed',
-                };
-                const thumbnail = jobManager.getLastThumbnail();
-                if (thumbnail) {
-                    notif.icon = thumbnail;
+        if (this.notifyTimeout !== null) {
+            globalThis.clearTimeout(this.notifyTimeout);
+        }
+
+        this.notifyTimeout = globalThis.setTimeout(() => {
+            Notification.requestPermission().then((permission) => {
+                if (permission === 'granted') {
+                    const notif: { body: string; icon?: string } = {
+                        body: 'Generation completed',
+                    };
+                    const thumbnail = jobManager.getLastThumbnail();
+                    if (thumbnail) {
+                        notif.icon = thumbnail;
+                    }
+                    new Notification('ComfyGrid', notif);
                 }
-                new Notification('ComfyGrid', notif);
-            }
-        });
+            });
+            this.notifyTimeout = null;
+        }, 500);
     }
 }
 

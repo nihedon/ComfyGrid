@@ -18,7 +18,10 @@
     easing: elasticInOut,
   });
 
-  const busy = $derived(executionState.progress.status === 'busy');
+  const busy = $derived(
+    executionState.queueJobIds.size > 0 &&
+      executionState.queueJobIds.get(executionState.lastProcessedJobId) === 'external',
+  );
   const hidden = $derived(
     !busy &&
       executionState.progress.status !== 'processing' &&
