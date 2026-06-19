@@ -18,10 +18,12 @@
     easing: elasticInOut,
   });
 
-  const busy = $derived(
-    executionState.queueJobIds.size > 0 &&
-      executionState.queueJobIds.get(executionState.processingJobId) === 'external',
-  );
+  const empty = $derived(executionState.queueJobIds.size === 0);
+
+  const jobOwner = $derived(executionState.queueJobIds.get(executionState.processingJobId) ?? '');
+
+  const busy = $derived(jobOwner === 'external');
+
   const hidden = $derived(
     !busy &&
       executionState.progress.status !== 'processing' &&
@@ -30,7 +32,7 @@
 
   const progressLabel = $derived.by(() => {
     if (busy) {
-      return 'Processing in background...';
+      return `Processing in background... (${executionState.queueJobIds.size})`;
     }
     if (executionState.progress.status && executionState.progress.label) {
       return executionState.progress.label;
@@ -60,7 +62,7 @@
 </script>
 
 <svelte:head>
-  {#if busy || hidden}
+  {#if empty || busy || hidden}
     <title>ComfyGrid</title>
   {:else}
     <title>ComfyGrid - {executionState.totalProgress.toFixed(0)}%</title>

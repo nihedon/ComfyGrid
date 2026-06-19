@@ -176,7 +176,6 @@ class ExecutionState {
     setProcessingJobId(jobId: string) {
         const processingJobId = this.#processingJobId;
         if (processingJobId !== jobId) {
-            this.#queueJobIds.delete(processingJobId);
             this.#processingJobId = jobId;
         }
     }

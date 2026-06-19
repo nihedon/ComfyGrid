@@ -78,11 +78,9 @@ class ExecutionManager {
         }
         this.#lastQueueRemaining = queueRemaining;
 
-        if (queueRemaining === 0) {
-            if (jobId) {
-                this.handleTaskFinished();
-                this.notifyTaskFinished();
-            }
+        if (jobId && queueRemaining === 0) {
+            this.handleTaskFinished();
+            this.notifyTaskFinished();
         }
     }
 
@@ -153,8 +151,6 @@ class ExecutionManager {
     handleExecuting(payload: { jobId: string; nodeIds: string[]; nodeNames: Record<string, string> }) {
         const { jobId, nodeIds, nodeNames } = payload;
 
-        appState.executionState.setProcessingJobId(jobId);
-
         if (appState.executionState.executingNodeId) {
             appState.executionState.progress.addExecutedNodeSet(jobId, [appState.executionState.executingNodeId]);
         }
@@ -169,8 +165,6 @@ class ExecutionManager {
     handleExecuted(payload: { jobId: string; nodeIds: string[]; nodeNames: Record<string, string>; cached: boolean }) {
         const { jobId, nodeNames, cached } = payload;
         let nodeIds = payload.nodeIds;
-
-        appState.executionState.setProcessingJobId(jobId);
 
         if (!cached) {
             const nodeId = nodeIds[0];
@@ -206,10 +200,7 @@ class ExecutionManager {
 
     async handleImageGenerated(payload: { jobId: string; nodeId: string; images: string[][] }) {
         const { jobId, nodeId, images } = payload;
-        const lastBatchJobId = await mediaProcessor.onImageGenerated(jobId, nodeId, images);
-        if (lastBatchJobId) {
-            appState.executionState.setProcessingJobId(lastBatchJobId);
-        }
+        await mediaProcessor.onImageGenerated(jobId, nodeId, images);
     }
 
     getModelName(nodeIds: string[]): string | null {
