@@ -83,6 +83,7 @@
   });
 
   $effect(() => {
+    if (galleryState.currentGalleryJob?.isRestoring) return;
     if (galleryState.currentGalleryJob?.hasPreviewNode) return;
     const jobId = galleryState.currentGalleryJob?.jobId;
     if (jobId) {

@@ -107,10 +107,9 @@ class MediaProcessor {
     }
 
     async #makeImageAssets(images: string[]): Promise<GeneratedAssets> {
-        const mediums = await Promise.all(images.map((url) => this.#resizeImage(url, 1024)));
+        const [mediums, thumb] = await Promise.all([Promise.all(images.map((url) => this.#resizeImage(url, 1024))), this.#resizeImage(images[0], 120)]);
         const mediumUrls = mediums.map((medium) => (typeof medium === 'string' ? medium : URL.createObjectURL(medium)));
 
-        const thumb = await this.#resizeImage(images[0], 120);
         let thumbnail: string;
         if (typeof thumb === 'string') {
             thumbnail = thumb;

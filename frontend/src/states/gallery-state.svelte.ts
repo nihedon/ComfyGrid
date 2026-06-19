@@ -36,6 +36,7 @@ type GalleryJobRecord = {
     metadata?: Record<string, string>;
     viewed: boolean;
     nodes: GalleryNodeRecord[];
+    isRestoring?: boolean;
 };
 
 // ---------------------------------------------------------------------------
@@ -52,6 +53,7 @@ export type GalleryJob = {
     completed: boolean;
     viewed: boolean;
     metadata?: Record<string, string>;
+    isRestoring: boolean;
 };
 
 /** Represents a node entry in the node thumbnail strip and main viewer. */
@@ -78,6 +80,26 @@ class GalleryState {
     #selectedJobIndex = $state<number>(0);
     #selectedNodeIndex = $state<number | undefined>();
     #selectedCompareIndex = $state<number>(0);
+    #nextCreatedAt = Date.now();
+    #isRestoring = $state(false);
+
+    #allocateCreatedAt(): number {
+        const now = Date.now();
+        this.#nextCreatedAt = Math.max(now, this.#nextCreatedAt + 1);
+        return this.#nextCreatedAt;
+    }
+
+    get isRestoring(): boolean {
+        return this.#isRestoring;
+    }
+
+    beginRestoration(): void {
+        this.#isRestoring = true;
+    }
+
+    setRestorationComplete(): void {
+        this.#isRestoring = false;
+    }
 
     #makeGalleryJob(record: GalleryJobRecord): GalleryJob | undefined {
         const visibleNodes = record.nodes.filter((n) => n.assets?.thumbnail || n.previewUrl);
@@ -101,6 +123,7 @@ class GalleryState {
             viewed: record.viewed,
             completed: isExternal ? !hasPreviewNode : record.completed,
             metadata: record.metadata,
+            isRestoring: record.isRestoring ?? false,
         };
     }
 
@@ -122,8 +145,9 @@ class GalleryState {
     }
 
     readonly galleryJobs = $derived.by<GalleryJob[]>(() => {
+        const sorted = [...this.#jobs.values()].sort((a, b) => a.createdAt - b.createdAt);
         const result: GalleryJob[] = [];
-        for (const record of this.#jobs.values()) {
+        for (const record of sorted) {
             const view = this.#makeGalleryJob(record);
             if (view) result.push(view);
         }
@@ -189,9 +213,10 @@ class GalleryState {
             const stateJob = $state({
                 jobId,
                 completed: false,
-                createdAt: Date.now(),
+                createdAt: this.#allocateCreatedAt(),
                 viewed: false,
                 nodes: [],
+                isRestoring: false,
                 ...partial,
             });
             this.#jobs.set(jobId, stateJob);
@@ -274,7 +299,7 @@ class GalleryState {
         const toDelete = [...this.#jobs.values()]
             .filter((r) => {
                 const view = this.#makeGalleryJob(r);
-                return view && view.completed;
+                return view?.completed;
             })
             .map((r) => r.jobId);
         toDelete.forEach((id) => this.#revokeAndDelete(id));

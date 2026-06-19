@@ -68,11 +68,13 @@ class ExecutionManager {
 
         const owner = queueJobIds.get(jobId);
         if (owner === 'external' && jobId) {
-            this.#checkJobStatus().then((jobs) => {
-                if (!jobs[jobId]) {
-                    this.handleExecutionSuccess({ jobId });
-                }
-            });
+            if (this.#lastQueueRemaining !== -1 && queueRemaining < this.#lastQueueRemaining) {
+                this.#checkJobStatus().then((jobs) => {
+                    if (!jobs[jobId]) {
+                        this.handleExecutionSuccess({ jobId });
+                    }
+                });
+            }
         }
         this.#lastQueueRemaining = queueRemaining;
 
@@ -256,10 +258,10 @@ class ExecutionManager {
     // Job lifecycle – directly manages JobState and GalleryState
     // -----------------------------------------------------------------------
 
-    #registerJob(jobId: string, meta: JobInfo['metadata']): void {
+    #registerJob(jobId: string, meta: JobInfo['metadata'], isRestoring?: boolean): void {
         const createdAt = Date.now();
         appState.jobState.setJob(jobId, { jobId, images: {}, createdAt, metadata: meta });
-        appState.galleryState.upsertJob(jobId, { metadata: meta, createdAt });
+        appState.galleryState.upsertJob(jobId, { metadata: meta, createdAt, isRestoring });
     }
 
     #completeJob(jobId: string): void {
@@ -317,6 +319,7 @@ class ExecutionManager {
 
     async syncStateFromComfyUi() {
         this.#isRestoring = true;
+        appState.galleryState.beginRestoration();
         try {
             await this.#appendQueueFromComfyUi();
             await this.#restoreFromHistory();
@@ -328,6 +331,8 @@ class ExecutionManager {
         if (appState.executionState.queueJobIds.size === 0) {
             this.handleTaskFinished();
         }
+
+        appState.galleryState.setRestorationComplete();
     }
 
     async #makePromptQueueData(jobId: string) {
@@ -351,16 +356,21 @@ class ExecutionManager {
             prompt?: string;
             workflow?: string;
             owner: 'owned' | 'external';
+            isRestoring?: boolean;
         },
     ) {
         appState.executionState.addQueueJobId(jobId, data.owner);
         gallerySession.trackQueued(jobId);
-        this.#registerJob(jobId, {
-            ckpt_name: data.ckpt_name,
-            prompt: data.prompt,
-            workflow: data.workflow,
-            owner: data.owner,
-        });
+        this.#registerJob(
+            jobId,
+            {
+                ckpt_name: data.ckpt_name,
+                prompt: data.prompt,
+                workflow: data.workflow,
+                owner: data.owner,
+            },
+            data.isRestoring,
+        );
         if (data.nodeIds.length > 0) {
             appState.executionState.progress.status = 'processing';
             appState.executionState.progress.setNodeSet(jobId, data.nodeIds);
@@ -391,7 +401,6 @@ class ExecutionManager {
         }
 
         for (const [jobId, status] of Object.entries(json)) {
-            if (status === 'completed') continue;
             const queueData = await this.#makePromptQueueData(jobId);
             this.#restoreJobWithoutBatchClear(jobId, {
                 nodeIds: queueData?.nodeIds ?? [],
@@ -413,31 +422,56 @@ class ExecutionManager {
         const historyJson = historyRes.json;
         const backendJobs = allJobsRes.ok ? allJobsRes.json : {};
 
+        const promises: Promise<void>[] = [];
+
         for (const jobId of appState.executionState.queueJobIds.keys()) {
             if (appState.galleryState.isJobCompleted(jobId)) continue;
             const historyEntry = historyJson[jobId];
             if (!historyEntry?.outputs) continue;
 
-            await this.#restoreImagesFromHistoryOutputs(jobId, historyEntry.outputs);
-            this.handleExecutionSuccess({ jobId });
+            appState.galleryState.upsertJob(jobId, { isRestoring: true });
+
+            const p = (async () => {
+                try {
+                    await this.#restoreImagesFromHistoryOutputs(jobId, historyEntry.outputs);
+                    this.handleExecutionSuccess({ jobId });
+                } finally {
+                    appState.galleryState.upsertJob(jobId, { isRestoring: false });
+                }
+            })();
+            promises.push(p);
         }
 
-        for (const jobId of appState.galleryState.getIncompleteJobIds()) {
-            if (appState.executionState.queueJobIds.has(jobId)) continue;
-            const historyEntry = historyJson[jobId];
-            if (!historyEntry?.outputs) continue;
-
-            const queueData = await this.#makePromptQueueData(jobId);
+        const incompleteJobIds = appState.galleryState
+            .getIncompleteJobIds()
+            .filter((jobId) => !appState.executionState.queueJobIds.has(jobId) && historyJson[jobId]?.outputs);
+        const queueDataResults = await Promise.all(
+            incompleteJobIds.map(async (jobId) => {
+                const queueData = await this.#makePromptQueueData(jobId);
+                return { jobId, queueData };
+            }),
+        );
+        for (const { jobId, queueData } of queueDataResults) {
             this.#restoreJobWithoutBatchClear(jobId, {
                 nodeIds: queueData?.nodeIds ?? [],
                 ckpt_name: queueData?.ckpt_name,
                 prompt: queueData?.prompt,
                 workflow: queueData?.workflow,
                 owner: 'external',
+                isRestoring: true,
             });
-
-            await this.#restoreImagesFromHistoryOutputs(jobId, historyEntry.outputs);
-            this.handleExecutionSuccess({ jobId });
+        }
+        for (const { jobId } of queueDataResults) {
+            const historyEntry = historyJson[jobId];
+            const p = (async () => {
+                try {
+                    await this.#restoreImagesFromHistoryOutputs(jobId, historyEntry.outputs);
+                    this.handleExecutionSuccess({ jobId });
+                } finally {
+                    appState.galleryState.upsertJob(jobId, { isRestoring: false });
+                }
+            })();
+            promises.push(p);
         }
 
         for (const [jobId, jobData] of Object.entries(backendJobs)) {
@@ -454,11 +488,21 @@ class ExecutionManager {
                 prompt: jobData.prompt,
                 workflow: jobData.workflow,
                 owner: 'external',
+                isRestoring: true,
             });
 
-            await this.#restoreImagesFromHistoryOutputs(jobId, historyEntry.outputs);
-            this.handleExecutionSuccess({ jobId });
+            const p = (async () => {
+                try {
+                    await this.#restoreImagesFromHistoryOutputs(jobId, historyEntry.outputs);
+                    this.handleExecutionSuccess({ jobId });
+                } finally {
+                    appState.galleryState.upsertJob(jobId, { isRestoring: false });
+                }
+            })();
+            promises.push(p);
         }
+
+        await Promise.all(promises);
     }
 
     #cleanupOrphanedIncompleteJobs() {
