@@ -80,6 +80,26 @@
   });
 </script>
 
+{#snippet sparkbox(ariaLabel: string, history: number[], max: number = 100, color: string)}
+  <div class="sparkbox">
+    <svg
+      viewBox="0 0 {WIDTH} {HEIGHT}"
+      preserveAspectRatio="none"
+      role="img"
+      aria-label={ariaLabel}
+    >
+      <path d={areaPath(history, max)} fill={color} fill-opacity="0.15" />
+      <path
+        d={linePath(history, max)}
+        fill="none"
+        stroke={color}
+        stroke-width="1.5"
+        stroke-linejoin="round"
+      />
+    </svg>
+  </div>
+{/snippet}
+
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
   class="card"
@@ -100,23 +120,7 @@
         >{cpu.total.toFixed(1)}<span class="sup">%</span></span
       >
     </div>
-    <div class="sparkbox">
-      <svg
-        viewBox="0 0 {WIDTH} {HEIGHT}"
-        preserveAspectRatio="none"
-        role="img"
-        aria-label="CPU Usage Graph"
-      >
-        <path d={areaPath(cpuHistory)} fill={color(cpu.total)} fill-opacity="0.15" />
-        <path
-          d={linePath(cpuHistory)}
-          fill="none"
-          stroke={color(cpu.total)}
-          stroke-width="1.5"
-          stroke-linejoin="round"
-        />
-      </svg>
-    </div>
+    {@render sparkbox('CPU Usage Graph', cpuHistory, 100, color(cpu.total ?? 0))}
     <!-- Core -->
     {#if !simple && showCores && cpu.per_core.length}
       <div class="core-row">
@@ -139,23 +143,7 @@
         >{ram.pct.toFixed(1)}<span class="sup">%</span></span
       >
     </div>
-    <div class="sparkbox">
-      <svg
-        viewBox="0 0 {WIDTH} {HEIGHT}"
-        preserveAspectRatio="none"
-        role="img"
-        aria-label="RAM Usage Graph"
-      >
-        <path d={areaPath(ramHistory)} fill={color(ram.pct)} fill-opacity="0.15" />
-        <path
-          d={linePath(ramHistory)}
-          fill="none"
-          stroke={color(ram.pct)}
-          stroke-width="1.5"
-          stroke-linejoin="round"
-        />
-      </svg>
-    </div>
+    {@render sparkbox('RAM Usage Graph', ramHistory, 100, color(ram.pct ?? 0))}
     {#if !simple}
       <div class="sub-info">
         <span>{ram.used_gb.toFixed(1)} GB</span>
@@ -185,23 +173,7 @@
       {/if}
     </div>
     {#if gpu.available}
-      <div class="sparkbox">
-        <svg
-          viewBox="0 0 {WIDTH} {HEIGHT}"
-          preserveAspectRatio="none"
-          role="img"
-          aria-label="GPU Usage Graph"
-        >
-          <path d={areaPath(gpuHistory)} fill={color(gpu.gpu_pct ?? 0)} fill-opacity="0.15" />
-          <path
-            d={linePath(gpuHistory)}
-            fill="none"
-            stroke={color(gpu.gpu_pct ?? 0)}
-            stroke-width="1.5"
-            stroke-linejoin="round"
-          />
-        </svg>
-      </div>
+      {@render sparkbox('GPU Usage Graph', gpuHistory, 100, color(gpu.gpu_pct ?? 0))}
       {#if !simple}
         <div class="progress-track">
           <div
@@ -227,23 +199,7 @@
       {/if}
     </div>
     {#if gpu.available}
-      <div class="sparkbox">
-        <svg
-          viewBox="0 0 {WIDTH} {HEIGHT}"
-          preserveAspectRatio="none"
-          role="img"
-          aria-label="VRAM Usage Graph"
-        >
-          <path d={areaPath(vramHistory)} fill={color(gpu.vram_pct ?? 0)} fill-opacity="0.15" />
-          <path
-            d={linePath(vramHistory)}
-            fill="none"
-            stroke={color(gpu.vram_pct ?? 0)}
-            stroke-width="1.5"
-            stroke-linejoin="round"
-          />
-        </svg>
-      </div>
+      {@render sparkbox('VRAM Usage Graph', vramHistory, 100, color(gpu.vram_pct ?? 0))}
       {#if !simple}
         <div class="sub-info">
           <span>{(gpu.vram_used ?? 0).toFixed(1)} GB</span>
@@ -273,27 +229,7 @@
       {/if}
     </div>
     {#if gpu.available}
-      <div class="sparkbox">
-        <svg
-          viewBox="0 0 {WIDTH} {HEIGHT}"
-          preserveAspectRatio="none"
-          role="img"
-          aria-label="GPU Temperature Graph"
-        >
-          <path
-            d={areaPath(tempHistory, tempMax)}
-            fill={tempColor(gpu.temp_c ?? 0)}
-            fill-opacity="0.15"
-          />
-          <path
-            d={linePath(tempHistory, tempMax)}
-            fill="none"
-            stroke={tempColor(gpu.temp_c ?? 0)}
-            stroke-width="1.5"
-            stroke-linejoin="round"
-          />
-        </svg>
-      </div>
+      {@render sparkbox('GPU Temperature Graph', tempHistory, tempMax, tempColor(gpu.temp_c ?? 0))}
       {#if !simple}
         <!-- Temperature Gauge -->
         <div class="temp-gauge">
