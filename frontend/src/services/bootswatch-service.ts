@@ -15,11 +15,11 @@ const BOOTSWATCH_LINK_ID = 'bootswatch-theme-css';
 export const BOOTSWATCH_THEME_OPT_KEY = 'bootswatch_theme_url';
 
 export async function fetchBootswatchThemes(): Promise<BootswatchTheme[]> {
-    const resp = await fetch(BOOTSWATCH_API_URL);
-    if (!resp.ok) {
-        throw new Error(`HTTP error! status: ${resp.status}`);
+    const res = await fetch(BOOTSWATCH_API_URL);
+    if (!res.ok) {
+        throw new Error(`HTTP error! status: ${res.status}`);
     }
-    const data = await resp.json();
+    const data = await res.json();
     return data.themes as BootswatchTheme[];
 }
 

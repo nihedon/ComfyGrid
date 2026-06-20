@@ -82,44 +82,6 @@ export class ComfyUiBridge {
         this.#app.queuePrompt(0, batchCount);
     }
 
-    /**
-     * Handle interrupt command from ComfyGrid
-     * @param _e - Message event (unused)
-     */
-    async interrupt(): Promise<void> {
-        await fetch('/interrupt', {
-            method: 'POST',
-        });
-    }
-
-    /**
-     * Handle delete queue command from ComfyGrid
-     * @param jobId - Job ID to delete
-     */
-    async deleteQueue(jobId: string): Promise<void> {
-        await fetch('/queue', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ delete: [jobId] }),
-        });
-    }
-
-    /**
-     * Handle clear queue command from ComfyGrid
-     * @param _e - Message event (unused)
-     */
-    async clearQueue(): Promise<void> {
-        await fetch('/queue', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ clear: true }),
-        });
-    }
-
     async nodeQueue(payload: { nodeId: string }): Promise<void> {
         const { nodeId } = payload;
         await nodeQueueManager.queueOutputNodes(this.#app, nodeId);

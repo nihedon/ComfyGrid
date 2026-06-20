@@ -1,21 +1,10 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import { comfyGridApiClient } from '@/api/api-client';
+  import type { SetupConfig, WorkspaceInfo } from '@/types/setup';
   import logger from '@/utils/logger';
 
   const DEFAULT_COMFYUI_PORT = 8188;
-
-  interface WorkspaceInfo {
-    name: string;
-    script_path: string;
-    python_path: string;
-    comfyui_port: number;
-  }
-
-  interface SetupConfig {
-    workspaces: WorkspaceInfo[];
-    last_workspace: string;
-    connect_port: number | null;
-  }
 
   type LaunchMode = 'launch' | 'connect';
 
@@ -46,25 +35,23 @@
 
     async function pollConfig() {
       while (!unmounted) {
-        try {
-          const res = await fetch('/comfygrid/api/setup/config');
-          if (res.ok) {
-            config = await res.json();
-            connectPort = config.connect_port;
+        const res = await comfyGridApiClient.getSetupConfig();
+        if (res.ok) {
+          config = res.json;
+          connectPort = config.connect_port;
 
-            if (config.workspaces.length > 0) {
-              const lastWs = config.workspaces.find((w) => w.name === config.last_workspace);
-              selectedWorkspaceName = lastWs?.name ?? config.workspaces[0].name;
-              syncEditingWorkspace(selectedWorkspaceName);
-            } else {
-              isNewWorkspace = true;
-            }
-            isConnectingToBackend = false;
-            errorMessage = '';
-            break;
+          if (config.workspaces.length > 0) {
+            const lastWs = config.workspaces.find((w) => w.name === config.last_workspace);
+            selectedWorkspaceName = lastWs?.name ?? config.workspaces[0].name;
+            syncEditingWorkspace(selectedWorkspaceName);
+          } else {
+            isNewWorkspace = true;
           }
-        } catch (e) {
-          logger.debug('Waiting for backend...', e);
+          isConnectingToBackend = false;
+          errorMessage = '';
+          break;
+        } else {
+          logger.debug('Waiting for backend...');
         }
 
         // Wait 1 second before retrying
@@ -123,19 +110,14 @@
           ? { mode: 'launch', workspace: { ...editingWorkspace } }
           : { mode: 'connect', connect_port: connectPort };
 
-      const res = await fetch('/comfygrid/api/setup/launch', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
+      const res = await comfyGridApiClient.postSetupLaunch(JSON.stringify(body));
 
       if (!res.ok) {
         if (res.status === 409) {
           handleLaunched();
           return;
         }
-        const data = await res.json();
-        errorMessage = data.error ?? 'Unknown error';
+        errorMessage = res.json.error ?? 'Unknown error';
         return;
       }
 
@@ -149,37 +131,29 @@
   }
 
   async function pickMainScriptFile() {
-    const res = await fetch('/comfygrid/api/dialog/file', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        title: 'Select ComfyUI main.py',
-        filetypes: [['ComfyUI main.py', 'main.py']],
-        initial_dir: editingWorkspace.script_path || '',
-      }),
-    });
-    const data = await res.json();
-    if (data.path) {
-      editingWorkspace.script_path = data.path;
+    const filetypes = [['ComfyUI main.py', 'main.py']];
+    const data = await comfyGridApiClient.postDialogFile(
+      'Select ComfyUI main.py',
+      filetypes,
+      editingWorkspace.script_path,
+    );
+    if (data.ok) {
+      editingWorkspace.script_path = data.json.path;
     }
   }
 
   async function pickPythonFile() {
-    const res = await fetch('/comfygrid/api/dialog/file', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        title: 'Select ComfyUI python.exe',
-        filetypes: [
-          ['Python', 'python.exe'],
-          ['Python3', 'python3.exe'],
-        ],
-        initial_dir: editingWorkspace.python_path || '',
-      }),
-    });
-    const data = await res.json();
-    if (data.path) {
-      editingWorkspace.python_path = data.path;
+    const filetypes = [
+      ['Python', 'python.exe'],
+      ['Python3', 'python3.exe'],
+    ];
+    const data = await comfyGridApiClient.postDialogFile(
+      'Select ComfyUI python.exe',
+      filetypes,
+      editingWorkspace.python_path,
+    );
+    if (data.ok) {
+      editingWorkspace.python_path = data.json.path;
     }
   }
 </script>

@@ -1,3 +1,4 @@
+import type { Version } from '@/types/verion';
 import { comfyUiState } from './comfyui-state.svelte';
 import { dialogState } from './dialog-state.svelte';
 import { executionState } from './execution-state.svelte';
@@ -11,14 +12,6 @@ import { systemState } from './system-state.svelte';
 import { toastState } from './toast-state.svelte';
 import { uiState } from './ui-state.svelte';
 import { workspaceState } from './workspace-state.svelte';
-
-type Version = {
-    branch: string;
-    commit: string;
-    tag: string;
-    date: string;
-    comitter: string;
-};
 
 class AppState {
     name: string = $state('ComfyGrid');

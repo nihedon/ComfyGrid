@@ -8,6 +8,7 @@
   import { importLayout } from '@/services/gridstack-service';
   import { appState } from '@/states/app-state.svelte';
   import logger from '@/utils/logger';
+  import { comfyGridApiClient } from './api/api-client';
 
   const toastState = appState.toastState;
   const workspaceState = appState.workspaceState;
@@ -77,20 +78,15 @@
     const formData = new FormData();
     formData.append('file', file);
 
-    try {
-      const res = await fetch('/comfygrid/api/image_info', {
-        method: 'POST',
-        body: formData,
-      });
-      const json = await res.json();
-      if (json.workflow) {
-        await loadWorkflow(fileName, JSON.parse(json.workflow));
+    const res = await comfyGridApiClient.postImageInfo(file);
+    if (res.ok) {
+      if (res.json.workflow) {
+        await loadWorkflow(fileName, JSON.parse(res.json.workflow));
       } else {
-        toastState.addToast({ type: 'warning', message: $t('toast.no_workflow_found') });
+        toastState.addToast({ type: 'error', message: $t('toast.metadata_load_failed') });
       }
-    } catch (error) {
-      logger.error('Failed to extract metadata:', error);
-      toastState.addToast({ type: 'error', message: $t('toast.metadata_load_failed') });
+    } else {
+      toastState.addToast({ type: 'warning', message: $t('toast.no_workflow_found') });
     }
   }
 

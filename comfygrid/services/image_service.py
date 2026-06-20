@@ -169,7 +169,11 @@ def make_directory(output_dir: Path, image_info: dict) -> Path:
 def complement_image_info(image_info: dict) -> dict:
     image_info = dict(image_info)
     dt = get_datetime(image_info)
-    image_info["ckpt_name"] = os.path.splitext(os.path.basename(image_info.get("ckpt_name", "")))[0]
+    ckpt_name = image_info.get("ckpt_name", None)
+    if ckpt_name:
+        image_info["ckpt_name"] = os.path.splitext(os.path.basename(ckpt_name))[0]
+    else:
+        image_info["ckpt_name"] = "unknown"
     image_info["seed"] = image_info.get("seed", "")
     image_info["date"] = datetime.strftime(dt, "%Y-%m-%d")
     image_info["datetime"] = datetime.strftime(dt, "%Y%m%d%H%M%S")
