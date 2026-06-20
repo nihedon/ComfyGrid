@@ -211,7 +211,7 @@
   <SharedThumbnailPopover />
 
   {#snippet failed(error, reset)}
-    {@const err = error as any}
+    {@const err = error as Error}
     <div class="container py-5">
       <div class="row justify-content-center">
         <div class="col-md-8">

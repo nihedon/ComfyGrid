@@ -83,14 +83,13 @@
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
   class="card"
-  class:p-2={!simple}
-  class:gap-2={!simple}
+  class:simple
   class:unavailable={isGpuGroup && !gpu.available}
   ondblclick={changePosition}
 >
   <!-- CPU -->
   {#if monitorType === 'cpu'}
-    <div class="card-head w-100" class:position-absolute={simple} class:px-1={simple}>
+    <div class="card-head w-100">
       <span>
         <span class="label">CPU</span>
         {#if !simple && cpu.freq_mhz}
@@ -134,7 +133,7 @@
     {/if}
   {:else if monitorType === 'ram'}
     <!-- RAM -->
-    <div class="card-head w-100" class:position-absolute={simple} class:px-1={simple}>
+    <div class="card-head w-100">
       <span class="label">RAM</span>
       <span class="val" style:color={color(ram.pct)}
         >{ram.pct.toFixed(1)}<span class="sup">%</span></span
@@ -172,10 +171,10 @@
     {/if}
   {:else if monitorType === 'gpu'}
     <!-- GPU -->
-    <div class="card-head w-100" class:position-absolute={simple} class:px-1={simple}>
+    <div class="card-head w-100">
       <span>
         <span class="label">GPU</span>
-        {#if !simple && gpu.name}<span class="label chip">{gpu.name}</span>{/if}
+        {#if gpu.available && !simple && gpu.name}<span class="label chip">{gpu.name}</span>{/if}
       </span>
       {#if gpu.available}
         <span class="val" style:color={color(gpu.gpu_pct ?? 0)}
@@ -213,11 +212,11 @@
         </div>
       {/if}
     {:else}
-      <p class="no-gpu-msg">NVIDIA GPU Not Found</p>
+      <p class="no-gpu-msg">Not Found</p>
     {/if}
   {:else if monitorType === 'vram'}
     <!-- VRAM -->
-    <div class="card-head w-100" class:position-absolute={simple} class:px-1={simple}>
+    <div class="card-head w-100">
       <span class="label">VRAM</span>
       {#if gpu.available}
         <span class="val" style:color={color(gpu.vram_pct ?? 0)}
@@ -259,11 +258,11 @@
         </div>
       {/if}
     {:else}
-      <p class="no-gpu-msg">GPU Not Found</p>
+      <p class="no-gpu-msg">Not Found</p>
     {/if}
   {:else if monitorType === 'temp'}
     <!-- TEMP -->
-    <div class="card-head w-100" class:position-absolute={simple} class:px-1={simple}>
+    <div class="card-head w-100">
       <span class="label">TEMP</span>
       {#if gpu.available}
         <span class="val" style:color={tempColor(gpu.temp_c ?? 0)}
@@ -311,7 +310,7 @@
         </div>
       {/if}
     {:else}
-      <p class="no-gpu-msg">GPU Not Found</p>
+      <p class="no-gpu-msg">Not Found</p>
     {/if}
   {/if}
 </div>
@@ -321,14 +320,42 @@
     font-family: 'Courier New', monospace;
     user-select: none;
     position: relative;
-    &.unavailable {
-      opacity: 0.45;
-    }
 
     .card-head {
       display: flex;
       justify-content: space-between;
       align-items: baseline;
+    }
+
+    .no-gpu-msg {
+      width: 100%;
+      font-size: 0.9rem;
+      color: #3a3f52;
+      margin: 0;
+      text-align: center;
+    }
+
+    &:not(.simple) {
+      padding: 0.5rem;
+      gap: 0.5rem;
+    }
+
+    &.simple {
+      min-width: 95px;
+
+      .card-head {
+        position: absolute;
+        padding: 0 0.5rem;
+      }
+
+      .no-gpu-msg {
+        position: absolute;
+        bottom: 0;
+      }
+    }
+
+    &.unavailable {
+      opacity: 0.45;
     }
   }
 
@@ -348,7 +375,7 @@
     font-size: 0.9rem;
   }
   .no-gpu {
-    font-size: 18px;
+    font-size: 0.9rem;
     color: #3a3f52;
   }
 
@@ -433,13 +460,5 @@
     top: 0;
     font-size: 8px;
     transform: translateX(-50%);
-  }
-
-  .no-gpu-msg {
-    font-size: 11px;
-    color: #3a3f52;
-    margin: 0;
-    text-align: center;
-    padding: 12px 0;
   }
 </style>

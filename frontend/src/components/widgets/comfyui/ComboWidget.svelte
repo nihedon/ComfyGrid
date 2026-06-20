@@ -80,7 +80,7 @@
   }
 </script>
 
-<div data-name={widget.name} title={widget.tooltip ?? ''}>
+<div title={widget.tooltip ?? ''} data-id={widget.id} data-name={widget.name}>
   <label
     class="p-0 flex-nowrap text-truncate"
     class:col-4={modelDirInfo === null}

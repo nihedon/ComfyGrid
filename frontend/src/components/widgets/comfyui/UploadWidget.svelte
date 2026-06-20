@@ -25,7 +25,7 @@
   }
 </script>
 
-<div class={widget.name} title={widget.tooltip ?? ''}>
+<div title={widget.tooltip ?? ''} data-id={widget.id} data-name={widget.name}>
   <div class="d-flex flex-grow-1 gap-2">
     <ModalComboWidget
       node={widget.node}

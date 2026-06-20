@@ -37,9 +37,13 @@
   }
 </script>
 
-<div class="object-contain" title={widget.tooltip ?? ''}>
+<div
+  class="object-contain"
+  title={widget.tooltip ?? ''}
+  data-id={widget.id}
+  data-name={widget.name}
+>
   <audio
-    id={widget.id}
     class="flex-grow-1"
     style="height: 34px"
     src={previewUrl}

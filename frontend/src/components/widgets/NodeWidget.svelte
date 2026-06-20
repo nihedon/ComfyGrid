@@ -285,6 +285,8 @@
   class:is-invalid={workspaceState.hasErrorNode(node.id)}
   style:background-color={bgColor}
   style:display={showNode ? '' : 'none'}
+  data-id={node.id}
+  data-name={node.title}
 >
   <div class="card-header" class:mute={node.mode === 2}>
     {#if !isTitleEditing}

@@ -118,7 +118,12 @@
   });
 </script>
 
-<div class="d-flex flex-grow-1 {widget.name}" title={widget.tooltip ?? ''}>
+<div
+  class="d-flex flex-grow-1"
+  title={widget.tooltip ?? ''}
+  data-id={widget.id}
+  data-name={widget.name}
+>
   <div class="vstack h-100 flex-grow-1 rounded textarea-container">
     <div class="d-flex border rounded-top border-bottom-0 bg-light d-flex py-0 ps-3 pe-0">
       <div class="dropdown">
@@ -166,11 +171,9 @@
     </div>
     <div class="d-flex flex-grow-1 overflow-y-hidden">
       <textarea
-        id={widget.id}
         class="flex-grow-1 form-control overflow-y-scroll rounded-top-0"
         class:positive-prompt={isPositivePrompt}
         class:prompt={isPromptGroup}
-        data-name={widget.name}
         onkeydown={keydown}
         oninput={handleInput}
         rows={isFloating ? 1 : 6}
