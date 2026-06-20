@@ -187,24 +187,70 @@
   });
 </script>
 
-<main class="vstack h-100 w-100">
-  {#if showScreen}
-    {#if !launched}
-      <SetupScreen onLaunched={handleSetupLaunched} />
-    {:else}
-      {#if comfyUiState.graphReady && !initializing}
-        <Header />
+<svelte:boundary>
+  <main class="vstack h-100 w-100">
+    {#if showScreen}
+      {#if !launched}
+        <SetupScreen onLaunched={handleSetupLaunched} />
       {:else}
-        <LoadingScreen {initializing} />
+        {#if comfyUiState.graphReady && !initializing}
+          <Header />
+        {:else}
+          <LoadingScreen {initializing} />
+        {/if}
+        <Body {initializing} />
       {/if}
-      <Body {initializing} />
     {/if}
-  {/if}
-</main>
+  </main>
 
-<ModelsModal />
-<PaintModal />
-<DescriptionModal />
-<ToastContainer />
-<Dialog />
-<SharedThumbnailPopover />
+  <ModelsModal />
+  <PaintModal />
+  <DescriptionModal />
+  <ToastContainer />
+  <Dialog />
+  <SharedThumbnailPopover />
+
+  {#snippet failed(error, reset)}
+    {@const err = error as any}
+    <div class="container py-5">
+      <div class="row justify-content-center">
+        <div class="col-md-8">
+          <div class="card border-danger shadow-lg">
+            <div class="card-header bg-danger text-white d-flex align-items-center gap-2">
+              <i class="pi pi-exclamation-triangle"></i>
+              <h5 class="card-title mb-0">Application Error</h5>
+            </div>
+            <div class="card-body">
+              <p class="card-text text-muted">
+                An unexpected error occurred in the application view. You can try to reset the view
+                or reload the page.
+              </p>
+              <div
+                class="alert alert-secondary font-monospace text-wrap small my-3"
+                style="max-height: 250px; overflow-y: auto;"
+              >
+                <strong>{err?.name || 'Error'}:</strong>
+                {err?.message || err}
+                {#if err?.stack}
+                  <pre class="mt-2 mb-0 text-muted" style="white-space: pre-wrap;">{err.stack}</pre>
+                {/if}
+              </div>
+              <div class="d-flex justify-content-end gap-2 mt-4">
+                <button type="button" class="btn btn-outline-secondary" onclick={reset}>
+                  <i class="pi pi-refresh me-1"></i>Reset View
+                </button>
+                <button
+                  type="button"
+                  class="btn btn-danger"
+                  onclick={() => globalThis.location.reload()}
+                >
+                  <i class="pi pi-sync me-1"></i>Reload Page
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  {/snippet}
+</svelte:boundary>
