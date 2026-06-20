@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
+  import { comfyGridApiClient } from '@/api/api-client';
   import { appState } from '@/states/app-state.svelte';
   import type { Model } from '@/states/storage-state.svelte';
   import logger from '@/utils/logger';
@@ -45,22 +46,17 @@
 
     logger.info(`[${model.name}] fetching details`);
 
-    try {
-      const res = await fetch(`/comfygrid/api/model_info=${model.full_path}`);
-      if (res.ok) {
-        const data = await res.json();
-        if (data.description) {
-          model.description = data.description;
-        }
-        if (data.metadata) {
-          model.metadata = data.metadata;
-        }
+    const res = await comfyGridApiClient.getModelInfo(model.full_path);
+    if (res.ok) {
+      const data = res.json;
+      if (data.description) {
+        model.description = data.description;
       }
-    } catch (e) {
-      console.error(e);
-    } finally {
-      model.retrieved = true;
+      if (data.metadata) {
+        model.metadata = data.metadata;
+      }
     }
+    model.retrieved = true;
   }
 
   $effect(() => {

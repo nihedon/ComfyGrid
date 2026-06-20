@@ -1,5 +1,6 @@
 <script lang="ts">
   import { sortBy } from 'es-toolkit/array';
+  import { comfyGridApiClient } from '@/api/api-client';
   import { t } from '@/i18n/i18n';
   import { refreshModels } from '@/services/models-service';
   import { saveOptsWithCallback } from '@/services/options-service';
@@ -161,15 +162,12 @@
     const subfolder = pathes.join('/');
 
     try {
-      const query = new URLSearchParams({
+      const res = await comfyGridApiClient.deleteImage({
         type: 'input',
         filename: filename,
         subfolder: subfolder,
       });
-      const response = await fetch(`/comfygrid/api/delete_image?${query.toString()}`, {
-        method: 'DELETE',
-      });
-      if (response.ok) {
+      if (res.ok) {
         reloadModels();
       } else {
         logger.error('Failed to delete');

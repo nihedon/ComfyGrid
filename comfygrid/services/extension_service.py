@@ -61,14 +61,22 @@ def list_custom_nodes() -> list[dict]:
         return []
 
     result = []
-    for ext_dir in sorted(CUSTOM_EXTENSIONS_DIR.iterdir()):
-        manifest_path = ext_dir / "manifest.json"
-        if ext_dir.is_dir() and manifest_path.exists():
-            try:
+    try:
+        entries = list(CUSTOM_EXTENSIONS_DIR.iterdir())
+    except Exception as e:
+        logging.error("Failed to list custom nodes directory %s: %s", CUSTOM_EXTENSIONS_DIR, e)
+        return []
+
+    for ext_dir in sorted(entries):
+        try:
+            if not ext_dir.is_dir():
+                continue
+            manifest_path = ext_dir / "manifest.json"
+            if manifest_path.exists():
                 manifest = orjson.loads(manifest_path.read_text(encoding="utf-8"))
                 result.append({ext_dir.name: manifest})
-            except Exception:
-                logging.exception("Failed to read extension manifest: %s", manifest_path)
+        except Exception as e:
+            logging.error("Failed to process custom node directory %s: %s", ext_dir, e)
     return result
 
 

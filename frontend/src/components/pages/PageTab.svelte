@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { comfyGridApiClient } from '@/api/api-client';
   import { t } from '@/i18n/i18n';
   import { workflowManager } from '@/managers/workflow-manager';
   import { appState } from '@/states/app-state.svelte';
@@ -36,13 +37,10 @@
   let isRestarting = $state(false);
   async function handleRestart() {
     isRestarting = true;
-    try {
-      await fetch('/comfygrid/api/restart', { method: 'POST' });
-    } catch (e) {
-      logger.error('Failed to restart ComfyUI', e);
-    } finally {
-      isRestarting = false;
+    if (!(await comfyGridApiClient.postRestart())) {
+      logger.error('Failed to restart ComfyUI');
     }
+    isRestarting = false;
   }
 
   function handleReload() {

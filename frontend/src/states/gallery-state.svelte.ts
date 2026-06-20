@@ -1,22 +1,22 @@
-import { type IDBPDatabase, openDB } from 'idb';
 import { SvelteMap } from 'svelte/reactivity';
+import { comfyGridApiClient } from '@/api/api-client';
 import { appState } from './app-state.svelte';
 
 // ---------------------------------------------------------------------------
-// Types – moved from job-state.svelte.ts since display is gallery's concern
+// Types
 // ---------------------------------------------------------------------------
 
 export type GeneratedAssets = {
     originalSingle?: string;
     originalCompare?: string[];
-    mediumSingle?: string; // blob URL, runtime only (not persisted)
-    mediumCompare?: string[]; // blob URLs, runtime only (not persisted)
+    mediumSingle?: string; // blob URL, runtime only
+    mediumCompare?: string[]; // blob URLs, runtime only
     videoSingle?: string;
     isVideo?: boolean;
-    thumbnail: string; // base64, persisted
+    thumbnail: string;
 };
 
-/** Internal storage node (held in Map and IndexedDB). */
+/** Internal storage node (held in memory). */
 type GalleryNodeRecord = {
     nodeId: string;
     batchJobIndex: number;
@@ -24,10 +24,10 @@ type GalleryNodeRecord = {
     assets?: GeneratedAssets;
     saved: boolean;
     downloaded: boolean;
-    previewUrl?: string; // runtime only, not persisted
+    previewUrl?: string;
 };
 
-/** Internal storage job (held in Map and IndexedDB). */
+/** Internal storage job (held in memory). */
 type GalleryJobRecord = {
     jobId: string;
     completed: boolean;
@@ -36,6 +36,7 @@ type GalleryJobRecord = {
     metadata?: Record<string, string>;
     viewed: boolean;
     nodes: GalleryNodeRecord[];
+    isRestoring?: boolean;
 };
 
 // ---------------------------------------------------------------------------
@@ -52,6 +53,7 @@ export type GalleryJob = {
     completed: boolean;
     viewed: boolean;
     metadata?: Record<string, string>;
+    isRestoring: boolean;
 };
 
 /** Represents a node entry in the node thumbnail strip and main viewer. */
@@ -69,64 +71,34 @@ export type GalleryNode = {
 };
 
 // ---------------------------------------------------------------------------
-// IndexedDB helpers
+// GalleryState – pure in-memory state, no persistence
 // ---------------------------------------------------------------------------
-
-type PersistedNode = Omit<GalleryNodeRecord, 'previewUrl'> & {
-    assets?: Omit<GeneratedAssets, 'mediumSingle' | 'mediumCompare'>;
-};
-type PersistedJob = Omit<GalleryJobRecord, 'nodes'> & { nodes: PersistedNode[] };
-
-interface ComfyGridDB {
-    galleryJobs: { key: string; value: PersistedJob };
-}
-
-async function openGalleryDB(): Promise<IDBPDatabase<ComfyGridDB>> {
-    return openDB<ComfyGridDB>('comfygrid-gallery', 1, {
-        upgrade(database) {
-            database.createObjectStore('galleryJobs', { keyPath: 'jobId' });
-        },
-    });
-}
-
-function toPersistedJob(record: GalleryJobRecord): PersistedJob {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const nodes = record.nodes.map(({ previewUrl: _preview, assets, ...rest }) => ({
-        ...rest,
-        assets: assets ? { ...assets, mediumSingle: undefined, mediumCompare: undefined } : undefined,
-    }));
-    return $state.snapshot({ ...record, nodes }) as PersistedJob;
-}
-
-// ---------------------------------------------------------------------------
-// GalleryState
-// ---------------------------------------------------------------------------
-
-const db = await openGalleryDB();
-const stored = await db.getAll('galleryJobs');
 
 class GalleryState {
-    readonly #db: IDBPDatabase<ComfyGridDB> | null;
     readonly #jobs = new SvelteMap<string, GalleryJobRecord>();
 
     #selectedJobIndex = $state<number>(0);
     #selectedNodeIndex = $state<number | undefined>();
     #selectedCompareIndex = $state<number>(0);
+    #nextCreatedAt = Date.now();
+    #isRestoring = $state(false);
 
-    constructor(db: IDBPDatabase<ComfyGridDB>, stored: PersistedJob[]) {
-        this.#db = db;
-        this.#initJobs(stored);
+    #allocateCreatedAt(): number {
+        const now = Date.now();
+        this.#nextCreatedAt = Math.max(now, this.#nextCreatedAt + 1);
+        return this.#nextCreatedAt;
     }
 
-    #initJobs(stored: PersistedJob[]) {
-        for (const job of stored) {
-            if (!job.completed) {
-                db.delete('galleryJobs', job.jobId);
-                continue;
-            }
-            const stateJob = $state(job);
-            this.#jobs.set(job.jobId, stateJob);
-        }
+    get isRestoring(): boolean {
+        return this.#isRestoring;
+    }
+
+    beginRestoration(): void {
+        this.#isRestoring = true;
+    }
+
+    setRestorationComplete(): void {
+        this.#isRestoring = false;
     }
 
     #makeGalleryJob(record: GalleryJobRecord): GalleryJob | undefined {
@@ -140,6 +112,7 @@ class GalleryState {
         const isPreview = Boolean(selected.previewUrl && !selected.assets);
         const hasPreviewNode = record.nodes.some((n) => n.previewUrl && !n.assets);
         const hasSaved = record.nodes.some((n) => n.saved);
+        const isExternal = record.metadata?.owner === 'external';
 
         return {
             jobId: record.jobId,
@@ -147,9 +120,10 @@ class GalleryState {
             isPreview,
             hasPreviewNode,
             hasSaved,
-            completed: record.completed,
             viewed: record.viewed,
+            completed: isExternal ? !hasPreviewNode : record.completed,
             metadata: record.metadata,
+            isRestoring: record.isRestoring ?? false,
         };
     }
 
@@ -171,8 +145,9 @@ class GalleryState {
     }
 
     readonly galleryJobs = $derived.by<GalleryJob[]>(() => {
+        const sorted = [...this.#jobs.values()].sort((a, b) => a.createdAt - b.createdAt);
         const result: GalleryJob[] = [];
-        for (const record of this.#jobs.values()) {
+        for (const record of sorted) {
             const view = this.#makeGalleryJob(record);
             if (view) result.push(view);
         }
@@ -218,9 +193,17 @@ class GalleryState {
         this.#selectedCompareIndex = value;
     }
 
-    // -----------------------------------------------------------------------
-    // Sync methods – called by JobManager
-    // -----------------------------------------------------------------------
+    hasJob(jobId: string): boolean {
+        return this.#jobs.has(jobId);
+    }
+
+    isJobCompleted(jobId: string): boolean | undefined {
+        return this.#jobs.get(jobId)?.completed;
+    }
+
+    getIncompleteJobIds(): string[] {
+        return [...this.#jobs.values()].filter((r) => !r.completed).map((r) => r.jobId);
+    }
 
     upsertJob(jobId: string, partial: Partial<Omit<GalleryJobRecord, 'nodes'>>): void {
         const existing = this.#jobs.get(jobId);
@@ -230,9 +213,10 @@ class GalleryState {
             const stateJob = $state({
                 jobId,
                 completed: false,
-                createdAt: Date.now(),
+                createdAt: this.#allocateCreatedAt(),
                 viewed: false,
                 nodes: [],
+                isRestoring: false,
                 ...partial,
             });
             this.#jobs.set(jobId, stateJob);
@@ -255,7 +239,6 @@ class GalleryState {
         if (!record) return;
         record.completed = true;
         record.duration = duration;
-        this.#persist(jobId);
     }
 
     /** Removes preview-only nodes (e.g. KSampler) that have no final assets yet. Called after onImageGenerated. */
@@ -273,21 +256,19 @@ class GalleryState {
         const record = this.#jobs.get(jobId);
         if (!record || record.viewed) return;
         record.viewed = true;
-        this.#persist(jobId);
+        comfyGridApiClient.patchJobViewed(jobId);
     }
 
     markSaved(jobId: string, nodeId: string, batchJobIndex: number): void {
         const node = this.#findNode(jobId, nodeId, batchJobIndex);
         if (!node) return;
         node.saved = true;
-        this.#persist(jobId);
     }
 
     markDownloaded(jobId: string, nodeId: string, batchJobIndex: number): void {
         const node = this.#findNode(jobId, nodeId, batchJobIndex);
         if (!node) return;
         node.downloaded = true;
-        this.#persist(jobId);
     }
 
     deleteJob(jobId: string): void {
@@ -295,17 +276,32 @@ class GalleryState {
     }
 
     clearSavedJobs(): void {
-        const toDelete = [...this.#jobs.values()].filter((r) => r.completed && r.nodes.some((n) => n.saved)).map((r) => r.jobId);
+        const toDelete = [...this.#jobs.values()]
+            .filter((r) => {
+                const view = this.#makeGalleryJob(r);
+                return view && view.completed && r.nodes.some((n) => n.saved);
+            })
+            .map((r) => r.jobId);
         toDelete.forEach((id) => this.#revokeAndDelete(id));
     }
 
     clearViewedJobs(): void {
-        const toDelete = [...this.#jobs.values()].filter((r) => r.completed && r.viewed).map((r) => r.jobId);
+        const toDelete = [...this.#jobs.values()]
+            .filter((r) => {
+                const view = this.#makeGalleryJob(r);
+                return view && view.completed && view.viewed;
+            })
+            .map((r) => r.jobId);
         toDelete.forEach((id) => this.#revokeAndDelete(id));
     }
 
     clearAllJobs(): void {
-        const toDelete = [...this.#jobs.values()].filter((r) => r.completed).map((r) => r.jobId);
+        const toDelete = [...this.#jobs.values()]
+            .filter((r) => {
+                const view = this.#makeGalleryJob(r);
+                return view?.completed;
+            })
+            .map((r) => r.jobId);
         toDelete.forEach((id) => this.#revokeAndDelete(id));
     }
 
@@ -319,11 +315,16 @@ class GalleryState {
         if (node.assets.mediumSingle || node.assets.mediumCompare || node.assets.isVideo) return;
 
         if (node.assets.originalSingle) {
-            const blob = await fetch(`/comfygrid/api/resize?url=${encodeURIComponent(node.assets.originalSingle)}&size=1024`).then((r) => r.blob());
-            node.assets.mediumSingle = URL.createObjectURL(blob);
+            const res = await comfyGridApiClient.getResize(node.assets.originalSingle, 1024);
+            if (res.ok) {
+                node.assets.mediumSingle = URL.createObjectURL(res.blob);
+            }
         } else if (node.assets.originalCompare) {
             const blobs = await Promise.all(
-                node.assets.originalCompare.map((url) => fetch(`/comfygrid/api/resize?url=${encodeURIComponent(url)}&size=1024`).then((r) => r.blob())),
+                node.assets.originalCompare.map(async (url) => {
+                    const res = await comfyGridApiClient.getResize(url, 1024);
+                    if (res.ok) return res.blob;
+                }),
             );
             node.assets.mediumCompare = blobs.map((b) => URL.createObjectURL(b));
         }
@@ -346,14 +347,7 @@ class GalleryState {
             node.assets.mediumCompare?.forEach((u) => URL.revokeObjectURL(u));
         }
         this.#jobs.delete(jobId);
-        this.#db?.delete('galleryJobs', jobId);
-    }
-
-    async #persist(jobId: string): Promise<void> {
-        const record = this.#jobs.get(jobId);
-        if (!record || !this.#db) return;
-        await this.#db.put('galleryJobs', toPersistedJob(record));
     }
 }
 
-export const galleryState = new GalleryState(db, stored);
+export const galleryState = new GalleryState();

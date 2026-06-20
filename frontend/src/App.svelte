@@ -20,6 +20,7 @@
   import logger from '@/utils/logger';
   import Body from './Body.svelte';
   import Header from './Header.svelte';
+  import { comfyGridApiClient } from './api/api-client';
   import { bindKeyboardShortcuts } from './helpers/keybind.svelte';
 
   let initialized = false;
@@ -37,14 +38,9 @@
   }
 
   async function checkSetupStatus() {
-    try {
-      const res = await fetch('/comfygrid/api/setup/status');
-      if (res.ok) {
-        const status = await res.json();
-        launched = status.mode === 'launch';
-      }
-    } catch (e) {
-      logger.error(e);
+    const res = await comfyGridApiClient.getSetupStatus();
+    if (res.ok) {
+      launched = res.json.mode === 'launch';
     }
   }
 
@@ -73,13 +69,10 @@
 
         bindKeyboardShortcuts();
 
-        const versionInfo = await fetch('/comfygrid/api/version_info');
-        if (versionInfo.ok) {
-          const data = await versionInfo.json();
-          logger.log('Version Info:', data);
-          appState.version = data;
+        const res = await comfyGridApiClient.getVersionInfo();
+        if (res.ok) {
+          appState.version = res.json;
         } else {
-          logger.error('Error fetching version info');
           appState.version = {
             branch: 'unknown',
             commit: 'unknown',

@@ -2,10 +2,7 @@
  * Tracks prompt jobs that are still active (queued or running). Defines the batch boundary for
  * gallery storage: when {@link GallerySession.activeCount} is zero and a new prompt is queued,
  * {@link ExecutionManager} treats the prior batch as finished — it resets run progress and calls
- * {@link JobManager.cleanupAllJobs}.
- *
- * This isolates “when we wipe the gallery between batches” from WebSocket handling and from
- * {@link JobManager}, which only performs the actual teardown of stored outputs.
+ * This isolates “when we wipe the gallery between batches” from WebSocket handling.
  */
 class GallerySession {
     private readonly activeJobIds = new Set<string>();

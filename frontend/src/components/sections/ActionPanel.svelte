@@ -25,7 +25,7 @@
   }
 
   function handleDeleteJob(jobId: string) {
-    if (executionState.lastProcessedJobId === jobId) {
+    if (executionState.processingJobId === jobId) {
       handleCancel();
     } else if (executionState.deleteQueueJobId(jobId)) {
       executionState.deleteQueue(jobId);
@@ -68,26 +68,25 @@
     title={$t('action.clear')}
     onclick={handleClearQueue}
     ><i class="pi pi-stop"></i>
-    {#if executionState.queueJobIds.size > 1}
-      <span
-        class="top-0 start-100 d-flex align-items-center justify-content-center translate-middle badge rounded-pill bg-danger"
-        style="position: absolute !important;"
-      >
-        {#if executionState.queueJobIds.size > 100}
-          99+
-        {:else}
-          {executionState.queueJobIds.size - 1}
-        {/if}
-      </span>
-    {/if}
   </button>
 
-  <!-- svelte-ignore a11y_consider_explicit_label -->
   <button
     type="button"
     class="btn btn-light btn-square position-relative d-flex justify-content-center align-items-center"
     bind:this={jobListElement}
     ><i class="pi pi-bars"></i>
+    {#if executionState.queueJobIds.size > 0}
+      <span
+        class="top-0 start-100 d-flex align-items-center justify-content-center translate-middle badge rounded-pill bg-danger"
+        style="position: absolute !important;"
+      >
+        {#if executionState.queueJobIds.size > 99}
+          99+
+        {:else}
+          {executionState.queueJobIds.size}
+        {/if}
+      </span>
+    {/if}
   </button>
 
   <div class="d-none">
@@ -99,14 +98,13 @@
             title={jobId}
           >
             <span class="vstack justify-content-center" style="min-width: 1.2rem;"
-              >{#if executionState.lastProcessedJobId === jobId}<i
-                  class="spinner-grow spinner-grow-sm"
+              >{#if executionState.processingJobId === jobId}<i class="spinner-grow spinner-grow-sm"
                 ></i>{/if}</span
             >
             <div class="vstack justify-content-center">
               <span>{jobId}</span>
               <div class="w-100 progress" style="height: 4px;" role="progressbar">
-                {#if executionState.lastProcessedJobId === jobId}
+                {#if executionState.processingJobId === jobId}
                   <div class="progress-bar" style="width: {executionState.jobProgress}%"></div>
                 {/if}
               </div>
