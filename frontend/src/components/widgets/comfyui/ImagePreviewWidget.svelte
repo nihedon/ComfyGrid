@@ -15,9 +15,8 @@
   });
 </script>
 
-<div title={widget.tooltip ?? ''}>
+<div title={widget.tooltip ?? ''} data-id={widget.id} data-name={widget.name}>
   <img
-    id={widget.id}
     class="object-contain preview-image"
     class:is-error={isError}
     style:max-width={isFloating ? '' : '256px'}

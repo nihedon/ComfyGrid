@@ -73,7 +73,7 @@
         <SystemMonitor monitorType="temp" />
       </div>
     {/if}
-    <div class="w-100 flex-grow-1">
+    <div class="flex-grow-1" style="min-width: 0;">
       <GridStackBoard boardId="Global"></GridStackBoard>
       <hr />
       {#if workspaceState.layout}
