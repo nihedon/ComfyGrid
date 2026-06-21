@@ -205,10 +205,33 @@ export class ComfyUiEventListener {
         api.queuePrompt = async (index: number, prompt: PromptData, ...args: unknown[]): Promise<QueuePromptResponse> => {
             let response!: QueuePromptResponse;
             const needUpdateNodes: ComfyNode[] = [];
-            let catchedError;
 
             try {
                 response = await orgQueuePrompt.apply(api, [index, prompt, ...args]);
+                try {
+                    this.#handlePromptQueued(response.prompt_id, prompt);
+                    if (nodeQueueManager.getQueueNodeIds().length && prompt.output) {
+                        prompt.output = nodeQueueManager.getNodeQueueOutput(prompt.output);
+                    }
+                    const app = appState.comfyUiState.app;
+                    Object.keys(prompt.output).forEach((id) => {
+                        const nodes = getNodesById(app, id);
+                        if (nodes.length > 0 && needNodeUpdate(nodes[0])) {
+                            needUpdateNodes.push(getMainGraphNode(app, nodes[0].id));
+                        }
+                    });
+                    if (needUpdateNodes.length > 0) {
+                        const uniqueTopNodes = [...new Map(needUpdateNodes.map((n) => [n.id, n])).values()];
+                        for (const node of uniqueTopNodes) {
+                            workflowManager.handleUpdateNode({ nodeId: String(node.id) });
+                        }
+                    }
+                } catch (err) {
+                    const error = err as Error;
+                    appState.toastState.addToast({ type: 'error', message: error.message });
+                    logger.error(error.message, error);
+                    throw error;
+                }
             } catch (err) {
                 const error = err as QueuePromptError;
                 const nodeErrors = error.response?.node_errors ?? {};
@@ -233,36 +256,9 @@ export class ComfyUiEventListener {
                 });
 
                 logger.error(error.message, error);
-                catchedError = error;
-            }
-
-            try {
-                this.#onPromptQueued(response.prompt_id, prompt);
-                if (nodeQueueManager.getQueueNodeIds().length && prompt.output) {
-                    prompt.output = nodeQueueManager.getNodeQueueOutput(prompt.output);
-                }
-                const app = appState.comfyUiState.app;
-                Object.keys(prompt.output).forEach((id) => {
-                    const nodes = getNodesById(app, id);
-                    if (nodes.length > 0 && needNodeUpdate(nodes[0])) {
-                        needUpdateNodes.push(getMainGraphNode(app, nodes[0].id));
-                    }
-                });
-                if (needUpdateNodes.length > 0) {
-                    const uniqueTopNodes = [...new Map(needUpdateNodes.map((n) => [n.id, n])).values()];
-                    for (const node of uniqueTopNodes) {
-                        workflowManager.handleUpdateNode({ nodeId: String(node.id) });
-                    }
-                }
-            } catch (err) {
-                const error = err as Error;
-                appState.toastState.addToast({ type: 'error', message: error.message });
-                logger.error(error.message, error);
                 throw error;
             }
-            if (catchedError) {
-                throw catchedError;
-            }
+
             return response;
         };
         anyQueuePrompt.__comfygrid__is_hooked__ = true;
@@ -273,7 +269,7 @@ export class ComfyUiEventListener {
      * @param jobId - Job ID
      * @param prompt - Prompt data
      */
-    #onPromptQueued(jobId: string, prompt: PromptData): void {
+    #handlePromptQueued(jobId: string, prompt: PromptData): void {
         executionManager.handlePromptQueued({
             jobId: jobId,
             nodeIds: Object.keys(prompt.output).map((nodeId) => nodeId),

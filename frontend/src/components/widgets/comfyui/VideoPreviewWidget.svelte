@@ -37,9 +37,13 @@
   }
 </script>
 
-<div class="object-contain" title={widget.tooltip ?? ''}>
+<div
+  class="object-contain"
+  title={widget.tooltip ?? ''}
+  data-id={widget.id}
+  data-name={widget.name}
+>
   <video
-    id={widget.id}
     style={isFloating ? 'height: 100%; width: 100%;' : 'max-width: 100%; max-height: 256px;'}
     src={previewUrl}
     controls

@@ -62,7 +62,7 @@
   }
 </script>
 
-<div data-name={widget.name} title={widget.tooltip ?? ''}>
+<div title={widget.tooltip ?? ''} data-id={widget.id} data-name={widget.name}>
   <label class="col-4 p-0 flex-nowrap text-truncate" for={widget.id}>
     {$t(`comfyui.widget.${widget.name}`, {}, widget.label) ?? widget.name}
   </label>
@@ -71,7 +71,6 @@
       id={widget.id}
       class="form-control"
       type="number"
-      data-name={widget.name}
       value={displayValue}
       {...minAndMaxAttr}
       step={widget?.options?.step2 ?? widget?.options?.step ?? undefined}

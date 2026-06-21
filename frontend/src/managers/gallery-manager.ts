@@ -69,6 +69,14 @@ class GalleryManager {
             const res = await comfyGridApiClient.postUploadToInput(url, filename);
             if (res.ok && res.json.message === 'uploaded') {
                 refreshModels('images');
+
+                for (const node of appState.workspaceState.nodes.values()) {
+                    for (const widget of node.widgets) {
+                        if (widget.className === 'ComboWidget') {
+                            widget.updateComfyUiSelect({ addOptions: [filename] });
+                        }
+                    }
+                }
             }
         } catch (e) {
             logger.error('Failed to upload to input', e);

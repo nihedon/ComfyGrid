@@ -10,13 +10,12 @@
   }
 </script>
 
-<div class={widget.name} title={widget.tooltip ?? ''}>
-  <button
-    id={widget.id}
-    class="btn btn-sm btn-secondary w-100"
-    data-name={widget.name}
-    onclick={clickAction}
-  >
-    {$t(`comfyui.widget.${widget.name}`, {}, widget.label) ?? widget.name}
-  </button>
-</div>
+<button
+  class="btn btn-sm btn-secondary w-100"
+  title={widget.tooltip ?? ''}
+  data-id={widget.id}
+  data-name={widget.name}
+  onclick={clickAction}
+>
+  {$t(`comfyui.widget.${widget.name}`, {}, widget.label) ?? widget.name}
+</button>

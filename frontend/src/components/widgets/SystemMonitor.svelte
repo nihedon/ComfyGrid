@@ -80,17 +80,36 @@
   });
 </script>
 
+{#snippet sparkbox(ariaLabel: string, history: number[], max: number = 100, color: string)}
+  <div class="sparkbox">
+    <svg
+      viewBox="0 0 {WIDTH} {HEIGHT}"
+      preserveAspectRatio="none"
+      role="img"
+      aria-label={ariaLabel}
+    >
+      <path d={areaPath(history, max)} fill={color} fill-opacity="0.15" />
+      <path
+        d={linePath(history, max)}
+        fill="none"
+        stroke={color}
+        stroke-width="1.5"
+        stroke-linejoin="round"
+      />
+    </svg>
+  </div>
+{/snippet}
+
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
   class="card"
-  class:p-2={!simple}
-  class:gap-2={!simple}
+  class:simple
   class:unavailable={isGpuGroup && !gpu.available}
   ondblclick={changePosition}
 >
   <!-- CPU -->
   {#if monitorType === 'cpu'}
-    <div class="card-head w-100" class:position-absolute={simple} class:px-1={simple}>
+    <div class="card-head w-100">
       <span>
         <span class="label">CPU</span>
         {#if !simple && cpu.freq_mhz}
@@ -101,23 +120,7 @@
         >{cpu.total.toFixed(1)}<span class="sup">%</span></span
       >
     </div>
-    <div class="sparkbox">
-      <svg
-        viewBox="0 0 {WIDTH} {HEIGHT}"
-        preserveAspectRatio="none"
-        role="img"
-        aria-label="CPU Usage Graph"
-      >
-        <path d={areaPath(cpuHistory)} fill={color(cpu.total)} fill-opacity="0.15" />
-        <path
-          d={linePath(cpuHistory)}
-          fill="none"
-          stroke={color(cpu.total)}
-          stroke-width="1.5"
-          stroke-linejoin="round"
-        />
-      </svg>
-    </div>
+    {@render sparkbox('CPU Usage Graph', cpuHistory, 100, color(cpu.total ?? 0))}
     <!-- Core -->
     {#if !simple && showCores && cpu.per_core.length}
       <div class="core-row">
@@ -134,29 +137,13 @@
     {/if}
   {:else if monitorType === 'ram'}
     <!-- RAM -->
-    <div class="card-head w-100" class:position-absolute={simple} class:px-1={simple}>
+    <div class="card-head w-100">
       <span class="label">RAM</span>
       <span class="val" style:color={color(ram.pct)}
         >{ram.pct.toFixed(1)}<span class="sup">%</span></span
       >
     </div>
-    <div class="sparkbox">
-      <svg
-        viewBox="0 0 {WIDTH} {HEIGHT}"
-        preserveAspectRatio="none"
-        role="img"
-        aria-label="RAM Usage Graph"
-      >
-        <path d={areaPath(ramHistory)} fill={color(ram.pct)} fill-opacity="0.15" />
-        <path
-          d={linePath(ramHistory)}
-          fill="none"
-          stroke={color(ram.pct)}
-          stroke-width="1.5"
-          stroke-linejoin="round"
-        />
-      </svg>
-    </div>
+    {@render sparkbox('RAM Usage Graph', ramHistory, 100, color(ram.pct ?? 0))}
     {#if !simple}
       <div class="sub-info">
         <span>{ram.used_gb.toFixed(1)} GB</span>
@@ -172,10 +159,10 @@
     {/if}
   {:else if monitorType === 'gpu'}
     <!-- GPU -->
-    <div class="card-head w-100" class:position-absolute={simple} class:px-1={simple}>
+    <div class="card-head w-100">
       <span>
         <span class="label">GPU</span>
-        {#if !simple && gpu.name}<span class="label chip">{gpu.name}</span>{/if}
+        {#if gpu.available && !simple && gpu.name}<span class="label chip">{gpu.name}</span>{/if}
       </span>
       {#if gpu.available}
         <span class="val" style:color={color(gpu.gpu_pct ?? 0)}
@@ -186,23 +173,7 @@
       {/if}
     </div>
     {#if gpu.available}
-      <div class="sparkbox">
-        <svg
-          viewBox="0 0 {WIDTH} {HEIGHT}"
-          preserveAspectRatio="none"
-          role="img"
-          aria-label="GPU Usage Graph"
-        >
-          <path d={areaPath(gpuHistory)} fill={color(gpu.gpu_pct ?? 0)} fill-opacity="0.15" />
-          <path
-            d={linePath(gpuHistory)}
-            fill="none"
-            stroke={color(gpu.gpu_pct ?? 0)}
-            stroke-width="1.5"
-            stroke-linejoin="round"
-          />
-        </svg>
-      </div>
+      {@render sparkbox('GPU Usage Graph', gpuHistory, 100, color(gpu.gpu_pct ?? 0))}
       {#if !simple}
         <div class="progress-track">
           <div
@@ -213,11 +184,11 @@
         </div>
       {/if}
     {:else}
-      <p class="no-gpu-msg">NVIDIA GPU Not Found</p>
+      <p class="no-gpu-msg">Not Found</p>
     {/if}
   {:else if monitorType === 'vram'}
     <!-- VRAM -->
-    <div class="card-head w-100" class:position-absolute={simple} class:px-1={simple}>
+    <div class="card-head w-100">
       <span class="label">VRAM</span>
       {#if gpu.available}
         <span class="val" style:color={color(gpu.vram_pct ?? 0)}
@@ -228,23 +199,7 @@
       {/if}
     </div>
     {#if gpu.available}
-      <div class="sparkbox">
-        <svg
-          viewBox="0 0 {WIDTH} {HEIGHT}"
-          preserveAspectRatio="none"
-          role="img"
-          aria-label="VRAM Usage Graph"
-        >
-          <path d={areaPath(vramHistory)} fill={color(gpu.vram_pct ?? 0)} fill-opacity="0.15" />
-          <path
-            d={linePath(vramHistory)}
-            fill="none"
-            stroke={color(gpu.vram_pct ?? 0)}
-            stroke-width="1.5"
-            stroke-linejoin="round"
-          />
-        </svg>
-      </div>
+      {@render sparkbox('VRAM Usage Graph', vramHistory, 100, color(gpu.vram_pct ?? 0))}
       {#if !simple}
         <div class="sub-info">
           <span>{(gpu.vram_used ?? 0).toFixed(1)} GB</span>
@@ -259,11 +214,11 @@
         </div>
       {/if}
     {:else}
-      <p class="no-gpu-msg">GPU Not Found</p>
+      <p class="no-gpu-msg">Not Found</p>
     {/if}
   {:else if monitorType === 'temp'}
     <!-- TEMP -->
-    <div class="card-head w-100" class:position-absolute={simple} class:px-1={simple}>
+    <div class="card-head w-100">
       <span class="label">TEMP</span>
       {#if gpu.available}
         <span class="val" style:color={tempColor(gpu.temp_c ?? 0)}
@@ -274,27 +229,7 @@
       {/if}
     </div>
     {#if gpu.available}
-      <div class="sparkbox">
-        <svg
-          viewBox="0 0 {WIDTH} {HEIGHT}"
-          preserveAspectRatio="none"
-          role="img"
-          aria-label="GPU Temperature Graph"
-        >
-          <path
-            d={areaPath(tempHistory, tempMax)}
-            fill={tempColor(gpu.temp_c ?? 0)}
-            fill-opacity="0.15"
-          />
-          <path
-            d={linePath(tempHistory, tempMax)}
-            fill="none"
-            stroke={tempColor(gpu.temp_c ?? 0)}
-            stroke-width="1.5"
-            stroke-linejoin="round"
-          />
-        </svg>
-      </div>
+      {@render sparkbox('GPU Temperature Graph', tempHistory, tempMax, tempColor(gpu.temp_c ?? 0))}
       {#if !simple}
         <!-- Temperature Gauge -->
         <div class="temp-gauge">
@@ -311,7 +246,7 @@
         </div>
       {/if}
     {:else}
-      <p class="no-gpu-msg">GPU Not Found</p>
+      <p class="no-gpu-msg">Not Found</p>
     {/if}
   {/if}
 </div>
@@ -321,14 +256,42 @@
     font-family: 'Courier New', monospace;
     user-select: none;
     position: relative;
-    &.unavailable {
-      opacity: 0.45;
-    }
 
     .card-head {
       display: flex;
       justify-content: space-between;
       align-items: baseline;
+    }
+
+    .no-gpu-msg {
+      width: 100%;
+      font-size: 0.9rem;
+      color: #3a3f52;
+      margin: 0;
+      text-align: center;
+    }
+
+    &:not(.simple) {
+      padding: 0.5rem;
+      gap: 0.5rem;
+    }
+
+    &.simple {
+      min-width: 95px;
+
+      .card-head {
+        position: absolute;
+        padding: 0 0.5rem;
+      }
+
+      .no-gpu-msg {
+        position: absolute;
+        bottom: 0;
+      }
+    }
+
+    &.unavailable {
+      opacity: 0.45;
     }
   }
 
@@ -348,7 +311,7 @@
     font-size: 0.9rem;
   }
   .no-gpu {
-    font-size: 18px;
+    font-size: 0.9rem;
     color: #3a3f52;
   }
 
@@ -433,13 +396,5 @@
     top: 0;
     font-size: 8px;
     transform: translateX(-50%);
-  }
-
-  .no-gpu-msg {
-    font-size: 11px;
-    color: #3a3f52;
-    margin: 0;
-    text-align: center;
-    padding: 12px 0;
   }
 </style>

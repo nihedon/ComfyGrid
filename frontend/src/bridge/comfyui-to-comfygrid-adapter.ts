@@ -234,7 +234,7 @@ class ComfyUiToComfyGridAdapter {
         let input: { id: string; slot: string } | null = null;
 
         if (widgetInput) {
-            const link = app.rootGraph.getLink(widgetInput.link);
+            const link = app.rootGraph.getLink?.(widgetInput.link);
             if (link) {
                 input = {
                     id: String(link.origin_id),

@@ -63,7 +63,12 @@
   }
 </script>
 
-<div class="flex-grow-1 overflow-y-hidden" title={widget.tooltip ?? ''} data-name={widget.name}>
+<div
+  class="flex-grow-1 overflow-y-hidden"
+  title={widget.tooltip ?? ''}
+  data-id={widget.id}
+  data-name={widget.name}
+>
   <div
     class="d-flex flex-grow-1 h-100 position-relative justify-content-center border rounded p-1 checkerboard"
     style="background-color: #f8f9fa; min-height: 0;"
@@ -82,7 +87,6 @@
     <!-- svelte-ignore a11y_click_events_have_key_events -->
     <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
     <img
-      id={widget.id}
       class="w-100 h-100 object-fit-contain"
       src={previewUrl}
       alt="preview"

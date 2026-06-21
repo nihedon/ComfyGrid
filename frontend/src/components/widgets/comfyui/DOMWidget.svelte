@@ -127,7 +127,13 @@
   }
 </script>
 
-<div class="dom-container" title={widget.tooltip ?? ''} use:domMount></div>
+<div
+  class="dom-container"
+  title={widget.tooltip ?? ''}
+  data-id={widget.id}
+  data-name={widget.name}
+  use:domMount
+></div>
 
 <style lang="scss">
   .dom-container {
