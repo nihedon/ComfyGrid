@@ -5,6 +5,7 @@ import { t } from '@/i18n/i18n';
 import { callLayoutChangedCallbacks } from '@/services/callback-service';
 import { appState } from '@/states/app-state.svelte';
 import { Layout } from '@/states/workspace-state.svelte';
+import type { BoardId } from '@/types/board';
 import type { FloatingPosition, LayoutType } from '@/types/layout';
 import logger from '@/utils/logger';
 import { waitForDom } from '@/utils/schedule';
@@ -150,7 +151,7 @@ export function updateAttribute(grid: GridStack) {
     });
 }
 
-export function applyFloatingPositions(boardId?: string, initSettings?: Record<string, Record<string, FloatingPosition>>) {
+export function applyFloatingPositions(boardId?: BoardId, initSettings?: Record<string, Record<string, FloatingPosition>>) {
     const boardIds = boardId ? [boardId] : appState.workspaceState.gridStackBoards.keys();
 
     for (const exactGridKey of boardIds) {

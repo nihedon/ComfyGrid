@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { ComfyGridWidget } from '@/states/model-state.svelte';
 
-  let { widget, isFloating = false }: { widget: ComfyGridWidget; isFloating?: boolean } = $props();
+  let { widget, options }: { widget: ComfyGridWidget; options: { isFloating: boolean } } = $props();
 
   let isError = $state(false);
 
@@ -19,8 +19,8 @@
   <img
     class="object-contain preview-image"
     class:is-error={isError}
-    style:max-width={isFloating ? '' : '256px'}
-    style:max-height={isFloating ? '' : '256px'}
+    style:max-width={options.isFloating ? '' : '256px'}
+    style:max-height={options.isFloating ? '' : '256px'}
     src={previewUrl}
     alt="preview"
     onerror={() => (isError = true)}

@@ -5,6 +5,7 @@ import { notifyNodeChanged } from '@/services/custom-node-service';
 import { applyFloatingPositions, loadLayout } from '@/services/gridstack-service';
 import { appState } from '@/states/app-state.svelte';
 import { ComfyGridGroup, ComfyGridNode } from '@/states/model-state.svelte';
+import type { BoardId } from '@/types/board';
 import type { FloatingPosition, LayoutType } from '@/types/layout';
 import type { NodeProps } from '@/types/model-props';
 
@@ -35,8 +36,8 @@ class WorkflowManager {
 
         const expandedMap = this.#collectExpandedState(appState.workspaceState.groups);
 
-        const floatingNodes: Record<string, string> = {};
-        const floatingWidgets: Record<string, string> = {};
+        const floatingNodes: Record<string, BoardId> = {};
+        const floatingWidgets: Record<string, BoardId> = {};
         const rootGroups: ComfyGridGroup[] = [];
         const groupMap = new Map<string, ComfyGridGroup>();
 

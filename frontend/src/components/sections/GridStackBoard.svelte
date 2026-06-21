@@ -9,11 +9,12 @@
   } from '@/services/gridstack-service';
   import { appState } from '@/states/app-state.svelte';
   import { ComfyGridGroup, ComfyGridNode } from '@/states/model-state.svelte';
+  import type { BoardId } from '@/types/board';
   import logger from '@/utils/logger';
   import { debounceOnTick } from '@/utils/schedule';
   import NodeWidget from '../widgets/NodeWidget.svelte';
 
-  let { boardId, groupId }: { boardId: string; groupId?: string } = $props();
+  let { boardId, groupId }: { boardId: BoardId; groupId?: string } = $props();
 
   const workspaceState = appState.workspaceState;
 

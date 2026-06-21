@@ -5,9 +5,11 @@
   import { updateBoardFloatingState } from '@/services/gridstack-service';
   import { appState } from '@/states/app-state.svelte';
   import type { ComfyGridNode, ComfyGridWidget } from '@/states/model-state.svelte';
+  import type { BoardId } from '@/types/board';
   import { COMFY_NODE_MODE, type ComfyNodeMode } from '@/types/model-shared';
   import logger from '@/utils/logger';
   import NodeMode from './comfyui/features/NodeModeSelector.svelte';
+  import TextareaCategory from './comfyui/features/TextareaCategory.svelte';
   import { getWidgetComponentWithMeta } from './comfyui/registry/widget-registry';
 
   let { node, widget }: { node: ComfyGridNode; widget?: ComfyGridWidget } = $props();
@@ -15,6 +17,13 @@
   const workspaceState = appState.workspaceState;
   const noControlNodes = $derived(workspaceState.layout.noControlNodes);
   const noCollapsedNodes = $derived(workspaceState.layout.noCollapsedNodes);
+
+  const containsWidgets = $derived.by(() => {
+    if (widget) {
+      return [widget];
+    }
+    return node.widgets.filter((w) => !workspaceState.layout.floatingWidgets.get(w.id));
+  });
 
   const nodeStyle = $derived.by(() => {
     if (node.mode === COMFY_NODE_MODE.BYPASS) {
@@ -29,16 +38,15 @@
   const isFloating = $derived.by(() => {
     if (widget) {
       return Boolean(workspaceState.layout.floatingWidgets.get(widget.id));
-    } else {
-      return Boolean(workspaceState.layout.floatingNodes.get(node.id));
     }
+    return Boolean(workspaceState.layout.floatingNodes.get(node.id));
   });
 
   const showNode = $derived.by(() => {
     if (isFloating || workspaceState.hasErrorNode(node.id)) {
       return true;
     }
-    if (noControlNodes && node.widgets.length === 0) {
+    if (noControlNodes && containsWidgets.length === 0) {
       return false;
     }
     if (noCollapsedNodes && node.collapsed) {
@@ -66,12 +74,19 @@
   });
 
   const otherBoardId = $derived.by(() => {
-    if (!isFloating) return null;
+    if (!isFloating) return '';
     return (
       [...workspaceState.gridStackBoards.keys()]
         .map((id) => id.split('-')[0])
-        .find((id) => id !== currentBoardId) || null
+        .find((id) => id !== currentBoardId) || ''
     );
+  }) as BoardId;
+
+  const isTextareaOnly = $derived.by(() => {
+    if (node.widgets.length === 1 && node.widgets[0].type === 'customtext') {
+      return node.widgets[0];
+    }
+    return null;
   });
 
   type RenderItem =
@@ -85,7 +100,7 @@
     // eslint-disable-next-line svelte/prefer-svelte-reactivity
     const renderedGroups = new Set<string>();
 
-    for (const w of node.widgets) {
+    for (const w of containsWidgets) {
       // Skip if input is set or if floating conditions don't match
       if (w.input != null) continue;
       if (widget && w.id !== widget.id) continue;
@@ -108,7 +123,7 @@
 
         if (!renderedGroups.has(groupKey)) {
           renderedGroups.add(groupKey);
-          const groupedWidgets = node.widgets.filter((gw) => {
+          const groupedWidgets = containsWidgets.filter((gw) => {
             switch (matchResult.groupBy) {
               case 'widget_class_name':
                 return gw.className === w.className;
@@ -228,7 +243,7 @@
     await updateBoardFloatingState();
   }
 
-  async function moveToBoard(targetBoardId: string) {
+  async function moveToBoard(targetBoardId: BoardId) {
     if (widget) {
       workspaceState.layout.setFloatingWidgets(widget.id, targetBoardId);
     } else {
@@ -262,7 +277,7 @@
       type: node.type,
       constructorName: node.constructorName,
       comfyClass: node.comfyClass,
-      widgets: node.widgets.map((w) => ({
+      widgets: containsWidgets.map((w) => ({
         name: w.name,
         value: w.value,
         type: w.type,
@@ -290,41 +305,44 @@
 >
   <div class="card-header" class:mute={node.mode === 2}>
     {#if !isTitleEditing}
-      {#if !widget}
+      {#if widget || isTextareaOnly}
         <div class="d-flex align-items-center gap-2">
-          <NodeMode
-            mode={new Set([node.mode])}
-            handleChange={(e, val) => handleStateChange(e, val)}
-          />
-          {#if node.hasOutputNode}
-            <!-- svelte-ignore a11y_consider_explicit_label -->
-            <button
-              type="button"
-              class="d-flex align-items-center btn btn-sm btn-primary"
-              onclick={handleExecuteNode}
-            >
-              <i class="pi pi-caret-right"></i>
-            </button>
+          {#if !widget}
+            <NodeMode
+              mode={new Set([node.mode])}
+              handleChange={(e, val) => handleStateChange(e, val)}
+            />
+            {#if node.hasOutputNode}
+              <!-- svelte-ignore a11y_consider_explicit_label -->
+              <button
+                type="button"
+                class="d-flex align-items-center btn btn-sm btn-primary"
+                onclick={handleExecuteNode}
+              >
+                <i class="pi pi-caret-right"></i>
+              </button>
+            {/if}
+            {#if appState.isDebugMode}
+              <button
+                type="button"
+                class="btn btn-xs"
+                title={node.id}
+                onclick={(e) => {
+                  e.stopPropagation();
+                  const nodeInfo = getNodeInfo();
+                  logger.info(nodeInfo);
+                  appState.dialogState.showDialog({
+                    type: 'TypeInfo',
+                    title: 'Node Information',
+                    message: JSON.stringify(nodeInfo, null, 2),
+                  });
+                }}
+              >
+                <i class="pi pi-info-circle"></i>
+              </button>
+            {/if}
           {/if}
-          {#if appState.isDebugMode}
-            <button
-              type="button"
-              class="btn btn-xs"
-              title={node.id}
-              onclick={(e) => {
-                e.stopPropagation();
-                const nodeInfo = getNodeInfo();
-                logger.info(nodeInfo);
-                appState.dialogState.showDialog({
-                  type: 'TypeInfo',
-                  title: 'Node Information',
-                  message: JSON.stringify(nodeInfo, null, 2),
-                });
-              }}
-            >
-              <i class="pi pi-info-circle"></i>
-            </button>
-          {/if}
+          <TextareaCategory widget={widget ?? node.widgets[0]} />
         </div>
       {:else}
         <span></span>
@@ -388,28 +406,32 @@
       </div>
     {/if}
   </div>
-  {#if workspaceState.hasErrorNode(node.id) || (!node.collapsed && node.widgets.length > 0)}
-    <div class="widget-stack {node.type} {nodeStyle}">
+  {#if workspaceState.hasErrorNode(node.id) || (!node.collapsed && containsWidgets.length > 0)}
+    <div
+      class="widget-stack {node.type} {nodeStyle}"
+      class:py-1={!widget && !isTextareaOnly}
+      class:px-2={!widget && !isTextareaOnly}
+    >
       {#each renderableWidgets as item, index (index)}
         {#if item.type === 'grouped'}
-          <item.component {node} widgets={item.widgets} {isFloating} />
+          <item.component {node} widgets={item.widgets} options={{ isFloating, isTextareaOnly }} />
+        {:else if item.type === 'single'}
+          <item.component widget={item.widget} options={{ isFloating, isTextareaOnly }} />
         {:else if item.type === 'grouped-ce'}
           <svelte:element
             this={item.customElement}
             {...{
               node: node,
               widgets: item.widgets,
-              isFloating: isFloating,
+              options: { isFloating, isTextareaOnly },
             }}
           />
-        {:else if item.type === 'single'}
-          <item.component widget={item.widget} {isFloating} />
         {:else if item.type === 'single-ce'}
           <svelte:element
             this={item.customElement}
             {...{
               widget: item.widget,
-              isFloating: isFloating,
+              options: { isFloating, isTextareaOnly },
             }}
           />
         {/if}
