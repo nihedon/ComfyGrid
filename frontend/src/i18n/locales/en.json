@@ -89,5 +89,9 @@
     "toast.layout_applied": "Layout is applied to ComfyGrid",
     "toast.append_lora_tag_to_positive_prompt": "LoRA tag appended to positive prompt",
     "toast.append_embedding_tag_to_positive_prompt": "Embedding tag appended to positive prompt",
-    "toast.append_hypernetwork_tag_to_positive_prompt": "Hypernetwork tag appended to positive prompt"
+    "toast.append_hypernetwork_tag_to_positive_prompt": "Hypernetwork tag appended to positive prompt",
+    "toast.free_memory.completed": "Free memory completed",
+    "toast.free_memory_and_unload_models.completed": "Free memory and unload models completed",
+    "contextmenu.free_memory": "Free Memory",
+    "contextmenu.free_memory_and_unload": "Free Memory and Unload Models"
 }

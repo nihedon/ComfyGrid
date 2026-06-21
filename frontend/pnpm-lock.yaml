@@ -17,6 +17,9 @@ importers:
       bootstrap-autocomplete:
         specifier: ^2.3.7
         version: 2.3.7
+      bootstrap-contextmenu:
+        specifier: ^1.0.0
+        version: 1.0.0
       bootstrap-icons:
         specifier: ^1.13.1
         version: 1.13.1
@@ -1139,6 +1142,9 @@ packages:
 
   bootstrap-autocomplete@2.3.7:
     resolution: {integrity: sha512-YD2bev4bDTLsAzkr6lSTuMZOcE7k2+c2BYbtIT+j/XpPnM5ADLlbhR4NnpSsfg6Vde5xQckG/IbdRKrLlAtXOw==}
+
+  bootstrap-contextmenu@1.0.0:
+    resolution: {integrity: sha512-3UuA2vRRhsOjkCKZOFG29NMIPwKlSHSo9bABtLIF9TI1ryvYwi1vgpQYAzzkjT61Lhv4hE6UP9JJjFkREn96hg==}
 
   bootstrap-icons@1.13.1:
     resolution: {integrity: sha512-ijombt4v6bv5CLeXvRWKy7CuM3TRTuPEuGaGKvTV5cz65rQSY8RQ2JcHt6b90cBBAC7s8fsf2EkQDldzCoXUjw==}
@@ -2938,6 +2944,8 @@ snapshots:
   balanced-match@4.0.4: {}
 
   bootstrap-autocomplete@2.3.7: {}
+
+  bootstrap-contextmenu@1.0.0: {}
 
   bootstrap-icons@1.13.1: {}
 
