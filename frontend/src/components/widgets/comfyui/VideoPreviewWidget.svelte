@@ -2,7 +2,7 @@
   import { appState } from '@/states/app-state.svelte';
   import type { ComfyGridWidget } from '@/states/model-state.svelte';
 
-  let { widget, isFloating }: { widget: ComfyGridWidget; isFloating: boolean } = $props();
+  let { widget, options }: { widget: ComfyGridWidget; options: { isFloating: boolean } } = $props();
 
   const uiState = appState.uiState;
 
@@ -44,7 +44,9 @@
   data-name={widget.name}
 >
   <video
-    style={isFloating ? 'height: 100%; width: 100%;' : 'max-width: 100%; max-height: 256px;'}
+    style={options.isFloating
+      ? 'height: 100%; width: 100%;'
+      : 'max-width: 100%; max-height: 256px;'}
     src={previewUrl}
     controls
     ondragover={handleDragOver}

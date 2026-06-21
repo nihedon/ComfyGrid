@@ -1,6 +1,5 @@
 <script lang="ts">
   import { onDestroy, onMount } from 'svelte';
-  import { saveOptsWithCallback } from '@/services/options-service';
   import { appState } from '@/states/app-state.svelte';
 
   let {
@@ -14,14 +13,9 @@
   }>();
 
   let systemState = appState.systemState;
-  let optionState = appState.optionState;
 
   const isGpuGroup = $derived(
     monitorType === 'gpu' || monitorType === 'vram' || monitorType === 'temp',
-  );
-
-  const systemMonitor = $derived(
-    optionState.opts.get('system_monitor') ?? optionState.forms.get('system_monitor')?.default,
   );
 
   // 温度用のmax（120℃想定）
@@ -62,15 +56,6 @@
     return `${linePath(vals, max)} L ${WIDTH},${HEIGHT} L 0,${HEIGHT} Z`;
   }
 
-  function changePosition() {
-    if (systemMonitor === 'top') {
-      optionState.setOptionValue('system_monitor', 'left');
-    } else if (systemMonitor === 'left') {
-      optionState.setOptionValue('system_monitor', 'top');
-    }
-    saveOptsWithCallback();
-  }
-
   onMount(() => {
     systemState.startMonitoring();
   });
@@ -100,13 +85,7 @@
   </div>
 {/snippet}
 
-<!-- svelte-ignore a11y_no_static_element_interactions -->
-<div
-  class="card"
-  class:simple
-  class:unavailable={isGpuGroup && !gpu.available}
-  ondblclick={changePosition}
->
+<div class="card" class:simple class:unavailable={isGpuGroup && !gpu.available}>
   <!-- CPU -->
   {#if monitorType === 'cpu'}
     <div class="card-head w-100">
@@ -306,9 +285,9 @@
     line-height: 1;
     transition: color 0.4s;
     letter-spacing: -1px;
-  }
-  .val .sup {
-    font-size: 0.9rem;
+    .sup {
+      font-size: 0.9rem;
+    }
   }
   .no-gpu {
     font-size: 0.9rem;
@@ -319,11 +298,11 @@
     height: 100%;
     border-radius: 4px;
     overflow: hidden;
-  }
-  .sparkbox svg {
-    width: 100%;
-    height: 100%;
-    display: block;
+    svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
   }
 
   .progress-track {
@@ -396,5 +375,11 @@
     top: 0;
     font-size: 8px;
     transform: translateX(-50%);
+  }
+
+  :global(.system-monitor-popover) {
+    --bs-popover-body-padding-x: 0;
+    --bs-popover-body-padding-y: 0;
+    border: 1px solid var(--bs-border-color);
   }
 </style>

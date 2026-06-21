@@ -3,12 +3,12 @@
   import ActionForm from '@/components/sections/ActionPanel.svelte';
   import MenuForm from '@/components/sections/GlobalMenu.svelte';
   import ProgressBar from '@/components/sections/ProgressBar.svelte';
-  import SystemMonitor from '@/components/widgets/SystemMonitor.svelte';
   import { t } from '@/i18n/i18n';
   import { importLayout } from '@/services/gridstack-service';
   import { appState } from '@/states/app-state.svelte';
   import logger from '@/utils/logger';
   import { comfyGridApiClient } from './api/api-client';
+  import SystemMonitorGroup from './components/widgets/SystemMonitorGroup.svelte';
 
   const toastState = appState.toastState;
   const workspaceState = appState.workspaceState;
@@ -120,13 +120,7 @@
         <Page id="settings" text="Settings" />
       </ul>
       {#if systemMonitor === 'top'}
-        <div class="d-flex gap-1" style="height: 32px;">
-          <SystemMonitor monitorType="cpu" simple />
-          <SystemMonitor monitorType="ram" simple />
-          <SystemMonitor monitorType="gpu" simple />
-          <SystemMonitor monitorType="vram" simple />
-          <SystemMonitor monitorType="temp" simple />
-        </div>
+        <SystemMonitorGroup simple className="d-flex gap-1" style="height: 32px;" />
       {/if}
       <div class="ms-auto pe-3 z-1">
         <ActionForm />
