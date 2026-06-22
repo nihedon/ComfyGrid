@@ -89,5 +89,9 @@
     "toast.layout_applied": "ComfyGridレイアウトを反映しました",
     "toast.append_lora_tag_to_positive_prompt": "ポジティブプロンプトにLoRAタグを追加しました",
     "toast.append_embedding_tag_to_positive_prompt": "ポジティブプロンプトにEmbeddingタグを追加しました",
-    "toast.append_hypernetwork_tag_to_positive_prompt": "ポジティブプロンプトにHypernetworkタグを追加しました"
+    "toast.append_hypernetwork_tag_to_positive_prompt": "ポジティブプロンプトにHypernetworkタグを追加しました",
+    "toast.free_memory.completed": "メモリを解放しました",
+    "toast.free_memory_and_unload_models.completed": "メモリを解放し、モデルをアンロードしました",
+    "contextmenu.free_memory": "メモリの解放",
+    "contextmenu.free_memory_and_unload_models": "メモリの解放とモデルのアンロード"
 }

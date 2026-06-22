@@ -5,7 +5,7 @@
 
   type UploadWidget = ComfyGridWidget<string>;
 
-  let { widget, isFloating = false }: { widget: UploadWidget; isFloating?: boolean } = $props();
+  let { widget, options }: { widget: UploadWidget; options: { isFloating: boolean } } = $props();
 
   const uiState = appState.uiState;
   const modalState = appState.inpaintModalState;
@@ -90,8 +90,8 @@
       class="w-100 h-100 object-fit-contain"
       src={previewUrl}
       alt="preview"
-      style:max-height={isFloating ? '' : '256px'}
-      style:min-height={isFloating ? '' : '256px'}
+      style:max-height={options.isFloating ? '' : '256px'}
+      style:min-height={options.isFloating ? '' : '256px'}
       style:cursor="zoom-in"
       onclick={() => (isFullscreen = true)}
       ondragover={handleDragOver}

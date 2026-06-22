@@ -103,8 +103,6 @@
         @extend .vstack;
         @extend .overflow-auto;
         @extend .h-100;
-        @extend .py-1;
-        @extend .px-2;
         @extend .gap-1;
         > *,
         .widget {

@@ -9,7 +9,7 @@
   import GridStackBoard from '../sections/GridStackBoard.svelte';
   import SplitPane from '../sections/SplitPane.svelte';
   import WidgetsSection from '../sections/WidgetsSection.svelte';
-  import SystemMonitor from '../widgets/SystemMonitor.svelte';
+  import SystemMonitorGroup from '../widgets/SystemMonitorGroup.svelte';
 
   const uiState = appState.uiState;
   const workspaceState = appState.workspaceState;
@@ -65,13 +65,11 @@
 >
   <div class="d-flex flex-grow-1">
     {#if systemMonitor === 'left'}
-      <div class="vstack gap-1 pt-1 pe-1" style="width: 162px; max-width: 162px; min-width: 162px;">
-        <SystemMonitor monitorType="cpu" showCores={true} />
-        <SystemMonitor monitorType="ram" />
-        <SystemMonitor monitorType="gpu" />
-        <SystemMonitor monitorType="vram" />
-        <SystemMonitor monitorType="temp" />
-      </div>
+      <SystemMonitorGroup
+        showCores={true}
+        className="vstack gap-1 pt-1 pe-1"
+        style="width: 162px; max-width: 162px; min-width: 162px;"
+      />
     {/if}
     <div class="flex-grow-1" style="min-width: 0;">
       <GridStackBoard boardId="Global"></GridStackBoard>

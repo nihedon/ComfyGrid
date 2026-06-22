@@ -1,13 +1,14 @@
 import type { GridStack, GridStackWidget } from 'gridstack';
 import { SvelteMap, SvelteSet } from 'svelte/reactivity';
+import type { BoardId } from '@/types/board';
 import type { FloatingPosition, LayoutType } from '@/types/layout';
 import { appState } from './app-state.svelte';
 import type { ComfyGridGroup, ComfyGridNode } from './model-state.svelte';
 
 export class Layout {
     #graphId = $state<string | null>(null);
-    readonly #floatingNodes = new SvelteMap<string, string>();
-    readonly #floatingWidgets = new SvelteMap<string, string>();
+    readonly #floatingNodes = new SvelteMap<string, BoardId>();
+    readonly #floatingWidgets = new SvelteMap<string, BoardId>();
     readonly #floatingPositions = new SvelteMap<string, Record<string, FloatingPosition>>();
     readonly #promptWidgetIds = new SvelteSet<string>();
     #positivePromptWidgetId = $state<string | null>(null);
@@ -19,10 +20,10 @@ export class Layout {
     get graphId() {
         return this.#graphId;
     }
-    get floatingNodes(): ReadonlyMap<string, string> {
+    get floatingNodes(): ReadonlyMap<string, BoardId> {
         return this.#floatingNodes;
     }
-    get floatingWidgets(): ReadonlyMap<string, string> {
+    get floatingWidgets(): ReadonlyMap<string, BoardId> {
         return this.#floatingWidgets;
     }
     get floatingPositions(): ReadonlyMap<string, Record<string, FloatingPosition>> {
@@ -53,13 +54,13 @@ export class Layout {
     set graphId(graphId: string) {
         this.#graphId = graphId;
     }
-    setFloatingNodes(nodeId: string, boardId: string) {
+    setFloatingNodes(nodeId: string, boardId: BoardId) {
         this.#floatingNodes.set(nodeId, boardId);
     }
     deleteFloatingNode(nodeId: string) {
         this.#floatingNodes.delete(nodeId);
     }
-    setFloatingWidgets(widgetId: string, boardId: string) {
+    setFloatingWidgets(widgetId: string, boardId: BoardId) {
         this.#floatingWidgets.set(widgetId, boardId);
     }
     deleteFloatingWidget(widgetId: string) {

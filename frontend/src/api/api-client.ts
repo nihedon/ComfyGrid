@@ -279,6 +279,14 @@ class ComfyUiApiClient {
     async interrupt(): Promise<ApiResultJson> {
         return await fetchApiJson('/interrupt', { method: 'POST' });
     }
+
+    async free(payload: { unload_models: boolean }): Promise<ApiResultJson> {
+        return await fetchApiJson('/free', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ...payload, free_memory: true }),
+        });
+    }
 }
 
 export const comfyGridApiClient = new ComfyGridApiClient();
