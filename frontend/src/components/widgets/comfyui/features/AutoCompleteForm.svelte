@@ -34,8 +34,16 @@
 
   function repositionDropdown() {
     const rect = inputDomEl?.getBoundingClientRect();
-    if (rect) {
-      ddEl.style.top = `${rect.bottom}px`;
+    if (rect && ddEl) {
+      const dropdownHeight = ddEl.offsetHeight || 400;
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const spaceAbove = rect.top;
+
+      if (spaceBelow < dropdownHeight && spaceAbove > spaceBelow) {
+        ddEl.style.top = `${rect.top - dropdownHeight}px`;
+      } else {
+        ddEl.style.top = `${rect.bottom}px`;
+      }
       ddEl.style.left = `${rect.left}px`;
     }
   }
@@ -44,7 +52,7 @@
     const inputEl = jQuery(inputDomEl!);
     inputEl.autoComplete({
       resolver: 'custom',
-      bootstrapVersion: '4',
+      bootstrapVersion: '5',
       minLength: 0,
       events: {
         search: function (query: string, callback: (results: string[]) => void) {
