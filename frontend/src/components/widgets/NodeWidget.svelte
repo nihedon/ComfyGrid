@@ -305,48 +305,46 @@
 >
   <div class="card-header" class:mute={node.mode === 2}>
     {#if !isTitleEditing}
-      {#if widget || isTextareaOnly}
-        <div class="d-flex align-items-center gap-2">
-          {#if !widget}
-            <NodeMode
-              mode={new Set([node.mode])}
-              handleChange={(e, val) => handleStateChange(e, val)}
-            />
-            {#if node.hasOutputNode}
-              <!-- svelte-ignore a11y_consider_explicit_label -->
-              <button
-                type="button"
-                class="d-flex align-items-center btn btn-sm btn-primary"
-                onclick={handleExecuteNode}
-              >
-                <i class="pi pi-caret-right"></i>
-              </button>
-            {/if}
-            {#if appState.isDebugMode}
-              <button
-                type="button"
-                class="btn btn-xs"
-                title={node.id}
-                onclick={(e) => {
-                  e.stopPropagation();
-                  const nodeInfo = getNodeInfo();
-                  logger.info(nodeInfo);
-                  appState.dialogState.showDialog({
-                    type: 'TypeInfo',
-                    title: 'Node Information',
-                    message: JSON.stringify(nodeInfo, null, 2),
-                  });
-                }}
-              >
-                <i class="pi pi-info-circle"></i>
-              </button>
-            {/if}
+      <div class="d-flex align-items-center gap-2">
+        {#if !widget}
+          <NodeMode
+            mode={new Set([node.mode])}
+            handleChange={(e, val) => handleStateChange(e, val)}
+          />
+          {#if node.hasOutputNode}
+            <!-- svelte-ignore a11y_consider_explicit_label -->
+            <button
+              type="button"
+              class="d-flex align-items-center btn btn-sm btn-primary"
+              onclick={handleExecuteNode}
+            >
+              <i class="pi pi-caret-right"></i>
+            </button>
           {/if}
+          {#if appState.isDebugMode}
+            <button
+              type="button"
+              class="btn btn-xs"
+              title={node.id}
+              onclick={(e) => {
+                e.stopPropagation();
+                const nodeInfo = getNodeInfo();
+                logger.info(nodeInfo);
+                appState.dialogState.showDialog({
+                  type: 'TypeInfo',
+                  title: 'Node Information',
+                  message: JSON.stringify(nodeInfo, null, 2),
+                });
+              }}
+            >
+              <i class="pi pi-info-circle"></i>
+            </button>
+          {/if}
+        {/if}
+        {#if widget || isTextareaOnly}
           <TextareaCategory widget={widget ?? node.widgets[0]} />
-        </div>
-      {:else}
-        <span></span>
-      {/if}
+        {/if}
+      </div>
     {/if}
     {#if !isTitleEditing}
       <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -456,20 +454,5 @@
   .node-title.floating {
     user-select: none;
     cursor: move;
-  }
-
-  .node-widget.bypass {
-    opacity: 0.5;
-  }
-
-  .node-widget.mute {
-    opacity: 0.5;
-    background-image: repeating-linear-gradient(
-      -45deg,
-      transparent,
-      transparent 8px,
-      rgba(128, 128, 128, 0.15) 8px,
-      rgba(128, 128, 128, 0.15) 16px
-    );
   }
 </style>

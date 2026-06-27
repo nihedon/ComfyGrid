@@ -1,3 +1,4 @@
+import { SvelteSet } from 'svelte/reactivity';
 import { workflowManager } from '@/managers/workflow-manager';
 import type { ComfyGroup, ComfyNode, ComfyWidget } from '@/types/comfy-model';
 import type { GroupProps, NodeProps, WidgetProps } from '@/types/model-props';
@@ -93,6 +94,24 @@ export class ComfyGridGroup {
             return true;
         }
         return this.#children.some((child) => child.hasVisibleNodes);
+    });
+
+    readonly isExecuting = $derived.by(() => {
+        if (this.#nodes.some((n) => appState.executionState.runningNodeId === n.id)) return true;
+        return this.#children.some((child) => child.isExecuting);
+    });
+
+    readonly hasError = $derived.by(() => {
+        if (this.#nodes.some((n) => appState.workspaceState.hasErrorNode(n.id))) return true;
+        return this.#children.some((child) => child.hasError);
+    });
+
+    readonly modeSet = $derived.by(() => {
+        const modes = new SvelteSet<ComfyNodeMode>();
+        for (const node of this.#nodes) {
+            modes.add(node.mode);
+        }
+        return modes;
     });
 
     get comfyGroup(): ComfyGroup {

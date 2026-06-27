@@ -36,9 +36,9 @@
       return { dir: 'models', subdirs: ['detection'] };
     } else if (widget.name.includes('vitpose_model')) {
       return { dir: 'models', subdirs: ['detection'] };
-    } else if (widget.name.includes('image')) {
+    } else if (widget.name === 'image') {
       return { dir: 'images', subdirs: [] };
-    } else if (widget.name.includes('video')) {
+    } else if (widget.name === 'video') {
       return { dir: 'videos', subdirs: [] };
     }
     return null;

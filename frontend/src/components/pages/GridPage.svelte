@@ -3,6 +3,7 @@
   import { saveLayoutObject } from '@/services/gridstack-service';
   import { appState } from '@/states/app-state.svelte';
   import { ComfyGridGroup } from '@/states/model-state.svelte';
+  import { COMFY_NODE_MODE } from '@/types/model-shared';
   import Tab from '../common/InnerTab.svelte';
   import TabContainer from '../common/InnerTabContainer.svelte';
   import Gallery from '../sections/Gallery.svelte';
@@ -30,29 +31,21 @@
     saveLayoutObject(workspaceState.layout);
   }
 
-  function isExecutingGroup(group: ComfyGridGroup): boolean {
-    const executing = group.nodes.some((n) => appState.executionState.runningNodeId === n.id);
-    if (executing) {
-      return true;
-    }
-    return group.children.some((g) => isExecutingGroup(g));
-  }
-
-  function hasErrorGroup(group: ComfyGridGroup): boolean {
-    const hasError = group.nodes.some((n) => workspaceState.hasErrorNode(n.id));
-    if (hasError) {
-      return true;
-    }
-    return group.children.some((g) => hasErrorGroup(g));
-  }
-
   function tabClass(group: ComfyGridGroup) {
     const classNames = [];
-    if (isExecutingGroup(group)) {
+    if (group.isExecuting) {
       classNames.push('executing');
     }
-    if (hasErrorGroup(group)) {
+    if (group.hasError) {
       classNames.push('is-invalid');
+    }
+    if (group.modeSet.size === 1) {
+      const [mode] = group.modeSet;
+      if (mode === COMFY_NODE_MODE.BYPASS) {
+        classNames.push('bypass');
+      } else if (mode === COMFY_NODE_MODE.MUTE) {
+        classNames.push('mute');
+      }
     }
     return classNames;
   }

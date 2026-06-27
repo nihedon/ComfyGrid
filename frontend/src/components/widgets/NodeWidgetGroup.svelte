@@ -37,15 +37,6 @@
 
   const nodes = $derived(findChildren());
 
-  const groupMode = $derived.by(() => {
-    // eslint-disable-next-line svelte/prefer-svelte-reactivity
-    const modes = new Set<ComfyNodeMode>();
-    for (const node of nodes.filter((node) => !node.collapsed)) {
-      modes.add(node.mode);
-    }
-    return modes;
-  }) as Set<ComfyNodeMode>;
-
   const floatingNodes = $derived(
     group.nodes.filter((n) => !workspaceState.layout.floatingNodes.get(n.id)),
   );
@@ -99,9 +90,9 @@
 <div
   id="group-{group.id}"
   class="node-group position-relative"
-  class:normal={groupMode.has(0)}
-  class:mute={groupMode.has(2)}
-  class:bypass={groupMode.has(4)}
+  class:normal={group.modeSet.has(0)}
+  class:mute={group.modeSet.has(2)}
+  class:bypass={group.modeSet.has(4)}
   class:accordion-item={!fixedExpanded}
 >
   {#snippet header()}
@@ -133,7 +124,7 @@
     {/if}
     <NodeMode
       className="me-2"
-      mode={groupMode}
+      mode={group.modeSet}
       handleChange={(e, val) => handleStateChange(e, val)}
     />
     {#if !isTitleEditing}
