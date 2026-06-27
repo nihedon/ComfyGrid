@@ -118,7 +118,7 @@
             scrollbar-width: thin;
         }
 
-        .form-control {
+        :not(textarea).form-control {
             padding: 0.15rem 0.75rem !important;
         }
 
@@ -138,6 +138,23 @@
         --bs-btn-padding-y: 0.15rem !important;
         --bs-btn-padding-x: 0.3rem !important;
         --bs-btn-font-size: 0.7rem !important;
+    }
+
+    .node-widget.bypass,
+    .nav-item.bypass > button {
+        opacity: 0.5 !important;
+    }
+
+    .node-widget.mute,
+    .nav-item.mute > button {
+        opacity: 0.5 !important;
+        background-image: repeating-linear-gradient(
+            -45deg,
+            transparent,
+            transparent 8px,
+            rgba(128, 128, 128, 0.15) 8px,
+            rgba(128, 128, 128, 0.15) 16px
+        ) !important;
     }
 
     .tooltip {
