@@ -305,7 +305,7 @@
 >
   <div class="card-header" class:mute={node.mode === 2}>
     {#if !isTitleEditing}
-      {#if widget || isTextareaOnly}
+      {#if !widget || isTextareaOnly}
         <div class="d-flex align-items-center gap-2">
           {#if !widget}
             <NodeMode
@@ -342,7 +342,9 @@
               </button>
             {/if}
           {/if}
+          {#if isTextareaOnly}
           <TextareaCategory widget={widget ?? node.widgets[0]} />
+          {/if}
         </div>
       {:else}
         <span></span>
