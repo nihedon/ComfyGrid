@@ -50,6 +50,7 @@
     "tab.comfyui.restart": "Restart",
     "tab.comfyui.reload": "Reload",
     "menu.reload": "Reload from ComfyUI",
+    "menu.update_request": "Request ComboBox Update",
     "menu.import": "Import Layout",
     "menu.export.workflow": "Export ComfyUI Workflow",
     "menu.export.layout": "Export ComfyGrid Layout",
@@ -92,6 +93,8 @@
     "toast.append_hypernetwork_tag_to_positive_prompt": "Hypernetwork tag appended to positive prompt",
     "toast.free_memory.completed": "Free memory completed",
     "toast.free_memory_and_unload_models.completed": "Free memory and unload models completed",
+    "toast.update_requested": "Update requested",
+    "toast.update_request_completed": "Update completed",
     "contextmenu.free_memory": "Free Memory",
     "contextmenu.free_memory_and_unload": "Free Memory and Unload Models"
 }

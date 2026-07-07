@@ -50,6 +50,7 @@
     "tab.comfyui.restart": "再起動",
     "tab.comfyui.reload": "リロード",
     "menu.reload": "ComfyUIから再読み込み",
+    "menu.update_request": "コンボボックスの更新を要求",
     "menu.import": "レイアウトをインポート",
     "menu.export.workflow": "ComfyUIワークフローをエクスポート",
     "menu.export.layout": "ComfyGridレイアウトをエクスポート",
@@ -92,6 +93,8 @@
     "toast.append_hypernetwork_tag_to_positive_prompt": "ポジティブプロンプトにHypernetworkタグを追加しました",
     "toast.free_memory.completed": "メモリを解放しました",
     "toast.free_memory_and_unload_models.completed": "メモリを解放し、モデルをアンロードしました",
+    "toast.update_requested": "更新を要求しました",
+    "toast.update_request_completed": "更新が完了しました",
     "contextmenu.free_memory": "メモリの解放",
     "contextmenu.free_memory_and_unload_models": "メモリの解放とモデルのアンロード"
 }
