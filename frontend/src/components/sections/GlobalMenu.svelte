@@ -12,6 +12,17 @@
     });
   }
 
+  function handleRefreshComboInNodes() {
+    const app = appState.comfyUiState.app;
+    appState.toastState.addToast({ type: 'info', message: $t('toast.update_requested') });
+    app?.refreshComboInNodes().then(() => {
+      appState.toastState.addToast({
+        type: 'success',
+        message: $t('toast.update_request_completed'),
+      });
+    });
+  }
+
   function handleClickImportLayout() {
     openLayout();
   }
@@ -55,6 +66,12 @@
       <button class="dropdown-item" onclick={handleClickReloadGraph}>
         <i class="pi pi-sync"></i>{$t('menu.reload')}
       </button>
+    </li>
+    <li><hr class="dropdown-divider" /></li>
+    <li>
+      <button class="dropdown-item" onclick={handleRefreshComboInNodes}
+        ><i></i>{$t('menu.update_request')}</button
+      >
     </li>
     <li><hr class="dropdown-divider" /></li>
     <li>

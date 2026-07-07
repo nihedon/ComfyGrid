@@ -19,6 +19,7 @@ export interface ComfyApp {
     ): unknown;
     queuePrompt: (number: number, batchCount?: number) => Promise<QueuePromptResponse>;
     registerExtension: (extension: ComfyExtension) => void;
+    refreshComboInNodes: () => Promise<void>;
 }
 
 export interface ComfyApi {
