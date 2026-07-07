@@ -1,7 +1,7 @@
 import { tick } from 'svelte';
 import { comfyUiToComfyGridAdapter as adapter } from '@/bridge/comfyui-to-comfygrid-adapter';
 import { callLayoutChangedCallbacks, callOptionsChangedCallbacks, callUiLoadedCallbacks } from '@/services/callback-service';
-import { notifyNodeChanged } from '@/services/custom-node-service';
+import { notifyNodeChanged } from '@/services/custom-node-service.svelte';
 import { applyFloatingPositions, loadLayout } from '@/services/gridstack-service';
 import { appState } from '@/states/app-state.svelte';
 import { ComfyGridGroup, ComfyGridNode } from '@/states/model-state.svelte';

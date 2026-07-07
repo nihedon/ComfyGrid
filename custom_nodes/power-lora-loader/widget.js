@@ -70,6 +70,12 @@ class PowerLoraList extends HTMLElement {
   disconnectedCallback() {
     this.#unsubscribe?.();
     this.#destroyListSortable();
+    const rows = this.querySelectorAll('[data-list-index]');
+    for (const row of rows) {
+      if (row._svelteComponent) {
+        row._svelteComponent.destroy();
+      }
+    }
   }
 
   async #initialize() {
@@ -116,6 +122,9 @@ class PowerLoraList extends HTMLElement {
     }
 
     for (let i = targetCount; i < existingRows.length; i++) {
+      if (existingRows[i]._svelteComponent) {
+        existingRows[i]._svelteComponent.destroy();
+      }
       existingRows[i].remove();
     }
 
@@ -172,66 +181,83 @@ class PowerLoraList extends HTMLElement {
   #updateRow(row, widget, listIndex, loraValues) {
     const value = widget.value ?? {};
     const isValid = !value.on || loraValues.includes(value.lora ?? "");
-    const datalistId = `lora-list-${this.#node.id}-${listIndex}`;
 
     row.dataset.listIndex = String(listIndex);
     setWidgetIndex(row, listIndex);
 
     const toggle = row.querySelector('[data-role="toggle"]');
-    const lora = row.querySelector('[data-role="lora"]');
-    const options = row.querySelector('[data-role="lora-options"]');
     const strength = row.querySelector('[data-role="strength"]');
 
     toggle.checked = Boolean(value.on);
-    lora.setAttribute("list", datalistId);
-    lora.value = value.lora ?? "";
-    lora.classList.toggle("is-invalid", !isValid);
-    options.id = datalistId;
     strength.value = String(value.strength ?? 1);
 
-    options.innerHTML = "";
-    for (const loraPath of loraValues) {
-      const option = document.createElement("option");
-      option.value = loraPath;
-      options.append(option);
+    if (row._svelteComponent) {
+      const fakeWidget = {
+        id: `lora_${this.#node.id}_${listIndex}`,
+        name: `lora_${listIndex}`,
+        get value() { return widget.value.lora ?? ""; },
+        set value(v) { 
+          widget.value.lora = v;
+          widget.comfyWidget.value = { ...widget.value };
+          widget.comfyWidget.setLora(v);
+          this._node.updateNode();
+        },
+        _node: this.#node
+      };
+
+      row._svelteComponent.update({
+        node: this.#node,
+        widget: fakeWidget,
+        select: loraValues,
+        isValid: isValid
+      });
     }
   }
 
   #createRow(widget, listIndex, loraValues) {
     const value = widget.value ?? {};
     const isValid = !value.on || loraValues.includes(value.lora ?? "");
-    const datalistId = `lora-list-${this.#node.id}-${listIndex}`;
     const row = this.#rowTemplate.content.firstElementChild.cloneNode(true);
 
     row.dataset.listIndex = String(listIndex);
     setWidgetIndex(row, listIndex);
 
     const toggle = row.querySelector('[data-role="toggle"]');
-    const lora = row.querySelector('[data-role="lora"]');
-    const options = row.querySelector('[data-role="lora-options"]');
     const strength = row.querySelector('[data-role="strength"]');
-    const inputGroup = row.querySelector(".input-group");
+    const comboContainer = row.querySelector('[data-role="combo-container"]');
 
     toggle.checked = Boolean(value.on);
-    lora.setAttribute("list", datalistId);
-    lora.value = value.lora ?? "";
-    lora.classList.toggle("is-invalid", !isValid);
-    options.id = datalistId;
     strength.value = String(value.strength ?? 1);
 
-    if (inputGroup) {
-      inputGroup.addEventListener("mouseenter", () => {
-        api.showModelPopover(inputGroup, widget.value?.lora ?? "");
-      });
-      inputGroup.addEventListener("mouseleave", () => {
-        api.hidePopover();
-      });
-    }
+    const fakeWidget = {
+      id: `lora_${this.#node.id}_${listIndex}`,
+      name: `lora_${listIndex}`,
+      get value() { return widget.value.lora ?? ""; },
+      set value(v) { 
+        widget.value.lora = v;
+        widget.comfyWidget.value = { ...widget.value };
+        widget.comfyWidget.setLora(v);
+        this._node.updateNode();
+      },
+      _node: this.#node
+    };
 
-    for (const loraPath of loraValues) {
-      const option = document.createElement("option");
-      option.value = loraPath;
-      options.append(option);
+    if (api.mountModalComboWidget) {
+      row._svelteComponent = api.mountModalComboWidget(comboContainer, {
+        node: this.#node,
+        widget: fakeWidget,
+        select: loraValues,
+        isValid: isValid,
+        modelDir: 'models',
+        modelSubdirs: ['loras'],
+        handleInput: (e, w, model) => {
+          if (model) {
+            fakeWidget.value = model.path;
+          } else if (e.detail?.value !== undefined) {
+            fakeWidget.value = e.detail.value;
+          }
+        }
+      });
     }
 
     return row;
@@ -246,8 +272,6 @@ class PowerLoraList extends HTMLElement {
 
     if (action === "toggle") {
       widget.value.on = target.checked;
-    } else if (action === "lora") {
-      widget.value.lora = target.value;
     } else if (action === "strength") {
       widget.value.strength = Number.parseFloat(target.value);
     } else {
@@ -262,15 +286,7 @@ class PowerLoraList extends HTMLElement {
     widget.comfyWidget.value = data;
     widget.comfyWidget.setLora(data.lora);
 
-    const row = target.closest("[data-list-index]");
-    if (row) {
-      const lora = row.querySelector('[data-role="lora"]');
-      if (lora) {
-        const loraValues = api.getModels("loras").map((m) => m.path);
-        const isValid = !data.on || loraValues.includes(data.lora ?? "");
-        lora.classList.toggle("is-invalid", !isValid);
-      }
-    }
+    this.#node.updateNode();
   }
 
   #handleClick(event) {
@@ -278,21 +294,6 @@ class PowerLoraList extends HTMLElement {
     if (!button) return;
 
     const widgetIndex = Number(button.dataset.widgetIndex);
-
-    if (button.dataset.action === "open-modal") {
-      const widget = this.#widgets[widgetIndex];
-      if (!widget) return;
-
-      api.openModelModal("models", ["loras"], (loraPath) => {
-        widget.value.lora = loraPath;
-
-        const data = { lora: loraPath, on: widget.value.on, strength: widget.value.strength };
-        widget.comfyWidget.value = data;
-        widget.comfyWidget.setLora(data.lora);
-        this.#node.updateNode();
-      });
-      return;
-    }
 
     if (button.dataset.action === "remove") {
       const widget = this.#widgets[widgetIndex];
