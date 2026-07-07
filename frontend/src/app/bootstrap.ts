@@ -3,7 +3,7 @@ import * as bootstrap from 'bootstrap';
 import 'gridstack/dist/gridstack-all.js';
 import jQuery from 'jquery';
 import { loadRuntimeExtensions } from '@/components/widgets/comfyui/registry/runtime-loader';
-import { setupCustomNodeApi } from '@/services/custom-node-service';
+import { setupCustomNodeApi } from '@/services/custom-node-service.svelte';
 import { ComfyUIHealthCheckService } from '@/services/healthcheck-service';
 import { appState } from '@/states/app-state.svelte';
 import logger from '@/utils/logger';
@@ -19,6 +19,7 @@ globalThis.bootstrap = bootstrap;
 
 await import('bootstrap-autocomplete');
 await import('bootstrap-contextmenu');
+await import('jquery-ui/dist/jquery-ui.js');
 const litHtml = await import('lit-html');
 const litUnsafeHtml = await import('lit-html/directives/unsafe-html.js');
 globalThis.litHtml = {
@@ -55,7 +56,7 @@ comfyUiHealthCheck.connect();
 
 setupCustomNodeApi();
 
-await loadRuntimeExtensions();
+loadRuntimeExtensions();
 
 mount(App, {
     target: document.getElementById('comfygrid'),

@@ -1,7 +1,7 @@
 <script lang="ts">
   import { type Component } from 'svelte';
   import { t } from '@/i18n/i18n';
-  import { notifyNodeChanged } from '@/services/custom-node-service';
+  import { notifyNodeChanged } from '@/services/custom-node-service.svelte';
   import { updateBoardFloatingState } from '@/services/gridstack-service';
   import { appState } from '@/states/app-state.svelte';
   import type { ComfyGridNode, ComfyGridWidget } from '@/states/model-state.svelte';

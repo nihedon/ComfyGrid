@@ -6,13 +6,7 @@
   <div class="d-flex w-100 align-items-center gap-1" data-role="row">
     <span class="comfygrid-lora-handle pi pi-bars" aria-label="Drag to reorder"></span>
     <input class="form-check-input m-0" type="checkbox" data-action="toggle" data-role="toggle" />
-    <div class="input-group" style="min-width: 0; flex: 1">
-      <input class="form-control" type="text" data-action="lora" data-role="lora" />
-      <datalist data-role="lora-options"></datalist>
-      <button class="btn btn-sm btn-secondary" data-action="open-modal" data-role="open-modal" aria-label="Select model">
-        <i class="bi bi-window"></i>
-      </button>
-    </div>
+    <div data-role="combo-container" style="min-width: 0; flex: 1"></div>
     <input class="form-control" style="width: 5.5rem" type="number" step="0.05" data-action="strength" data-role="strength" />
     <button class="remove-btn btn btn-sm p-0" data-action="remove" data-role="remove" aria-label="Remove LoRA">
       <i class="pi pi-times"></i>

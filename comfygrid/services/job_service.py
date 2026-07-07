@@ -24,7 +24,7 @@ _CREATE_INDEX_SQL = (
 def _get_connection() -> sqlite3.Connection:
     if not hasattr(_local, "conn"):
         JOBS_DB.parent.mkdir(parents=True, exist_ok=True)
-        conn = sqlite3.connect(str(JOBS_DB), check_same_thread=False)
+        conn = sqlite3.connect(str(JOBS_DB), check_same_thread=False, timeout=10.0)
         conn.execute(_CREATE_TABLE_SQL)
         conn.execute(_CREATE_INDEX_SQL)
         conn.commit()
@@ -34,8 +34,11 @@ def _get_connection() -> sqlite3.Connection:
 
 def initialize() -> None:
     conn = _get_connection()
-    conn.execute("DELETE FROM jobs WHERE created_at < ?", (int(time.time()) - _ONE_DAY_SECONDS,))
-    conn.commit()
+    try:
+        conn.execute("DELETE FROM jobs WHERE created_at < ?", (int(time.time()) - _ONE_DAY_SECONDS,))
+        conn.commit()
+    except Exception:
+        pass
 
 
 def set_job(job_id: str, data: Any) -> None:

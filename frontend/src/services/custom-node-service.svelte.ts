@@ -1,9 +1,12 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import { mount, unmount } from 'svelte';
+import ModalComboWidget from '@/components/widgets/comfyui/features/ModalComboWidget.svelte';
 import { appState } from '@/states/app-state.svelte';
 import type { ComfyGridNode } from '@/states/model-state.svelte';
 
 type NodeChangeCallback = (node: unknown) => void;
 
+// eslint-disable-next-line svelte/prefer-svelte-reactivity
 const subscriptions = new Map<string, Set<NodeChangeCallback>>();
 
 /**
@@ -20,6 +23,7 @@ export function setupCustomNodeApi(): void {
         },
         subscribe(nodeId: string, callback: NodeChangeCallback): () => void {
             if (!subscriptions.has(nodeId)) {
+                // eslint-disable-next-line svelte/prefer-svelte-reactivity
                 subscriptions.set(nodeId, new Set());
             }
             subscriptions.get(nodeId).add(callback);
@@ -43,6 +47,18 @@ export function setupCustomNodeApi(): void {
         },
         hidePopover() {
             appState.popoverState.hidePopover();
+        },
+        mountModalComboWidget(target: HTMLElement, props: any) {
+            const stateProps = $state({ ...props });
+            const comp = mount(ModalComboWidget, { target, props: stateProps });
+            return {
+                update(newProps: any) {
+                    Object.assign(stateProps, newProps);
+                },
+                destroy() {
+                    unmount(comp);
+                },
+            };
         },
     });
 }
