@@ -62,10 +62,11 @@ function loadStyle(url: string): Promise<void> {
 }
 
 export async function loadRuntimeExtensions(): Promise<void> {
-    const res = await comfyGridApiClient.getCustomNodes();
-    if (!res.ok) {
-        logger.error('Failed to load custom nodes from backend:', res);
-        return;
+    let res = await comfyGridApiClient.getCustomNodes();
+
+    while (!res.ok) {
+        await new Promise<void>((r) => setTimeout(r, 1000));
+        res = await comfyGridApiClient.getCustomNodes();
     }
 
     for (const extension of res.json) {

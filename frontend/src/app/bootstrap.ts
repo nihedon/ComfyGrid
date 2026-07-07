@@ -55,7 +55,7 @@ comfyUiHealthCheck.connect();
 
 setupCustomNodeApi();
 
-await loadRuntimeExtensions();
+loadRuntimeExtensions();
 
 mount(App, {
     target: document.getElementById('comfygrid'),

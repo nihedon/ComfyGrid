@@ -17,7 +17,10 @@ from comfygrid.services.setup_service import install_caddy, start_caddy_proxy
 def create_lifespan(settings: AppSettings):
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-        job_service.initialize()
+        try:
+            job_service.initialize()
+        except Exception as e:
+            logging.warning("Failed to initialize job service: %s", e)
         comfy_service = ComfyUIService(app)
         log_processor_task = asyncio.create_task(comfy_service.process_startup_logs())
 
