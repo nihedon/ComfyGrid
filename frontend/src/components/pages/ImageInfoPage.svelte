@@ -1,9 +1,13 @@
 <script lang="ts">
   import { JSONEditor } from 'svelte-jsoneditor';
   import { comfyGridApiClient } from '@/api/api-client';
+  import { t } from '@/i18n/i18n';
+  import { workflowManager } from '@/managers/workflow-manager';
   import { appState } from '@/states/app-state.svelte';
+  import logger from '@/utils/logger';
 
   const uiState = appState.uiState;
+  const toastState = appState.toastState;
 
   $effect(() => {
     if (uiState.fileToOpenInImageInfo) {
@@ -17,6 +21,8 @@
   let metadataJson = $state({});
   let imageSrc: string | null = $state(null);
   let jsonEditor: JSONEditor;
+  let currentFileName = $state<string | null>(null);
+  let currentWorkflowJson = $state<{ [key: string]: unknown } | null>(null);
 
   async function handleDrop(event: DragEvent) {
     event.preventDefault();
@@ -25,11 +31,21 @@
   }
 
   async function openFile(file: File) {
+    currentFileName = file.name.toLowerCase();
+    currentWorkflowJson = null;
+
     const formData = new FormData();
     formData.append('file', file);
 
     const res = await comfyGridApiClient.postImageInfo(file);
     if (res.ok) {
+      if (res.json.workflow) {
+        try {
+          currentWorkflowJson = JSON.parse(res.json.workflow);
+        } catch (e) {
+          logger.error('Failed to parse workflow JSON from image', e);
+        }
+      }
       if (res.json['metadata']) {
         const metadata = res.json['metadata'];
         // Not a ComfyUI format
@@ -117,6 +133,32 @@
     openFile(file);
     imageFileInput.value = '';
   }
+
+  async function handleTransferToComfyUI(e: Event) {
+    e.stopPropagation();
+
+    if (!currentFileName || !currentWorkflowJson) {
+      toastState.addToast({ type: 'warning', message: $t('toast.no_workflow_found') });
+      return;
+    }
+
+    const ret = await appState.bridge?.loadWorkflow({
+      filename: currentFileName,
+      json: currentWorkflowJson,
+    });
+
+    if (ret?.success) {
+      logger.log('Workflow applied successfully');
+      toastState.addToast({ type: 'success', message: $t('toast.workflow_applied') });
+      appState.bridge?.getWorkflow()?.then((res) => {
+        workflowManager.handleWorkflow(res);
+      });
+      uiState.activePageId = 'grid';
+    } else {
+      logger.error('Failed to apply workflow:', ret?.error);
+      toastState.addToast({ type: 'error', message: $t('toast.workflow_apply_failed') });
+    }
+  }
 </script>
 
 <div class="h-100" style:display={uiState.activePageId === 'image-info' ? '' : 'none'}>
@@ -128,21 +170,19 @@
       bind:this={imageFileInput}
       onchange={handleImageSelected}
     />
-    <!-- svelte-ignore a11y_click_events_have_key_events -->
-    <div
-      class="p-2 h-100"
-      aria-label="Image Drop Zone"
-      role="button"
-      tabindex="0"
-      ondragover={handleDragOver}
-      ondrop={handleDrop}
-      onclick={() => {
-        imageFileInput.click();
-      }}
-    >
+    <div class="p-2 h-100">
+      <!-- svelte-ignore a11y_click_events_have_key_events -->
       <div
         class="d-flex align-items-center justify-content-center"
         style="height: 480px; width: 480px;"
+        aria-label="Image Drop Zone"
+        role="button"
+        tabindex="0"
+        ondragover={handleDragOver}
+        ondrop={handleDrop}
+        onclick={() => {
+          imageFileInput.click();
+        }}
       >
         {#if imageSrc}
           <img
@@ -159,6 +199,16 @@
           </div>
         {/if}
       </div>
+      {#if currentWorkflowJson}
+        <div class="mt-3 w-100 px-3">
+          <button
+            class="btn btn-primary w-100 d-flex align-items-center justify-content-center gap-2"
+            onclick={(e) => handleTransferToComfyUI(e)}
+          >
+            <i class="pi pi-send"></i>{$t('imageinfo.send_to_comfyui')}
+          </button>
+        </div>
+      {/if}
     </div>
     <div id="json-editor" class="flex-grow-1 h-100">
       <JSONEditor bind:this={jsonEditor} readOnly={true} onRenderMenu={handleRenderMenu} />
