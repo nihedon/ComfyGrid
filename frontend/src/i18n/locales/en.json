@@ -50,7 +50,7 @@
     "tab.comfyui.restart": "Restart",
     "tab.comfyui.reload": "Reload",
     "menu.reload": "Reload from ComfyUI",
-    "menu.update_request": "Request ComboBox Update",
+    "menu.update_request": "Request Model List Update",
     "menu.import": "Import Layout",
     "menu.export.workflow": "Export ComfyUI Workflow",
     "menu.export.layout": "Export ComfyGrid Layout",
