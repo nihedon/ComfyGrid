@@ -9,4 +9,5 @@ export type WorkspaceInfo = {
     script_path: string;
     python_path: string;
     comfyui_port: number;
+    comfyui_args: string;
 };

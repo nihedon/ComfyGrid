@@ -49,6 +49,7 @@ def save_launch_workspace(workspace: WorkspaceInfo) -> None:
         existing["script_path"] = workspace.script_path
         existing["python_path"] = workspace.python_path
         existing["comfyui_port"] = workspace.comfyui_port
+        existing["comfyui_args"] = workspace.comfyui_args
     else:
         workspaces.append(
             {
@@ -56,6 +57,7 @@ def save_launch_workspace(workspace: WorkspaceInfo) -> None:
                 "script_path": workspace.script_path,
                 "python_path": workspace.python_path,
                 "comfyui_port": workspace.comfyui_port,
+                "comfyui_args": workspace.comfyui_args,
             }
         )
 

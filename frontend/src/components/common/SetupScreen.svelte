@@ -22,6 +22,7 @@
     script_path: '',
     python_path: '',
     comfyui_port: DEFAULT_COMFYUI_PORT,
+    comfyui_args: '',
   });
   let connectPort = $state<number | null>(DEFAULT_COMFYUI_PORT);
   let isSubmitting = $state(false);
@@ -87,6 +88,7 @@
       script_path: '',
       python_path: '',
       comfyui_port: DEFAULT_COMFYUI_PORT,
+      comfyui_args: '',
     };
   }
 
@@ -303,6 +305,17 @@
                   required
                 />
                 <div class="invalid-feedback">Please specify the ComfyUI port.</div>
+              </div>
+              <div class="col-md-12">
+                <label for="ws-extra-args" class="form-label">ComfyUI Arguments</label>
+                <textarea
+                  id="ws-extra-args"
+                  class="form-control font-monospace"
+                  rows="3"
+                  bind:value={editingWorkspace.comfyui_args}
+                  placeholder="e.g. --disable-dynamic-vram --enable-manager"
+                ></textarea>
+                <div class="form-text">Command-line arguments passed to ComfyUI on launch.</div>
               </div>
             </div>
           </div>

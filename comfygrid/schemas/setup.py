@@ -8,6 +8,7 @@ class WorkspaceInfo(BaseModel):
     script_path: str
     python_path: str
     comfyui_port: int | None = None
+    comfyui_args: str = ""
 
 
 class LaunchRequest(BaseModel):

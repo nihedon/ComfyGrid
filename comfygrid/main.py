@@ -41,7 +41,6 @@ def run() -> None:
     parser.add_argument("--server-port", type=int, default=int(os.getenv("COMFYGRID_SERVER_PORT", DEFAULT_SERVER_PORT)))
     parser.add_argument("--log-level", default=os.getenv("COMFYGRID_LOG_LEVEL", "INFO"))
     parser.add_argument("--extension-update", action="store_true")
-    parser.add_argument("--comfyui-args", default=os.getenv("COMFYUI_ARGS", ""))
 
     args, comfy_args = parser.parse_known_args()
 
@@ -50,7 +49,6 @@ def run() -> None:
     os.environ["COMFYGRID_SERVER_PORT"] = str(args.server_port)
     os.environ["COMFYGRID_LOG_LEVEL"] = args.log_level
     os.environ["COMFYGRID_EXTENSION_UPDATE"] = str(args.extension_update)
-    os.environ["COMFYUI_ARGS"] = args.comfyui_args
 
     app = create_app(*comfy_args, env="prod")
 
