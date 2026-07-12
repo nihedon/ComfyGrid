@@ -11,10 +11,13 @@ function handleKeyDown(e: KeyboardEvent) {
     }
     if (e.ctrlKey || e.metaKey) {
         if (e.key === 's') {
-            e.preventDefault();
+            const currentGalleryJob = appState.galleryState.currentGalleryJob;
+            if (currentGalleryJob) {
+                e.preventDefault();
 
-            const metadata = appState.galleryState.currentGalleryJob.metadata ?? {};
-            galleryManager.saveImage(metadata);
+                const metadata = currentGalleryJob.metadata ?? {};
+                galleryManager.saveImage(metadata);
+            }
         } else if (e.key === 'o') {
             e.preventDefault();
             openLayout();

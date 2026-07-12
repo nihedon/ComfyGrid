@@ -52,7 +52,7 @@
     const inputEl = jQuery(inputDomEl!);
     inputEl.autoComplete({
       resolver: 'custom',
-      bootstrapVersion: '5',
+      bootstrapVersion: '4',
       minLength: 0,
       events: {
         search: function (query: string, callback: (results: string[]) => void) {
