@@ -21,7 +21,7 @@ class WorkflowManager {
                 appState.bridge?.getWorkflow().then((res) => {
                     this.handleWorkflow(res);
                 });
-            }, 200);
+            }, 1000);
         }
     }
 
