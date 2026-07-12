@@ -337,6 +337,9 @@ function needNodeUpdate(node: ComfyNode) {
         return true;
     }
     const hasSeedWidget = node.widgets?.some((w) => {
+        if (w.name === 'seed' && w.type === 'number') {
+            return true;
+        }
         if (w.type !== 'combo') {
             return false;
         }
