@@ -99,28 +99,31 @@
     }
   }
 
-  // Svelte Action: Safely isolates direct DOM manipulation inside the node's lifecycle
+  let shadowRoot: ShadowRoot | null = null;
+
+  $effect(() => {
+    if (!shadowRoot) return;
+
+    if (uiState.activePageId === 'grid') {
+      mountElement(shadowRoot);
+      const removeBridge = bridgeDragEvents();
+      return () => {
+        removeBridge();
+      };
+    } else if (uiState.activePageId === 'comfyui') {
+      unmountElement();
+    }
+  });
+
   function domMount(nodeElement: HTMLDivElement) {
     if (!widget) return;
 
-    let removeBridge: (() => void) | null = null;
-    const shadow = nodeElement.attachShadow({ mode: 'open' });
-    cloneStyles(shadow);
-
-    $effect(() => {
-      if (uiState.activePageId === 'grid') {
-        removeBridge = bridgeDragEvents();
-        mountElement(shadow);
-      } else if (uiState.activePageId === 'comfyui') {
-        removeBridge?.();
-        removeBridge = null;
-        unmountElement();
-      }
-    });
+    shadowRoot = nodeElement.attachShadow({ mode: 'open' });
+    cloneStyles(shadowRoot);
 
     return {
       destroy() {
-        removeBridge?.();
+        shadowRoot = null;
         unmountElement();
       },
     };
