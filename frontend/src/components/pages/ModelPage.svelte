@@ -107,7 +107,9 @@
     </ul>
     <div class="vstack overflow-y-hidden py-2">
       <TabContainer tabId={activeTabId} {activeTabId}>
-        <ModelList dir="models" subdirs={activeTab.subdirs} action={activeTab.action} />
+        {#key activeTabId}
+          <ModelList dir="models" subdirs={activeTab.subdirs} action={activeTab.action} />
+        {/key}
       </TabContainer>
     </div>
   </div>

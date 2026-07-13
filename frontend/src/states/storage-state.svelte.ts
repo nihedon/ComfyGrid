@@ -13,11 +13,17 @@ export class Model {
     extension: string = $state('');
     description?: string = $state();
     has_description: boolean = $state(false);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    metadata?: Record<string, any> = $state();
+    metadata?: {
+        id: string;
+        modelId: string;
+        model: { nsfw: boolean };
+        trainedWords: string[];
+    } = $state();
     has_metadata: boolean = $state(false);
     retrieved: boolean = $state(false);
     preview?: string = $state();
+    rate?: number = $state();
+    favorite: boolean = $state(false);
     modified: number = $state(0);
     created: number = $state(0);
     size: number;

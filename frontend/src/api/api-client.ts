@@ -88,8 +88,14 @@ class ComfyGridApiClient {
     async getModelInfo(modelInfo: string): Promise<
         ApiResultJson<{
             description?: string;
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            metadata?: Record<string, any>;
+            metadata?: {
+                id: string;
+                modelId: string;
+                model: { nsfw: boolean };
+                trainedWords: string[];
+            };
+            rate?: number;
+            favorite?: boolean;
         }>
     > {
         return await fetchApiJson(`/comfygrid/api/model_info=${modelInfo}`);

@@ -17,7 +17,7 @@
     {@const src =
       type === 'images' || type === 'videos'
         ? getPreviewUrl(model.path)
-        : `/comfygrid/api/thumbnail=${model.preview}`}
+        : `/comfygrid/api/thumbnail=${model.preview}?t=${model.modified}`}
     {#if model.preview || type === 'images'}
       <img
         class="w-100 h-100 {type === 'images' ? 'object-fit-contain' : 'object-fit-cover'}"

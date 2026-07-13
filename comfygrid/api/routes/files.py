@@ -1,5 +1,6 @@
 import logging
 import threading
+import urllib.request
 import tkinter as tk
 from pathlib import Path
 from tkinter import filedialog
@@ -9,6 +10,7 @@ from fastapi import APIRouter, Depends, File, Form, Request, Response, UploadFil
 from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel
 
+from comfygrid.infrastructure.cache import delete_thumbnail_cache
 from comfygrid.services import file_service
 from comfygrid.services.comfyui import ComfyUIService
 from comfygrid.services.dependencies import get_comfy_service
@@ -92,6 +94,15 @@ def get_model_info(path: str, comfy_service: ComfyUIService = Depends(get_comfy_
             logger.error("Error processing file %s: %s", metadata_path, e)
             info["metadata"] = {}
 
+    comfygrid_path = root / f"{name_without_ext}.comfygrid.info"
+    if comfygrid_path.exists():
+        try:
+            cg_info = orjson.loads(file_service._read_file(comfygrid_path))
+            info["rate"] = cg_info.get("rate")
+            info["favorite"] = cg_info.get("favorite")
+        except Exception as e:
+            logger.error("Error processing file %s: %s", comfygrid_path, e)
+
     return JSONResponse(info)
 
 
@@ -105,11 +116,41 @@ async def save_model_info(request: Request, path: str, comfy_service: ComfyUISer
 
     name_without_ext = full_path.stem
     root = full_path.parent
+    description_path = root / f"{name_without_ext}.description.txt"
     metadata_path = root / f"{name_without_ext}.civitai.info"
+    comfygrid_path = root / f"{name_without_ext}.comfygrid.info"
 
     try:
         data = await request.json()
-        metadata_path.write_text(orjson.dumps(data, option=orjson.OPT_INDENT_2).decode("utf-8"), encoding="utf-8")
+        
+        if "metadata" in data:
+            metadata_path.write_text(orjson.dumps(data["metadata"], option=orjson.OPT_INDENT_2).decode("utf-8"), encoding="utf-8")
+        
+        if "description" in data:
+            description_path.write_text(data["description"], encoding="utf-8")
+            
+        cg_info = {}
+        if "rate" in data:
+            cg_info["rate"] = data["rate"]
+        if "favorite" in data:
+            cg_info["favorite"] = data["favorite"]
+            
+        if cg_info:
+            comfygrid_path.write_text(orjson.dumps(cg_info, option=orjson.OPT_INDENT_2).decode("utf-8"), encoding="utf-8")
+            
+        if "previewUrl" in data and data["previewUrl"]:
+            preview_path = root / f"{name_without_ext}.preview.png"
+            try:
+                req = urllib.request.Request(
+                    data["previewUrl"],
+                    headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
+                )
+                with urllib.request.urlopen(req) as response, open(preview_path, 'wb') as out_file:
+                    out_file.write(response.read())
+                delete_thumbnail_cache(str(preview_path))
+            except Exception as e:
+                logger.error("Error downloading preview image: %s", e)
+            
         return {"message": "success"}
     except Exception as e:
         logger.error("Error saving model info: %s", e)

@@ -9,6 +9,24 @@
   let isSaving = $state(false);
 
   const descriptionState = appState.descriptionModalState;
+  const model = $derived(descriptionState.model);
+  const subdirs = $derived(descriptionState.subdirs);
+  const metadata = $derived({
+    id: '',
+    modelId: '',
+    model: { nsfw: false },
+    trainedWords: [] as string[],
+    ...model?.metadata,
+  });
+
+  let tempPreviewUrl = $state<string | undefined>();
+  let tempDescription = $state('');
+  let tempNsfw = $state(false);
+  let tempRate = $state<number | undefined>();
+  let tempFavorite = $state(false);
+  let tempTrainedWords = $state<string[]>([]);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let fetchedMetadata = $state<any>(null);
 
   $effect(() => {
     if (!modalElement) return;
@@ -38,7 +56,14 @@
 
   $effect(() => {
     if (!bsModal) return;
-    if (descriptionState.model) {
+    if (model) {
+      tempPreviewUrl = undefined;
+      tempDescription = model.description ?? '';
+      tempNsfw = metadata?.model?.nsfw ?? false;
+      tempRate = model.rate;
+      tempFavorite = model.favorite ?? false;
+      tempTrainedWords = [...(metadata?.trainedWords ?? [])];
+      fetchedMetadata = null;
       bsModal.show();
     } else {
       bsModal.hide();
@@ -50,16 +75,27 @@
   }
 
   async function handleFetch() {
-    if (!descriptionState.model?.metadata?.id) return;
-    const id = descriptionState.model.metadata.id;
+    if (!model?.metadata?.id) return;
+    const id = metadata?.id;
     isFetching = true;
     try {
       const res = await fetch(`https://civitai.red/api/v1/model-versions/${id}`);
       if (!res.ok) throw new Error('Failed to fetch from Civitai');
       const data = await res.json();
 
-      descriptionState.model.metadata = data;
-      descriptionState.model.has_metadata = true;
+      if (!data.model) data.model = { nsfw: false };
+      if (!data.trainedWords) data.trainedWords = [];
+
+      const imgUrl = (data.images ?? [{}]).filter(
+        (image: Record<string, string>) => image.type === 'image',
+      )?.[0]?.url;
+      if (imgUrl) {
+        tempPreviewUrl = imgUrl;
+      }
+
+      fetchedMetadata = data;
+      tempNsfw = data.model?.nsfw ?? false;
+      tempTrainedWords = [...(data.trainedWords ?? [])];
     } catch (e) {
       console.error(e);
       alert(e);
@@ -69,13 +105,36 @@
   }
 
   async function handleSave() {
-    if (!descriptionState.model) return;
+    if (!model) return;
     isSaving = true;
     try {
-      const apiRes = await comfyGridApiClient.postModelInfo(descriptionState.model.full_path, descriptionState.model.metadata || {});
+      const payloadMetadata = $state.snapshot(fetchedMetadata || metadata || {});
+      if (!payloadMetadata.model) payloadMetadata.model = {};
+      payloadMetadata.model.nsfw = tempNsfw;
+      payloadMetadata.trainedWords = [...tempTrainedWords];
+
+      const payload = {
+        metadata: payloadMetadata,
+        description: tempDescription,
+        rate: tempRate,
+        favorite: tempFavorite,
+        previewUrl: tempPreviewUrl,
+      };
+      const apiRes = await comfyGridApiClient.postModelInfo(model.full_path, payload);
       if (!apiRes.ok) {
         throw new Error('Failed to save model info');
       }
+      if (tempPreviewUrl) {
+        const parts = model.full_path.split(/[/\\]/);
+        parts.shift();
+        model.preview = parts.join('/').replace(model.extension, '.preview.png');
+      }
+      model.description = tempDescription;
+      model.rate = tempRate;
+      model.favorite = tempFavorite;
+      model.metadata = payload.metadata;
+      model.has_metadata = true;
+      model.modified = Date.now();
       handleClose();
     } catch (e) {
       console.error(e);
@@ -89,25 +148,97 @@
 <div class="modal fade" tabindex="-1" aria-hidden="true" bind:this={modalElement}>
   <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
     <div class="modal-content">
-      {#if descriptionState.model}
+      {#if model}
         <div class="modal-header">
-          <h5 class="modal-title">
-            <i class="pi pi-file-o me-2"></i>{descriptionState.model.name}
+          <h5 class="modal-title d-flex align-items-center gap-2">
+            <!-- svelte-ignore a11y_click_events_have_key_events -->
+            <!-- svelte-ignore a11y_role_has_required_aria_props -->
+            <!-- svelte-ignore a11y_interactive_supports_focus -->
+            <i
+              class="pi pi-heart{tempFavorite ? '-fill text-warning' : ''}"
+              style="cursor: pointer;"
+              role="switch"
+              onclick={() => (tempFavorite = !tempFavorite)}
+            ></i>
+            {model.name}
           </h5>
           <button type="button" class="btn-close" aria-label="Close" onclick={handleClose}></button>
         </div>
         <div class="modal-body">
           <div class="row">
-            <div class={descriptionState.model.preview ? 'col-8' : 'col-12'}>
-              <pre
-                class="mb-0 font-monospace"
-                style="white-space: pre-wrap; word-break: break-word;">{descriptionState.model
-                  .description}</pre>
+            <div class={`${model.preview || tempPreviewUrl ? 'col-8' : 'col-12'} vstack`}>
+              <div class="mb-1 d-flex align-items-center justify-content-between">
+                <div class="form-check">
+                  <input
+                    class="form-check-input"
+                    type="checkbox"
+                    role="switch"
+                    id="nsfwSwitch"
+                    bind:checked={tempNsfw}
+                  />
+                  <label class="form-check-label" for="nsfwSwitch">NSFW</label>
+                </div>
+
+                <div class="d-flex">
+                  {#each [1, 2, 3, 4, 5] as star, i (i)}
+                    <!-- svelte-ignore a11y_click_events_have_key_events -->
+                    <!-- svelte-ignore a11y_no_static_element_interactions -->
+                    <i
+                      class="pi pi-star{tempRate && tempRate >= star
+                        ? '-fill text-warning'
+                        : ''} fs-4 me-1"
+                      style="cursor: pointer;"
+                      onclick={() => (tempRate = tempRate === star ? undefined : star)}
+                    ></i>
+                  {/each}
+                </div>
+              </div>
+              <div class="mb-1 vstack flex-grow-1">
+                <!-- svelte-ignore a11y_label_has_associated_control -->
+                <label class="mb-0 form-label fw-bold">Description</label>
+                <textarea
+                  class="form-control flex-grow-1 font-monospace"
+                  rows="10"
+                  bind:value={tempDescription}
+                ></textarea>
+              </div>
+              {#if !['checkpoints', 'unet', 'diffusion_models'].some((o) => subdirs.includes(o))}
+                <div>
+                  <!-- svelte-ignore a11y_label_has_associated_control -->
+                  <label class="mb-0 form-label fw-bold">Trained Words</label>
+                  {#if tempTrainedWords}
+                    {#each { length: tempTrainedWords.length }, i (i)}
+                      <div class="input-group input-group-sm mb-2">
+                        <input type="text" class="form-control" bind:value={tempTrainedWords[i]} />
+                        <!-- svelte-ignore a11y_consider_explicit_label -->
+                        <button
+                          class="btn btn-secondary"
+                          type="button"
+                          onclick={() => {
+                            tempTrainedWords.splice(i, 1);
+                          }}
+                        >
+                          <i class="pi pi-times"></i>
+                        </button>
+                      </div>
+                    {/each}
+                  {/if}
+                  <button
+                    class="btn btn-sm btn-outline-primary mt-2"
+                    onclick={() => {
+                      tempTrainedWords.push('');
+                    }}
+                  >
+                    <i class="pi pi-plus me-1"></i>Add Word
+                  </button>
+                </div>
+              {/if}
             </div>
-            {#if descriptionState.model.preview}
+            {#if model.preview || tempPreviewUrl}
               <div class="col-4">
                 <img
-                  src={`/comfygrid/api/thumbnail=${descriptionState.model.preview}`}
+                  src={tempPreviewUrl ||
+                    `/comfygrid/api/thumbnail=${model.preview}?t=${model.modified}`}
                   class="img-fluid rounded border"
                   alt="Preview"
                 />
@@ -117,7 +248,7 @@
         </div>
         <div class="modal-footer justify-content-start">
           <div class="flex flex-row flex-grow-1">
-            {#if descriptionState.model.metadata?.id}
+            {#if metadata.id}
               <button
                 type="button"
                 class="btn btn-secondary"
@@ -133,7 +264,12 @@
               </button>
             {/if}
           </div>
-          <button type="button" class="btn btn-primary" onclick={handleSave} disabled={isSaving || isFetching}>
+          <button
+            type="button"
+            class="btn btn-primary"
+            onclick={handleSave}
+            disabled={isSaving || isFetching}
+          >
             {#if isSaving}
               <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
               <span class="visually-hidden" role="status">Saving...</span>
