@@ -53,6 +53,7 @@ class ComfyUIService:
     python_path: str = ""
     comfyui_port: int = DEFAULT_COMFYUI_PORT
     connect_port: int = DEFAULT_COMFYUI_PORT
+    comfyui_args: str = ""
     output_directory: str = ""
     startup_log_clients: list = []
     startup_log_queue: Queue = None
@@ -101,6 +102,7 @@ class ComfyUIService:
             self.comfyui_path = active_workspace.get("script_path", "")
             self.python_path = active_workspace.get("python_path", "")
             self.comfyui_port = active_workspace.get("comfyui_port", DEFAULT_COMFYUI_PORT)
+            self.comfyui_args = active_workspace.get("comfyui_args", "")
             self.connect_port = saved_connect_port
 
     def apply_launch_config(self, workspace: WorkspaceInfo):
@@ -108,6 +110,7 @@ class ComfyUIService:
         self.comfyui_path = os.path.dirname(workspace.script_path)
         self.python_path = os.path.dirname(workspace.python_path)
         self.comfyui_port = workspace.comfyui_port
+        self.comfyui_args = workspace.comfyui_args
 
     def apply_connect_config(self, connect_port: int):
         self.mode = "connect"
@@ -169,15 +172,14 @@ class ComfyUIService:
 
         resolved_python_path = rel_to_abs(self.comfyui_path, self.python_path)
 
-        env_comfy_args = os.environ.get("COMFYUI_ARGS", "")
-        extra_args = self.last_args + shlex.split(env_comfy_args)
+        comfyui_args = self.last_args + shlex.split(self.comfyui_args)
 
         comfy_args = [
             "--listen", "127.0.0.1",
             "--port", str(self.comfyui_port),
             "--windows-standalone-build",
             "--preview-method", "auto",
-            *extra_args,
+            *comfyui_args,
             "--disable-auto-launch",
         ]
         kwargs = parse_python_args(comfy_args)

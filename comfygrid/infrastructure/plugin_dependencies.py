@@ -1,7 +1,7 @@
-from importlib.metadata import PackageNotFoundError, version
-from importlib.util import find_spec
 import subprocess
 import sys
+from importlib.metadata import PackageNotFoundError, version
+from importlib.util import find_spec
 
 
 def is_importable(import_name: str) -> bool:
@@ -16,8 +16,8 @@ def is_installed(dist_name: str) -> bool:
         return False
 
 
-def run_pip(command: str, package_name: str, *extra_args: str) -> None:
-    subprocess.check_call([sys.executable, "-m", "pip", command, package_name, *extra_args])
+def run_pip(command: str, package_name: str, *comfyui_args: str) -> None:
+    subprocess.check_call([sys.executable, "-m", "pip", command, package_name, *comfyui_args])
 
 
 def ensure_installed(import_name: str, dist_name: str | None = None) -> None:
