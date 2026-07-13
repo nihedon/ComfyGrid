@@ -1,9 +1,12 @@
 <script lang="ts">
   import { Modal } from 'bootstrap';
+  import { comfyGridApiClient } from '@/api/api-client';
   import { appState } from '@/states/app-state.svelte';
 
   let modalElement = $state<HTMLDivElement>();
   let bsModal: Modal | null = null;
+  let isFetching = $state(false);
+  let isSaving = $state(false);
 
   const descriptionState = appState.descriptionModalState;
 
@@ -45,6 +48,42 @@
   function handleClose() {
     descriptionState.close();
   }
+
+  async function handleFetch() {
+    if (!descriptionState.model?.metadata?.id) return;
+    const id = descriptionState.model.metadata.id;
+    isFetching = true;
+    try {
+      const res = await fetch(`https://civitai.red/api/v1/model-versions/${id}`);
+      if (!res.ok) throw new Error('Failed to fetch from Civitai');
+      const data = await res.json();
+
+      descriptionState.model.metadata = data;
+      descriptionState.model.has_metadata = true;
+    } catch (e) {
+      console.error(e);
+      alert(e);
+    } finally {
+      isFetching = false;
+    }
+  }
+
+  async function handleSave() {
+    if (!descriptionState.model) return;
+    isSaving = true;
+    try {
+      const apiRes = await comfyGridApiClient.postModelInfo(descriptionState.model.full_path, descriptionState.model.metadata || {});
+      if (!apiRes.ok) {
+        throw new Error('Failed to save model info');
+      }
+      handleClose();
+    } catch (e) {
+      console.error(e);
+      alert(e);
+    } finally {
+      isSaving = false;
+    }
+  }
 </script>
 
 <div class="modal fade" tabindex="-1" aria-hidden="true" bind:this={modalElement}>
@@ -76,8 +115,32 @@
             {/if}
           </div>
         </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" onclick={handleClose}>Close</button>
+        <div class="modal-footer justify-content-start">
+          <div class="flex flex-row flex-grow-1">
+            {#if descriptionState.model.metadata?.id}
+              <button
+                type="button"
+                class="btn btn-secondary"
+                onclick={handleFetch}
+                disabled={isFetching || isSaving}
+              >
+                {#if isFetching}
+                  <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                  <span class="visually-hidden" role="status">Loading...</span>
+                {:else}
+                  <i class="pi pi-refresh me-1"></i>Fetch Info
+                {/if}
+              </button>
+            {/if}
+          </div>
+          <button type="button" class="btn btn-primary" onclick={handleSave} disabled={isSaving || isFetching}>
+            {#if isSaving}
+              <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+              <span class="visually-hidden" role="status">Saving...</span>
+            {:else}
+              Save
+            {/if}
+          </button>
         </div>
       {/if}
     </div>

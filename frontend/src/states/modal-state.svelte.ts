@@ -124,9 +124,6 @@ class InpaintModalState {
     }
 }
 
-export const modalState = new ModalState();
-export const inpaintModalState = new InpaintModalState();
-
 class DescriptionModalState {
     #model = $state<Model | null>(null);
 
@@ -143,4 +140,6 @@ class DescriptionModalState {
     }
 }
 
+export const modalState = new ModalState();
+export const inpaintModalState = new InpaintModalState();
 export const descriptionModalState = new DescriptionModalState();

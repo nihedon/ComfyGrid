@@ -95,6 +95,14 @@ class ComfyGridApiClient {
         return await fetchApiJson(`/comfygrid/api/model_info=${modelInfo}`);
     }
 
+    async postModelInfo(modelInfo: string, data: unknown): Promise<ApiResultJson<{ message: string }>> {
+        return await fetchApiJson(`/comfygrid/api/model_info=${modelInfo}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+        });
+    }
+
     async deleteImage<T = unknown>(payload: ImageInfo): Promise<ApiResultJson<T>> {
         const query = new URLSearchParams({
             type: payload.type,

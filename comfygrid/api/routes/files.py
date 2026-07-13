@@ -5,7 +5,7 @@ from pathlib import Path
 from tkinter import filedialog
 
 import orjson
-from fastapi import APIRouter, Depends, File, Form, Response, UploadFile
+from fastapi import APIRouter, Depends, File, Form, Request, Response, UploadFile
 from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel
 
@@ -93,6 +93,27 @@ def get_model_info(path: str, comfy_service: ComfyUIService = Depends(get_comfy_
             info["metadata"] = {}
 
     return JSONResponse(info)
+
+
+@router.post("/model_info={path:path}")
+async def save_model_info(request: Request, path: str, comfy_service: ComfyUIService = Depends(get_comfy_service)):
+    comfyui_path = Path(comfy_service.comfyui_path)
+    full_path = comfyui_path / path
+
+    if not str(full_path).startswith(str(comfyui_path)):
+        return JSONResponse({"error": "Invalid path"}, status_code=400)
+
+    name_without_ext = full_path.stem
+    root = full_path.parent
+    metadata_path = root / f"{name_without_ext}.civitai.info"
+
+    try:
+        data = await request.json()
+        metadata_path.write_text(orjson.dumps(data, option=orjson.OPT_INDENT_2).decode("utf-8"), encoding="utf-8")
+        return {"message": "success"}
+    except Exception as e:
+        logger.error("Error saving model info: %s", e)
+        return JSONResponse({"error": str(e)}, status_code=500)
 
 
 @router.get("/output={file_path:path}")
