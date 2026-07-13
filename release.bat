@@ -33,6 +33,9 @@ mkdir release
 mkdir release\config
 mkdir release\frontend
 
+:: Generate version info
+echo Generating version.json...
+"%PYTHON_EXE%" -c "import json; from pathlib import Path; from comfygrid.services.git import get_version_info; Path('release/version.json').write_text(json.dumps(get_version_info(), ensure_ascii=False), encoding='utf-8')"
 :: Clean previous PyInstaller builds
 if exist "build" rmdir /s /q build
 if exist "dist" rmdir /s /q dist
