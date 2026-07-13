@@ -136,7 +136,16 @@ class ComfyUIService:
 
         logger.info(f"[ComfyUIService] Copying hook folder to {grid_dest_path}")
         try:
-            shutil.copytree("hook", grid_dest_path, dirs_exist_ok=True)
+            if getattr(sys, "frozen", False):
+                exe_path = sys.executable
+                if "_MEI" in str(exe_path):
+                    base_path = Path(sys.argv[0]).resolve().parent
+                else:
+                    base_path = Path(exe_path).parent
+            else:
+                base_path = Path.cwd()
+            hook_src_path = Path(base_path, "hook")
+            shutil.copytree(hook_src_path, grid_dest_path, dirs_exist_ok=True)
         except Exception as e:
             logger.error(f"[ComfyUIService] Error copying hook folder: {e}")
 

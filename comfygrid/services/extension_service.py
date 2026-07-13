@@ -10,7 +10,15 @@ import orjson
 from comfygrid.services.git import update_git_repository
 
 plugin_folders = []
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
+if getattr(sys, "frozen", False):
+    exe_path = sys.executable
+    if "_MEI" in str(exe_path):
+        PROJECT_ROOT = Path(sys.argv[0]).resolve().parent
+    else:
+        PROJECT_ROOT = Path(exe_path).parent
+else:
+    PROJECT_ROOT = Path(__file__).resolve().parents[2]
+
 EXTENSIONS_DIR = PROJECT_ROOT / "extensions"
 CUSTOM_EXTENSIONS_DIR = PROJECT_ROOT / "custom_nodes"
 
