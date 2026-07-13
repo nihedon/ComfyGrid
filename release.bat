@@ -32,6 +32,8 @@ if exist "release" rmdir /s /q release
 mkdir release
 mkdir release\config
 mkdir release\frontend
+mkdir release\hook
+mkdir release\custom_nodes
 
 :: Clean previous PyInstaller builds
 if exist "build" rmdir /s /q build
@@ -66,6 +68,8 @@ echo [4/4] Assembling Release folder...
 copy Caddyfile release\ >nul
 xcopy config release\config /E /I /Q >nul
 xcopy frontend\dist release\frontend /E /I /Q >nul
+xcopy hook release\hook /E /I /Q >nul
+if exist "custom_nodes\" xcopy custom_nodes release\custom_nodes /E /I /Q >nul
 
 :: Create a launch script for the release
 echo @echo off > release\comfygrid.bat
