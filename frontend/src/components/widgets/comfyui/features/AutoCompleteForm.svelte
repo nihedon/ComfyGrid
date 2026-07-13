@@ -113,9 +113,26 @@
     };
   });
 
+  let originalValue = '';
+
+  function handleFocus() {
+    originalValue = widget.value;
+  }
+
   function handleClick() {
     showAllOnNextSearch = isValid;
     jQuery(inputDomEl).autoComplete('show');
+  }
+
+  function handleKeyDown(e: KeyboardEvent) {
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      e.stopPropagation();
+      widget.value = originalValue;
+      if (inputDomEl) inputDomEl.value = originalValue;
+      jQuery(inputDomEl).autoComplete('hide');
+      inputDomEl.blur();
+    }
   }
 
   function handleChanged() {
@@ -165,7 +182,9 @@
   data-name={widget.name}
   bind:value={widget.value}
   onblur={handleChanged}
+  onfocus={handleFocus}
   onclick={handleClick}
+  onkeydown={handleKeyDown}
   bind:this={inputDomEl}
 />
 
