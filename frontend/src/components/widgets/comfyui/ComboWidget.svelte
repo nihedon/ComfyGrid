@@ -1,7 +1,7 @@
 <script lang="ts">
   import { t } from '@/i18n/i18n';
   import type { ComfyGridWidget } from '@/states/model-state.svelte';
-  import type { Model, ModelTypes } from '@/states/storage-state.svelte';
+  import { type Model, type ModelTypes } from '@/states/storage-state.svelte';
   import AutoCompleteForm from './features/AutoCompleteForm.svelte';
   import ModalComboWidget from './features/ModalComboWidget.svelte';
 
@@ -44,21 +44,6 @@
     return null;
   }) as { dir: ModelTypes; subdirs: string[] } | null;
 
-  const optionValuesSet = $derived(new Set(widget.options?.values ?? []));
-
-  const optionFixedValuesSet = $derived(new Set(widget.options?.fixed_values ?? []));
-
-  const hasValue = $derived(optionValuesSet.has(widget.value));
-
-  const isValid = $derived.by(() => {
-    return (
-      hasValue ||
-      String(widget.value).toLocaleLowerCase() === 'none' ||
-      String(widget.value).indexOf('Select ') === 0 ||
-      optionFixedValuesSet.has(widget.value)
-    );
-  });
-
   function handleInput(
     e: Event,
     widget: ComfyGridWidget<string, unknown>,
@@ -95,23 +80,18 @@
     class:col-10={modelDirInfo !== null}
     style="min-width: 0;"
   >
-    {#if modelDirInfo === null}
-      <AutoCompleteForm
-        node={widget.node}
-        {widget}
-        select={widget.options?.values ?? []}
-        {isValid}
-        handleInput={(e, w, m) => handleInput(e, w, m, true)}
-      />
-    {:else}
+    {#if modelDirInfo}
       <ModalComboWidget
-        node={widget.node}
         {widget}
-        select={widget.options?.values ?? []}
-        {isValid}
-        modelDir={modelDirInfo?.dir as ModelTypes}
+        modelDir={modelDirInfo?.dir}
         modelSubdirs={modelDirInfo?.subdirs}
         handleInput={(e, w, m) => handleInput(e, w, m, false)}
+      />
+    {:else}
+      <AutoCompleteForm
+        {widget}
+        select={widget.options?.values ?? []}
+        handleInput={(e, w, m) => handleInput(e, w, m, true)}
       />
     {/if}
   </div>

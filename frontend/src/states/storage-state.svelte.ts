@@ -71,11 +71,17 @@ class StorageState {
         this.#videos.set(reactiveModel.full_path, reactiveModel);
     }
 
-    findModelByPath(path: string): Model | undefined {
-        for (const model of this.#models.values()) {
-            if (model.path === path) return model;
-        }
-        return undefined;
+    findModel(modelDir: string, modelSubdirs: string[], path: string): Model | undefined {
+        return modelSubdirs
+            .map((subdir) => {
+                const fullPath = [modelDir, subdir, path].join('\\');
+                return this.#models.get(fullPath);
+            })
+            .find(Boolean);
+    }
+
+    findModelByFullPath(fullPath: string): Model | undefined {
+        return this.#models.get(fullPath);
     }
 
     clearFor(key: ModelTypes) {

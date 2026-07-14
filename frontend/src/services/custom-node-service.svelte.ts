@@ -36,11 +36,11 @@ export function setupCustomNodeApi(): void {
         openModelModal(modelDir: string, subDirs: string[], onSelect: (path: string) => void) {
             appState.modalState.setup('', modelDir as any, subDirs, null, (model: any) => onSelect(model.path));
         },
-        getModel(path: string) {
-            return appState.storageState.findModelByPath(path) ?? null;
+        getModel(fullPath: string) {
+            return appState.storageState.findModelByFullPath(fullPath) ?? null;
         },
-        showModelPopover(target: HTMLElement, modelPath: string) {
-            const model = appState.storageState.findModelByPath(modelPath);
+        showModelPopover(target: HTMLElement, modelFullPath: string) {
+            const model = appState.storageState.findModelByFullPath(modelFullPath);
             if (model) {
                 appState.popoverState.showModelPopover(target, model, 'models');
             }
