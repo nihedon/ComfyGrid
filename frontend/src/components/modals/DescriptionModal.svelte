@@ -144,6 +144,13 @@
       isSaving = false;
     }
   }
+
+  function inputImageUrl() {
+    const url = window.prompt('Enter image URL for preview:', tempPreviewUrl || '');
+    if (url) {
+      tempPreviewUrl = url;
+    }
+  }
 </script>
 
 <div class="modal fade" tabindex="-1" aria-hidden="true" bind:this={modalElement}>
@@ -237,15 +244,28 @@
             </div>
             <div style="width: 300px; height: 400px;">
               {#if model.preview || tempPreviewUrl}
+                <!-- svelte-ignore a11y_click_events_have_key_events -->
+                <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
                 <img
                   src={tempPreviewUrl ||
                     `/comfygrid/api/thumbnail=${model.preview}?t=${model.modified}`}
                   class="img-fluid rounded border h-100 object-fit-cover"
-                  style="min-width: 300px;"
+                  style="min-width: 300px; cursor: pointer;"
                   alt="Preview"
+                  title="Click to set image URL"
+                  onclick={inputImageUrl}
                 />
               {:else}
-                <NoPreview />
+                <!-- svelte-ignore a11y_click_events_have_key_events -->
+                <!-- svelte-ignore a11y_no_static_element_interactions -->
+                <div
+                  class="w-100 h-100"
+                  style="cursor: pointer;"
+                  onclick={inputImageUrl}
+                  title="Click to set image URL"
+                >
+                  <NoPreview />
+                </div>
               {/if}
             </div>
           </div>
