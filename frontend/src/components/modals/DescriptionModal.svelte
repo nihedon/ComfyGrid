@@ -15,8 +15,6 @@
   const metadata = $derived({
     id: '',
     modelId: '',
-    model: { nsfw: false },
-    trainedWords: [] as string[],
     ...model?.metadata,
   });
 
@@ -60,10 +58,10 @@
     if (model) {
       tempPreviewUrl = undefined;
       tempDescription = model.description ?? '';
-      tempNsfw = model.nsfw ?? metadata?.model?.nsfw ?? false;
+      tempNsfw = model.nsfw ?? false;
       tempRate = model.rate;
       tempFavorite = model.favorite ?? false;
-      tempTrainedWords = [...(model.trainedWords ?? metadata?.trainedWords ?? [])];
+      tempTrainedWords = [...(model.trainedWords ?? [])];
       fetchedMetadata = null;
       bsModal.show();
     } else {
@@ -168,7 +166,6 @@
       model.trainedWords = [...tempTrainedWords];
       if (fetchedMetadata) {
         model.metadata = $state.snapshot(fetchedMetadata);
-        model.has_metadata = true;
       }
       model.modified = Date.now();
       handleClose();

@@ -26,8 +26,6 @@
     model.metadata || {
       id: '',
       modelId: '',
-      model: { nsfw: false },
-      trainedWords: [],
     },
   );
 
@@ -57,7 +55,6 @@
 
   async function fetchDetails() {
     if (model.retrieved) return;
-    if (!model.has_metadata && !model.has_description) return;
 
     logger.info(`[${model.name}] fetching details`);
 
@@ -122,7 +119,7 @@
         <i class="pi pi-info-circle text-white"></i>
       </a>
       {#if metadata.modelId}
-        {@const civitaiDomain = metadata.model?.nsfw ? 'civitai.red' : 'civitai.com'}
+        {@const civitaiDomain = model.nsfw ? 'civitai.red' : 'civitai.com'}
         {@const modelVersionId = metadata.id ? `?modelVersionId=${metadata.id}` : ''}
         <a
           href={`https://${civitaiDomain}/models/${metadata.modelId}/${modelVersionId}`}

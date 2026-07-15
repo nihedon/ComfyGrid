@@ -112,9 +112,7 @@ def _make_model_info(root: str, filename: str, dir_name: str, sub_dir: str, mode
     model_info["description"] = None
     model_info["has_description"] = description_path.exists()
 
-    metadata_path = Path(root, name_without_ext + ".civitai.info")
     model_info["metadata"] = {}
-    model_info["has_metadata"] = metadata_path.exists()
 
     db_meta = model_repository.get_model_meta(model_info["full_path"])
     if db_meta is not None:
@@ -125,7 +123,8 @@ def _make_model_info(root: str, filename: str, dir_name: str, sub_dir: str, mode
     else:
         nsfw = False
         trained_words = []
-        if model_info["has_metadata"]:
+        metadata_path = Path(root, name_without_ext + ".civitai.info")
+        if metadata_path.exists():
             try:
                 import orjson
                 content = _read_file(metadata_path)

@@ -17,7 +17,6 @@ export class Model {
         id: string;
         modelId: string;
     } = $state();
-    has_metadata: boolean = $state(false);
     retrieved: boolean = $state(false);
     preview?: string = $state();
     nsfw: boolean = $state(false);

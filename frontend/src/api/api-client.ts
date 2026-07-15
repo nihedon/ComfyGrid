@@ -91,11 +91,11 @@ class ComfyGridApiClient {
             metadata?: {
                 id: string;
                 modelId: string;
-                model: { nsfw: boolean };
-                trainedWords: string[];
             };
             rate?: number;
             favorite?: boolean;
+            nsfw?: boolean;
+            trainedWords: string[];
         }>
     > {
         return await fetchApiJson(`/comfygrid/api/model_info=${modelInfo}`);
