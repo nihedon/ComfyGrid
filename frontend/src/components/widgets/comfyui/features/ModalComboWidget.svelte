@@ -83,5 +83,5 @@
     {isValidOverride}
     {handleInput}
   />
-  <ModelListButton {widget} select={filteredSelect} {modelDir} {modelSubdirs} {handleInput} />
+  <ModelListButton {widget} {select} {modelDir} {modelSubdirs} {handleInput} />
 </div>
