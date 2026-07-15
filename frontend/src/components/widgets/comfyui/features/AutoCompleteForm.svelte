@@ -37,6 +37,11 @@
   const popoverState = appState.popoverState;
   const workspaceState = appState.workspaceState;
 
+  const showNsfw = $derived(
+    appState.optionState.opts.get('show_nsfw') ??
+      appState.optionState.forms.get('show_nsfw')?.default,
+  );
+
   const isValid = $derived.by(() => {
     if (isValidOverride !== undefined) return isValidOverride;
     return (
@@ -176,7 +181,7 @@
       popoverState.hidePopover();
     } else {
       const model = storageState.findModel(modelDir, modelSubdirs!, item.innerText);
-      if (model) {
+      if (model && (showNsfw || !model.metadata?.model?.nsfw)) {
         popoverState.showModelPopover(item, model, modelDir);
       }
     }

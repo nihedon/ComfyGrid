@@ -55,7 +55,7 @@
       return;
     }
     const model = storageState.findModel(modelDir, modelSubdirs, widget.value);
-    if (model && element) {
+    if (model && element && (showNsfw || !model.metadata?.model?.nsfw)) {
       popoverState.showModelPopover(element, model, modelDir);
     }
   }
@@ -75,6 +75,13 @@
   onmouseleave={handleMouseLeave}
   bind:this={element}
 >
-  <AutoCompleteForm {widget} select={filteredSelect} {modelDir} {modelSubdirs} {isValidOverride} {handleInput} />
+  <AutoCompleteForm
+    {widget}
+    select={filteredSelect}
+    {modelDir}
+    {modelSubdirs}
+    {isValidOverride}
+    {handleInput}
+  />
   <ModelListButton {widget} select={filteredSelect} {modelDir} {modelSubdirs} {handleInput} />
 </div>
