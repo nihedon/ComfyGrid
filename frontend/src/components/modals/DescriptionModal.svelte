@@ -75,6 +75,39 @@
     descriptionState.close();
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  function applyFetchedData(data: any) {
+    if (!data.model) data.model = { nsfw: false };
+    if (!data.trainedWords) data.trainedWords = [];
+
+    const imgUrl = (data.images ?? [{}]).filter(
+      (image: Record<string, string>) => image.type === 'image',
+    )?.[0]?.url;
+    if (imgUrl) {
+      tempPreviewUrl = imgUrl;
+    }
+
+    fetchedMetadata = data;
+    tempNsfw = data.model?.nsfw ?? false;
+
+    let rawWords = data.trainedWords;
+    if (!rawWords || rawWords.length === 0) rawWords = data.trainedWord;
+    const fetchedWords: string[] = Array.isArray(rawWords) ? rawWords : [];
+
+    // eslint-disable-next-line svelte/prefer-svelte-reactivity
+    const mergedWords = new Set<string>();
+
+    for (const w of fetchedWords) {
+      mergedWords.add(w);
+    }
+
+    for (const w of tempTrainedWords) {
+      mergedWords.add(w);
+    }
+
+    tempTrainedWords = Array.from(mergedWords);
+  }
+
   async function handleFetch() {
     if (!model?.metadata?.id) return;
     const id = metadata?.id;
@@ -83,35 +116,20 @@
       const res = await fetch(`https://civitai.red/api/v1/model-versions/${id}`);
       if (!res.ok) throw new Error('Failed to fetch from Civitai');
       const data = await res.json();
-
-      if (!data.model) data.model = { nsfw: false };
-      if (!data.trainedWords) data.trainedWords = [];
-
-      const imgUrl = (data.images ?? [{}]).filter(
-        (image: Record<string, string>) => image.type === 'image',
-      )?.[0]?.url;
-      if (imgUrl) {
-        tempPreviewUrl = imgUrl;
-      }
-
-      fetchedMetadata = data;
-      tempNsfw = data.model?.nsfw ?? false;
-
-      const fetchedWords = data.trainedWords ?? [];
-      const mergedWords = new Set<string>();
-      
-      for (const w of fetchedWords) {
-        mergedWords.add(w);
-      }
-      
-      for (const w of tempTrainedWords) {
-        mergedWords.add(w);
-      }
-      
-      tempTrainedWords = Array.from(mergedWords);
+      applyFetchedData(data);
     } catch (e) {
-      console.error(e);
-      alert(e);
+      console.warn('Failed to fetch from civitai.red, trying local civitai.info fallback:', e);
+      try {
+        const localRes = await comfyGridApiClient.getModelInfo(model!.full_path);
+        if (localRes.ok && localRes.json.metadata) {
+          applyFetchedData(localRes.json.metadata);
+        } else {
+          throw new Error('Local fallback failed');
+        }
+      } catch (fallbackError) {
+        console.error(fallbackError);
+        alert('Failed to fetch from Civitai and local file.');
+      }
     } finally {
       isFetching = false;
     }

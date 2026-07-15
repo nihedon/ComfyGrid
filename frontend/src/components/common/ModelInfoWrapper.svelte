@@ -43,7 +43,7 @@
   });
 
   const triggerWords = $derived.by(() => {
-    const words = metadata.trainedWords;
+    const words = model.trainedWords;
     if (!words || words.length === 0) return [];
     return words;
   });

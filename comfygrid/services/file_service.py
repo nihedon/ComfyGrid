@@ -12,8 +12,8 @@ from charset_normalizer import from_path
 from PIL import Image
 
 from comfygrid.domain.image import resize_with_crop
-from comfygrid.infrastructure.cache import cache_thumbnail, load_thumbnail
 from comfygrid.infrastructure import model_repository
+from comfygrid.infrastructure.cache import cache_thumbnail, load_thumbnail
 
 logger = logging.getLogger(__name__)
 
@@ -121,19 +121,37 @@ def _make_model_info(root: str, filename: str, dir_name: str, sub_dir: str, mode
         model_info["nsfw"] = db_meta.nsfw
         model_info["rate"] = db_meta.rate
         model_info["favorite"] = db_meta.favorite
+        model_info["trainedWords"] = db_meta.trained_words
     else:
-        model_info["nsfw"] = False
-        model_info["rate"] = None
-        model_info["favorite"] = False
+        nsfw = False
+        trained_words = []
         if model_info["has_metadata"]:
             try:
                 import orjson
                 content = _read_file(metadata_path)
                 if content:
                     civitai_info = orjson.loads(content.replace("¥", "\\"))
-                    model_info["nsfw"] = bool(civitai_info.get("model", {}).get("nsfw", False))
+                    nsfw = bool(civitai_info.get("model", {}).get("nsfw", False))
+                    raw_words = civitai_info.get("trainedWords") or civitai_info.get("trainedWord") or []
+                    trained_words = raw_words if isinstance(raw_words, list) else []
             except Exception:
                 pass
+
+        try:
+            model_repository.upsert_model_meta(
+                model_info["full_path"],
+                nsfw=nsfw,
+                rate=None,
+                favorite=False,
+                trained_words=trained_words,
+            )
+        except Exception as e:
+            logger.error("Failed to insert initial model meta to DB for %s: %s", model_info["full_path"], e)
+
+        model_info["nsfw"] = nsfw
+        model_info["rate"] = None
+        model_info["favorite"] = False
+        model_info["trainedWords"] = trained_words
 
     return model_info
 

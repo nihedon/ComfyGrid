@@ -16,8 +16,6 @@ export class Model {
     metadata?: {
         id: string;
         modelId: string;
-        model: { nsfw: boolean };
-        trainedWords: string[];
     } = $state();
     has_metadata: boolean = $state(false);
     retrieved: boolean = $state(false);
