@@ -1,17 +1,19 @@
 import logging
 import threading
-import urllib.request
 import tkinter as tk
+import urllib.request
 from pathlib import Path
 from tkinter import filedialog
 
 import orjson
-from fastapi import APIRouter, Depends, File, Form, Request, Response, UploadFile
+from fastapi import (APIRouter, Depends, File, Form, Request, Response,
+                     UploadFile)
 from fastapi.responses import FileResponse, JSONResponse
+from huggingface_hub import ModelCard
 from pydantic import BaseModel
 
-from comfygrid.infrastructure.cache import delete_thumbnail_cache
 from comfygrid.infrastructure import model_repository
+from comfygrid.infrastructure.cache import delete_thumbnail_cache
 from comfygrid.services import file_service
 from comfygrid.services.comfyui import ComfyUIService
 from comfygrid.services.dependencies import get_comfy_service
@@ -33,6 +35,10 @@ def open_dialog(dialog_func):
     t.start()
     t.join()
     return result.get("path", "")
+
+
+class HuggingfaceRequest(BaseModel):
+    repo_id: str
 
 
 class FileDialogRequest(BaseModel):
@@ -231,4 +237,14 @@ def delete_image(type: str, filename: str, subfolder: str | None = None, comfy_s
         file_service.clear_model_cache(comfyui_path, type)
         return {"message": "deleted"}
     except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+
+@router.post("/huggingface_info")
+def get_huggingface_info(request: HuggingfaceRequest):
+    try:
+        card = ModelCard.load(request.repo_id)
+        return {"description": card.text}
+    except Exception as e:
+        logger.error("Failed to load huggingface model card %s: %s", request.repo_id, e)
         return JSONResponse({"error": str(e)}, status_code=500)

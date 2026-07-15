@@ -133,6 +133,34 @@
     }
   }
 
+  async function handleHuggingfaceFetch() {
+    const url = prompt('Enter HuggingFace Model URL\n(e.g. https://huggingface.co/author/model):');
+    if (!url) return;
+
+    const match = url.match(/huggingface\.co\/([^/]+)\/([^/]+)/);
+    if (!match) {
+      alert('Invalid HuggingFace URL format.');
+      return;
+    }
+    const repoId = `${match[1]}/${match[2]}`;
+
+    isFetching = true;
+    try {
+      const res = await comfyGridApiClient.postHuggingfaceInfo(repoId);
+      if (!res.ok) throw new Error('Failed to fetch from backend');
+      if (res.json.description) {
+        tempDescription = res.json.description;
+      } else {
+        alert('Description not found.');
+      }
+    } catch (e) {
+      console.error(e);
+      alert(e);
+    } finally {
+      isFetching = false;
+    }
+  }
+
   async function handleSave() {
     if (!model) return;
     isSaving = true;
@@ -316,6 +344,20 @@
                   <span class="visually-hidden" role="status">Loading...</span>
                 {:else}
                   <i class="pi pi-refresh me-1"></i>Fetch Info
+                {/if}
+              </button>
+            {:else}
+              <button
+                type="button"
+                class="btn btn-secondary"
+                onclick={handleHuggingfaceFetch}
+                disabled={isFetching || isSaving}
+              >
+                {#if isFetching}
+                  <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                  <span class="visually-hidden" role="status">Loading...</span>
+                {:else}
+                  <i class="pi pi-cloud-download me-1"></i>Fetch HuggingFace
                 {/if}
               </button>
             {/if}

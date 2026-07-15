@@ -101,6 +101,14 @@ class ComfyGridApiClient {
         return await fetchApiJson(`/comfygrid/api/model_info=${modelInfo}`);
     }
 
+    async postHuggingfaceInfo(repoId: string): Promise<ApiResultJson<{ description: string }>> {
+        return await fetchApiJson('/comfygrid/api/huggingface_info', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ repo_id: repoId }),
+        });
+    }
+
     async postModelInfo(modelInfo: string, data: unknown): Promise<ApiResultJson<{ message: string }>> {
         return await fetchApiJson(`/comfygrid/api/model_info=${modelInfo}`, {
             method: 'POST',
