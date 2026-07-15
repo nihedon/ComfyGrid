@@ -174,3 +174,6 @@ output/
 outputs/
 bin/
 release/
+*.db
+*.db-shm
+*.db-wal

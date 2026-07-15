@@ -181,7 +181,7 @@
       popoverState.hidePopover();
     } else {
       const model = storageState.findModel(modelDir, modelSubdirs!, item.innerText);
-      if (model && (showNsfw || !model.metadata?.model?.nsfw)) {
+      if (model && (showNsfw || !model.nsfw)) {
         popoverState.showModelPopover(item, model, modelDir);
       }
     }

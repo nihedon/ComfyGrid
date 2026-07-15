@@ -22,8 +22,10 @@ export class Model {
     has_metadata: boolean = $state(false);
     retrieved: boolean = $state(false);
     preview?: string = $state();
+    nsfw: boolean = $state(false);
     rate?: number = $state();
     favorite: boolean = $state(false);
+    trainedWords: string[] = $state([]);
     modified: number = $state(0);
     created: number = $state(0);
     size: number;

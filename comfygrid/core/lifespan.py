@@ -9,6 +9,7 @@ from fastapi import FastAPI
 
 from comfygrid.core.config import AppSettings
 from comfygrid.infrastructure.caddy import stop_caddy
+from comfygrid.infrastructure.database import initialize_db
 from comfygrid.services import job_service
 from comfygrid.services.comfyui import ComfyUIService
 from comfygrid.services.setup_service import install_caddy, start_caddy_proxy
@@ -17,6 +18,10 @@ from comfygrid.services.setup_service import install_caddy, start_caddy_proxy
 def create_lifespan(settings: AppSettings):
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+        try:
+            initialize_db()
+        except Exception as e:
+            logging.warning("Failed to initialize database: %s", e)
         try:
             job_service.initialize()
         except Exception as e:

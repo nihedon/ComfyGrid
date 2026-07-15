@@ -60,10 +60,10 @@
     if (model) {
       tempPreviewUrl = undefined;
       tempDescription = model.description ?? '';
-      tempNsfw = metadata?.model?.nsfw ?? false;
+      tempNsfw = model.nsfw ?? metadata?.model?.nsfw ?? false;
       tempRate = model.rate;
       tempFavorite = model.favorite ?? false;
-      tempTrainedWords = [...(metadata?.trainedWords ?? [])];
+      tempTrainedWords = [...(model.trainedWords ?? metadata?.trainedWords ?? [])];
       fetchedMetadata = null;
       bsModal.show();
     } else {
@@ -96,7 +96,19 @@
 
       fetchedMetadata = data;
       tempNsfw = data.model?.nsfw ?? false;
-      tempTrainedWords = [...(data.trainedWords ?? [])];
+
+      const fetchedWords = data.trainedWords ?? [];
+      const mergedWords = new Set<string>();
+      
+      for (const w of fetchedWords) {
+        mergedWords.add(w);
+      }
+      
+      for (const w of tempTrainedWords) {
+        mergedWords.add(w);
+      }
+      
+      tempTrainedWords = Array.from(mergedWords);
     } catch (e) {
       console.error(e);
       alert(e);
@@ -109,18 +121,19 @@
     if (!model) return;
     isSaving = true;
     try {
-      const payloadMetadata = $state.snapshot(fetchedMetadata || metadata || {});
-      if (!payloadMetadata.model) payloadMetadata.model = {};
-      payloadMetadata.model.nsfw = tempNsfw;
-      payloadMetadata.trainedWords = [...tempTrainedWords];
-
-      const payload = {
-        metadata: payloadMetadata,
+      const payload: Record<string, unknown> = {
         description: tempDescription,
+        nsfw: tempNsfw,
         rate: tempRate,
         favorite: tempFavorite,
+        trainedWords: [...tempTrainedWords],
         previewUrl: tempPreviewUrl,
       };
+
+      if (fetchedMetadata) {
+        payload.metadata = $state.snapshot(fetchedMetadata);
+      }
+
       const apiRes = await comfyGridApiClient.postModelInfo(model.full_path, payload);
       if (!apiRes.ok) {
         throw new Error('Failed to save model info');
@@ -131,10 +144,14 @@
         model.preview = parts.join('/').replace(model.extension, '.preview.png');
       }
       model.description = tempDescription;
+      model.nsfw = tempNsfw;
       model.rate = tempRate;
       model.favorite = tempFavorite;
-      model.metadata = payload.metadata;
-      model.has_metadata = true;
+      model.trainedWords = [...tempTrainedWords];
+      if (fetchedMetadata) {
+        model.metadata = $state.snapshot(fetchedMetadata);
+        model.has_metadata = true;
+      }
       model.modified = Date.now();
       handleClose();
     } catch (e) {

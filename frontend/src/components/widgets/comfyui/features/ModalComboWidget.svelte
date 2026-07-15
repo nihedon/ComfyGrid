@@ -45,7 +45,7 @@
     }
     return select.filter((path) => {
       const model = storageState.findModel(modelDir, modelSubdirs, path);
-      if (model?.metadata?.model?.nsfw === true) return false;
+      if (model?.nsfw === true) return false;
       return true;
     });
   });
@@ -55,7 +55,7 @@
       return;
     }
     const model = storageState.findModel(modelDir, modelSubdirs, widget.value);
-    if (model && element && (showNsfw || !model.metadata?.model?.nsfw)) {
+    if (model && element && (showNsfw || !model.nsfw)) {
       popoverState.showModelPopover(element, model, modelDir);
     }
   }

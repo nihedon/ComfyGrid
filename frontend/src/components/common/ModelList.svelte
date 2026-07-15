@@ -98,7 +98,7 @@
   const filteredModelList = $derived.by(() => {
     let list = folderFilteredModelList;
     if (!showNsfw) {
-      list = list.filter((model: Model) => model.metadata?.model?.nsfw !== true);
+      list = list.filter((model: Model) => !model.nsfw);
     }
     if (favoriteOnly) {
       list = list.filter((model: Model) => model.favorite === true);

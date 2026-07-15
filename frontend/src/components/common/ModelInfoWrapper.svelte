@@ -70,11 +70,17 @@
       if (data.metadata) {
         model.metadata = data.metadata;
       }
+      if (data.nsfw !== undefined) {
+        model.nsfw = data.nsfw;
+      }
       if (data.rate !== undefined) {
         model.rate = data.rate;
       }
       if (data.favorite !== undefined) {
         model.favorite = data.favorite;
+      }
+      if (Array.isArray(data.trainedWords)) {
+        model.trainedWords = data.trainedWords;
       }
     }
     model.retrieved = true;

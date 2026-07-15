@@ -13,6 +13,7 @@ from PIL import Image
 
 from comfygrid.domain.image import resize_with_crop
 from comfygrid.infrastructure.cache import cache_thumbnail, load_thumbnail
+from comfygrid.infrastructure import model_repository
 
 logger = logging.getLogger(__name__)
 
@@ -114,28 +115,25 @@ def _make_model_info(root: str, filename: str, dir_name: str, sub_dir: str, mode
     metadata_path = Path(root, name_without_ext + ".civitai.info")
     model_info["metadata"] = {}
     model_info["has_metadata"] = metadata_path.exists()
-    if model_info["has_metadata"]:
-        try:
-            import orjson
-            content = _read_file(metadata_path)
-            if content:
-                civitai_info = orjson.loads(content.replace("¥", "\\"))
-                nsfw = civitai_info.get("model", {}).get("nsfw", False)
-                model_info["metadata"]["model"] = {"nsfw": nsfw}
-        except Exception:
-            pass
 
-    comfygrid_path = Path(root, name_without_ext + ".comfygrid.info")
-    if comfygrid_path.exists():
-        try:
-            import orjson
-            content = _read_file(comfygrid_path)
-            if content:
-                cg_info = orjson.loads(content)
-                model_info["rate"] = cg_info.get("rate")
-                model_info["favorite"] = cg_info.get("favorite")
-        except Exception:
-            pass
+    db_meta = model_repository.get_model_meta(model_info["full_path"])
+    if db_meta is not None:
+        model_info["nsfw"] = db_meta.nsfw
+        model_info["rate"] = db_meta.rate
+        model_info["favorite"] = db_meta.favorite
+    else:
+        model_info["nsfw"] = False
+        model_info["rate"] = None
+        model_info["favorite"] = False
+        if model_info["has_metadata"]:
+            try:
+                import orjson
+                content = _read_file(metadata_path)
+                if content:
+                    civitai_info = orjson.loads(content.replace("¥", "\\"))
+                    model_info["nsfw"] = bool(civitai_info.get("model", {}).get("nsfw", False))
+            except Exception:
+                pass
 
     return model_info
 
