@@ -1,6 +1,6 @@
 import { tick } from 'svelte';
 import { comfyUiToComfyGridAdapter as adapter } from '@/bridge/comfyui-to-comfygrid-adapter';
-import { callLayoutChangedCallbacks, callOptionsChangedCallbacks, callUiLoadedCallbacks } from '@/services/callback-service';
+import { callLayoutChangedCallbacks } from '@/services/callback-service';
 import { notifyNodeChanged } from '@/services/custom-node-service.svelte';
 import { applyFloatingPositions, loadLayout } from '@/services/gridstack-service';
 import { appState } from '@/states/app-state.svelte';
@@ -10,21 +10,6 @@ import type { FloatingPosition, LayoutType } from '@/types/layout';
 import type { NodeProps } from '@/types/model-props';
 
 class WorkflowManager {
-    handleReady() {
-        appState.comfyUiState.graphReady = true;
-        callOptionsChangedCallbacks();
-        callUiLoadedCallbacks();
-
-        if (appState.uiState.activePageId === 'grid') {
-            // !!! Waiting for ComfyUI's data structure to be organized as the execution is too early. !!!
-            setTimeout(() => {
-                appState.bridge?.getWorkflow().then((res) => {
-                    this.handleWorkflow(res);
-                });
-            }, 1000);
-        }
-    }
-
     async handleWorkflow(payload: { graphId: string; name: string; nodes: NodeProps[] }) {
         const { graphId, nodes: rawNodes, name } = payload;
 

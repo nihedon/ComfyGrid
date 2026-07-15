@@ -34,7 +34,7 @@ export class ComfyUiApiHook {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         app.loadGraphData = function (...args: any[]) {
             const orgRet = orgLoadGraphData.apply(this, args);
-            workflowManager.handleReady();
+            appState.comfyUiState.graphReady = true;
             return orgRet;
         };
         anyApp.loadGraphData.__comfygrid__is_hooked__ = true;

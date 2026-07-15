@@ -11,7 +11,11 @@
   import PaintModal from '@/components/modals/PaintModal.svelte';
   import { loadTranslations, setLanguage } from '@/i18n/i18n';
   import { BOOTSWATCH_THEME_OPT_KEY, applyBootswatchTheme } from '@/services/bootswatch-service';
-  import { setupCallbacks } from '@/services/callback-service';
+  import {
+    callOptionsChangedCallbacks,
+    callUiLoadedCallbacks,
+    setupCallbacks,
+  } from '@/services/callback-service';
   import { loadExtensions } from '@/services/extension-service';
   import { ensureAllModels } from '@/services/models-service';
   import { loadOpts } from '@/services/options-service';
@@ -22,6 +26,7 @@
   import Header from './Header.svelte';
   import { comfyGridApiClient } from './api/api-client';
   import { bindKeyboardShortcuts } from './helpers/keybind.svelte';
+  import { workflowManager } from './managers/workflow-manager';
 
   let initialized = false;
 
@@ -84,6 +89,20 @@
 
         initializing = false;
       });
+    }
+  });
+
+  $effect(() => {
+    if (appState.comfyUiState.graphReady && !initializing) {
+      callOptionsChangedCallbacks();
+      callUiLoadedCallbacks();
+
+      // !!! Waiting for ComfyUI's data structure to be organized as the execution is too early. !!!
+      setTimeout(() => {
+        appState.bridge?.getWorkflow().then((res) => {
+          workflowManager.handleWorkflow(res);
+        });
+      }, 1000);
     }
   });
 
