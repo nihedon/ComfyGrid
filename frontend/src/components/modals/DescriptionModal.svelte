@@ -2,6 +2,7 @@
   import { Modal } from 'bootstrap';
   import { comfyGridApiClient } from '@/api/api-client';
   import { appState } from '@/states/app-state.svelte';
+  import NoPreview from '../common/NoPreview.svelte';
 
   let modalElement = $state<HTMLDivElement>();
   let bsModal: Modal | null = null;
@@ -146,7 +147,7 @@
 </script>
 
 <div class="modal fade" tabindex="-1" aria-hidden="true" bind:this={modalElement}>
-  <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+  <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
     <div class="modal-content">
       {#if model}
         <div class="modal-header">
@@ -165,8 +166,8 @@
           <button type="button" class="btn-close" aria-label="Close" onclick={handleClose}></button>
         </div>
         <div class="modal-body">
-          <div class="row">
-            <div class={`${model.preview || tempPreviewUrl ? 'col-8' : 'col-12'} vstack`}>
+          <div class="d-flex gap-3">
+            <div class="vstack flex-grow-1">
               <div class="mb-1 d-flex align-items-center justify-content-between">
                 <div class="form-check">
                   <input
@@ -203,12 +204,12 @@
                 ></textarea>
               </div>
               {#if !['checkpoints', 'unet', 'diffusion_models'].some((o) => subdirs.includes(o))}
-                <div>
+                <div class="d-flex flex-column">
                   <!-- svelte-ignore a11y_label_has_associated_control -->
                   <label class="mb-0 form-label fw-bold">Trained Words</label>
                   {#if tempTrainedWords}
                     {#each { length: tempTrainedWords.length }, i (i)}
-                      <div class="input-group input-group-sm mb-2">
+                      <div class="input-group input-group-sm mb-1">
                         <input type="text" class="form-control" bind:value={tempTrainedWords[i]} />
                         <!-- svelte-ignore a11y_consider_explicit_label -->
                         <button
@@ -224,7 +225,7 @@
                     {/each}
                   {/if}
                   <button
-                    class="btn btn-sm btn-outline-primary mt-2"
+                    class="btn btn-sm btn-primary mt-1"
                     onclick={() => {
                       tempTrainedWords.push('');
                     }}
@@ -234,16 +235,19 @@
                 </div>
               {/if}
             </div>
-            {#if model.preview || tempPreviewUrl}
-              <div class="col-4">
+            <div style="width: 300px; height: 400px;">
+              {#if model.preview || tempPreviewUrl}
                 <img
                   src={tempPreviewUrl ||
                     `/comfygrid/api/thumbnail=${model.preview}?t=${model.modified}`}
-                  class="img-fluid rounded border"
+                  class="img-fluid rounded border h-100 object-fit-cover"
+                  style="min-width: 300px;"
                   alt="Preview"
                 />
-              </div>
-            {/if}
+              {:else}
+                <NoPreview />
+              {/if}
+            </div>
           </div>
         </div>
         <div class="modal-footer justify-content-start">

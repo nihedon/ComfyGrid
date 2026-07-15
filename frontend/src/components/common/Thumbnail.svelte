@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { Model, ModelTypes } from '@/states/storage-state.svelte';
+  import NoPreview from './NoPreview.svelte';
 
   let { model, type }: { model: Model; type: ModelTypes } = $props();
 
@@ -35,11 +36,6 @@
       </video>
     {/if}
   {:else}
-    <div
-      class="vstack gap-2 fs-1 text-secondary fw-bold w-100 h-100 justify-content-center align-items-center user-select-none"
-    >
-      <span>NO</span>
-      <span>PREVIEW</span>
-    </div>
+    <NoPreview />
   {/if}
 </div>
