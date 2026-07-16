@@ -8,6 +8,7 @@ from comfygrid.infrastructure.database import get_connection
 @dataclass
 class ModelMeta:
     full_path: str
+    url: str | None
     nsfw: bool
     rate: int | None
     favorite: bool
@@ -17,7 +18,7 @@ class ModelMeta:
 def get_model_meta(full_path: str) -> ModelMeta | None:
     with get_connection() as conn:
         row = conn.execute(
-            "SELECT nsfw, rate, favorite FROM model_meta WHERE full_path = ?",
+            "SELECT url, nsfw, rate, favorite FROM model_meta WHERE full_path = ?",
             (full_path,),
         ).fetchone()
         if row is None:
@@ -31,6 +32,7 @@ def get_model_meta(full_path: str) -> ModelMeta | None:
         ]
         return ModelMeta(
             full_path=full_path,
+            url=row["url"],
             nsfw=bool(row["nsfw"]),
             rate=row["rate"],
             favorite=bool(row["favorite"]),
@@ -41,6 +43,7 @@ def get_model_meta(full_path: str) -> ModelMeta | None:
 def upsert_model_meta(
     full_path: str,
     *,
+    url: str | None = None,
     nsfw: bool | None = None,
     rate: int | None = ...,
     favorite: bool | None = None,
@@ -55,11 +58,12 @@ def upsert_model_meta(
         if existing is None:
             conn.execute(
                 """
-                INSERT INTO model_meta (full_path, nsfw, rate, favorite)
-                VALUES (?, ?, ?, ?)
+                INSERT INTO model_meta (full_path, url, nsfw, rate, favorite)
+                VALUES (?, ?, ?, ?, ?)
                 """,
                 (
                     full_path,
+                    None if url is ... else url,
                     int(nsfw) if nsfw is not None else 0,
                     None if rate is ... else rate,
                     int(favorite) if favorite is not None else 0,
@@ -68,6 +72,9 @@ def upsert_model_meta(
         else:
             fields: list[str] = ["updated_at = datetime('now')"]
             params: list = []
+            if url is not ...:
+                fields.append("url = ?")
+                params.append(url)
             if nsfw is not None:
                 fields.append("nsfw = ?")
                 params.append(int(nsfw))

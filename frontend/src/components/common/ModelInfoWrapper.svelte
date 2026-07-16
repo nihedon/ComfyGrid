@@ -22,13 +22,6 @@
   let containerElement = $state<HTMLElement | null>(null);
   let triggerWordsElement = $state<HTMLElement | null>(null);
 
-  const metadata = $derived(
-    model.metadata || {
-      id: '',
-      modelId: '',
-    },
-  );
-
   const sizeUnits = ['B', 'KB', 'MB', 'GB', 'TB'];
   const sizeWithUnit = $derived.by(() => {
     let size = model.size;
@@ -64,8 +57,8 @@
       if (data.description) {
         model.description = data.description;
       }
-      if (data.metadata) {
-        model.metadata = data.metadata;
+      if (data.url !== undefined) {
+        model.url = data.url;
       }
       if (data.nsfw !== undefined) {
         model.nsfw = data.nsfw;
@@ -118,11 +111,9 @@
       <a href="#" aria-label="Show description" onclick={showDescription}>
         <i class="pi pi-info-circle text-white"></i>
       </a>
-      {#if metadata.modelId}
-        {@const civitaiDomain = model.nsfw ? 'civitai.red' : 'civitai.com'}
-        {@const modelVersionId = metadata.id ? `?modelVersionId=${metadata.id}` : ''}
+      {#if model.url}
         <a
-          href={`https://${civitaiDomain}/models/${metadata.modelId}/${modelVersionId}`}
+          href={`${model.url}`}
           target="_blank"
           aria-label="Open Civitai"
           onclick={(e) => e.stopPropagation()}

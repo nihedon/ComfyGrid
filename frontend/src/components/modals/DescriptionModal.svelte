@@ -1,5 +1,7 @@
 <script lang="ts">
   import { Modal } from 'bootstrap';
+  import DOMPurify from 'dompurify';
+  import { marked } from 'marked';
   import { comfyGridApiClient } from '@/api/api-client';
   import { appState } from '@/states/app-state.svelte';
   import NoPreview from '../common/NoPreview.svelte';
@@ -12,20 +14,22 @@
   const descriptionState = appState.descriptionModalState;
   const model = $derived(descriptionState.model);
   const subdirs = $derived(descriptionState.subdirs);
-  const metadata = $derived({
-    id: '',
-    modelId: '',
-    ...model?.metadata,
-  });
 
   let tempPreviewUrl = $state<string | undefined>();
   let tempDescription = $state('');
+  let tempUrl = $state<string | undefined>();
   let tempNsfw = $state(false);
   let tempRate = $state<number | undefined>();
   let tempFavorite = $state(false);
   let tempTrainedWords = $state<string[]>([]);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let fetchedMetadata = $state<any>(null);
+  let isEditingDescription = $state(false);
+
+  DOMPurify.addHook('afterSanitizeAttributes', function (node) {
+    if ('target' in node) {
+      node.setAttribute('target', '_blank');
+      node.setAttribute('rel', 'noopener noreferrer');
+    }
+  });
 
   $effect(() => {
     if (!modalElement) return;
@@ -58,11 +62,12 @@
     if (model) {
       tempPreviewUrl = undefined;
       tempDescription = model.description ?? '';
+      tempUrl = model.url;
       tempNsfw = model.nsfw ?? false;
       tempRate = model.rate;
       tempFavorite = model.favorite ?? false;
       tempTrainedWords = [...(model.trainedWords ?? [])];
-      fetchedMetadata = null;
+      isEditingDescription = false;
       bsModal.show();
     } else {
       bsModal.hide();
@@ -75,8 +80,12 @@
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   function applyFetchedData(data: any) {
-    if (!data.model) data.model = { nsfw: false };
-    if (!data.trainedWords) data.trainedWords = [];
+    if (!data.model) {
+      data.model = { nsfw: false };
+    }
+    if (!data.trainedWords) {
+      data.trainedWords = [];
+    }
 
     const imgUrl = (data.images ?? [{}]).filter(
       (image: Record<string, string>) => image.type === 'image',
@@ -85,12 +94,15 @@
       tempPreviewUrl = imgUrl;
     }
 
-    fetchedMetadata = data;
     tempNsfw = data.model?.nsfw ?? false;
 
     let rawWords = data.trainedWords;
     if (!rawWords || rawWords.length === 0) rawWords = data.trainedWord;
     const fetchedWords: string[] = Array.isArray(rawWords) ? rawWords : [];
+
+    if (data.description) {
+      tempDescription = data.description;
+    }
 
     // eslint-disable-next-line svelte/prefer-svelte-reactivity
     const mergedWords = new Set<string>();
@@ -107,57 +119,31 @@
   }
 
   async function handleFetch() {
-    if (!model?.metadata?.id) return;
-    const id = metadata?.id;
+    let urlToFetch = tempUrl;
+    if (!urlToFetch) {
+      const prompted = prompt('Enter Model URL:');
+      if (!prompted) return;
+      urlToFetch = prompted;
+      tempUrl = urlToFetch;
+    }
+
     isFetching = true;
     try {
-      const res = await fetch(`https://civitai.red/api/v1/model-versions/${id}`);
-      if (!res.ok) throw new Error('Failed to fetch from Civitai');
-      const data = await res.json();
-      applyFetchedData(data);
+      const res = await comfyGridApiClient.postFetchInfo(urlToFetch);
+      if (!res.ok) throw new Error('Failed to fetch from backend');
+      applyFetchedData(res.json);
     } catch (e) {
-      console.warn('Failed to fetch from civitai.red, trying local civitai.info fallback:', e);
-      try {
-        const localRes = await comfyGridApiClient.getModelInfo(model!.full_path);
-        if (localRes.ok && localRes.json.metadata) {
-          applyFetchedData(localRes.json.metadata);
-        } else {
-          throw new Error('Local fallback failed');
-        }
-      } catch (fallbackError) {
-        console.error(fallbackError);
-        alert('Failed to fetch from Civitai and local file.');
-      }
+      console.error(e);
+      alert('Failed to fetch model info.');
     } finally {
       isFetching = false;
     }
   }
 
-  async function handleHuggingfaceFetch() {
-    const url = prompt('Enter HuggingFace Model URL\n(e.g. https://huggingface.co/author/model):');
-    if (!url) return;
-
-    const match = url.match(/huggingface\.co\/([^/]+)\/([^/]+)/);
-    if (!match) {
-      alert('Invalid HuggingFace URL format.');
-      return;
-    }
-    const repoId = `${match[1]}/${match[2]}`;
-
-    isFetching = true;
-    try {
-      const res = await comfyGridApiClient.postHuggingfaceInfo(repoId);
-      if (!res.ok) throw new Error('Failed to fetch from backend');
-      if (res.json.description) {
-        tempDescription = res.json.description;
-      } else {
-        alert('Description not found.');
-      }
-    } catch (e) {
-      console.error(e);
-      alert(e);
-    } finally {
-      isFetching = false;
+  function handleEditUrl() {
+    const url = prompt('Enter Model URL:', tempUrl || '');
+    if (url) {
+      tempUrl = url;
     }
   }
 
@@ -167,16 +153,13 @@
     try {
       const payload: Record<string, unknown> = {
         description: tempDescription,
+        url: tempUrl,
         nsfw: tempNsfw,
         rate: tempRate,
         favorite: tempFavorite,
         trainedWords: [...tempTrainedWords],
         previewUrl: tempPreviewUrl,
       };
-
-      if (fetchedMetadata) {
-        payload.metadata = $state.snapshot(fetchedMetadata);
-      }
 
       const apiRes = await comfyGridApiClient.postModelInfo(model.full_path, payload);
       if (!apiRes.ok) {
@@ -188,13 +171,11 @@
         model.preview = parts.join('/').replace(model.extension, '.preview.png');
       }
       model.description = tempDescription;
+      model.url = tempUrl;
       model.nsfw = tempNsfw;
       model.rate = tempRate;
       model.favorite = tempFavorite;
       model.trainedWords = [...tempTrainedWords];
-      if (fetchedMetadata) {
-        model.metadata = $state.snapshot(fetchedMetadata);
-      }
       model.modified = Date.now();
       handleClose();
     } catch (e) {
@@ -229,6 +210,15 @@
               onclick={() => (tempFavorite = !tempFavorite)}
             ></i>
             {model.name}
+            {#if tempUrl}
+              <!-- svelte-ignore a11y_click_events_have_key_events -->
+              <!-- svelte-ignore a11y_no_static_element_interactions -->
+              <i
+                class="pi pi-link fs-5"
+                style="cursor: pointer;"
+                onclick={() => window.open(tempUrl, '_blank')}
+              ></i>
+            {/if}
           </h5>
           <button type="button" class="btn-close" aria-label="Close" onclick={handleClose}></button>
         </div>
@@ -261,19 +251,35 @@
                   {/each}
                 </div>
               </div>
-              <div class="mb-1 vstack flex-grow-1">
+              <div class="mb-1 vstack flex-grow-1 description">
                 <!-- svelte-ignore a11y_label_has_associated_control -->
-                <label class="mb-0 form-label fw-bold">Description</label>
-                <textarea
-                  class="form-control flex-grow-1 font-monospace"
-                  rows="10"
-                  bind:value={tempDescription}
-                ></textarea>
+                <label class="fs-5 mb-0 form-label fw-bold d-flex align-items-center gap-2"
+                  >Description
+                  <!-- svelte-ignore a11y_click_events_have_key_events -->
+                  <!-- svelte-ignore a11y_no_static_element_interactions -->
+                  <i
+                    class="pi pi-file-edit fs-5 text-secondary"
+                    style="cursor: pointer;"
+                    onclick={() => (isEditingDescription = !isEditingDescription)}
+                  ></i>
+                </label>
+                {#if isEditingDescription}
+                  <textarea
+                    class="form-control flex-grow-1 font-monospace"
+                    rows="10"
+                    bind:value={tempDescription}
+                  ></textarea>
+                {:else}
+                  <div class="form-control flex-grow-1 mb-0">
+                    <!-- eslint-disable-next-line svelte/no-at-html-tags -->
+                    {@html DOMPurify.sanitize(marked.parse(tempDescription) as string)}
+                  </div>
+                {/if}
               </div>
               {#if !['checkpoints', 'unet', 'diffusion_models'].some((o) => subdirs.includes(o))}
                 <div class="d-flex flex-column">
                   <!-- svelte-ignore a11y_label_has_associated_control -->
-                  <label class="mb-0 form-label fw-bold">Trained Words</label>
+                  <label class="fs-5 mb-0 form-label fw-bold">Trained Words</label>
                   {#if tempTrainedWords}
                     {#each { length: tempTrainedWords.length }, i (i)}
                       <div class="input-group input-group-sm mb-1">
@@ -302,7 +308,7 @@
                 </div>
               {/if}
             </div>
-            <div style="width: 300px; height: 400px;">
+            <div style="width: 300px; min-width: 300px; height: 400px;">
               {#if model.preview || tempPreviewUrl}
                 <!-- svelte-ignore a11y_click_events_have_key_events -->
                 <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
@@ -331,34 +337,28 @@
           </div>
         </div>
         <div class="modal-footer justify-content-start">
-          <div class="flex flex-row flex-grow-1">
-            {#if metadata.id}
+          <div class="flex flex-row flex-grow-1 d-flex gap-2">
+            <button
+              type="button"
+              class="btn btn-secondary"
+              onclick={handleFetch}
+              disabled={isFetching || isSaving}
+            >
+              {#if isFetching}
+                <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                <span class="visually-hidden" role="status">Loading...</span>
+              {:else}
+                <i class="pi pi-refresh me-1"></i>Fetch Info
+              {/if}
+            </button>
+            {#if tempUrl}
               <button
                 type="button"
-                class="btn btn-secondary"
-                onclick={handleFetch}
+                class="btn btn-outline-secondary"
+                onclick={handleEditUrl}
                 disabled={isFetching || isSaving}
               >
-                {#if isFetching}
-                  <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
-                  <span class="visually-hidden" role="status">Loading...</span>
-                {:else}
-                  <i class="pi pi-refresh me-1"></i>Fetch Info
-                {/if}
-              </button>
-            {:else}
-              <button
-                type="button"
-                class="btn btn-secondary"
-                onclick={handleHuggingfaceFetch}
-                disabled={isFetching || isSaving}
-              >
-                {#if isFetching}
-                  <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
-                  <span class="visually-hidden" role="status">Loading...</span>
-                {:else}
-                  <i class="pi pi-cloud-download me-1"></i>Fetch HuggingFace
-                {/if}
+                <i class="pi pi-link me-1"></i>Edit URL
               </button>
             {/if}
           </div>
@@ -380,3 +380,60 @@
     </div>
   </div>
 </div>
+
+<style lang="scss">
+  .description {
+    min-width: 0;
+    > div,
+    textarea {
+      white-space: pre-wrap;
+      overflow-y: auto;
+      height: 0;
+      min-height: 400px;
+    }
+    :global(img) {
+      max-width: 100%;
+      height: auto;
+      display: block;
+    }
+  }
+
+  :global(.description .huggingface-gallery) {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 1rem;
+    margin-top: 1rem;
+    white-space: normal;
+
+    :global(figure) {
+      margin: 0;
+      padding: 0.5rem;
+      border: 1px solid var(--bs-border-color);
+      border-radius: var(--bs-border-radius);
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+
+      :global(img) {
+        margin-bottom: 0.5rem;
+        border-radius: var(--bs-border-radius);
+      }
+
+      :global(figcaption) {
+        margin-top: auto;
+        color: var(--bs-body-color);
+
+        :global(dl) {
+          margin-bottom: 0;
+          :global(dt) {
+            font-weight: bold;
+          }
+          :global(dd) {
+            margin-bottom: 0;
+            word-break: break-word;
+          }
+        }
+      }
+    }
+  }
+</style>

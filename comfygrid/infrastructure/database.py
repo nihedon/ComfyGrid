@@ -8,6 +8,7 @@ _CREATE_MODEL_META = """
 CREATE TABLE IF NOT EXISTS model_meta (
     id          INTEGER PRIMARY KEY AUTOINCREMENT,
     full_path   TEXT NOT NULL UNIQUE,
+    url         TEXT,
     nsfw        INTEGER NOT NULL DEFAULT 0,
     rate        INTEGER,
     favorite    INTEGER NOT NULL DEFAULT 0,

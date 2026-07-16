@@ -1,10 +1,13 @@
 import logging
+import re
 import threading
 import tkinter as tk
 import urllib.request
 from pathlib import Path
 from tkinter import filedialog
+from urllib.parse import urlsplit, urlunsplit
 
+import httpx
 import orjson
 from fastapi import (APIRouter, Depends, File, Form, Request, Response,
                      UploadFile)
@@ -37,8 +40,8 @@ def open_dialog(dialog_func):
     return result.get("path", "")
 
 
-class HuggingfaceRequest(BaseModel):
-    repo_id: str
+class FetchInfoRequest(BaseModel):
+    url: str
 
 
 class FileDialogRequest(BaseModel):
@@ -93,33 +96,39 @@ def get_model_info(path: str, comfy_service: ComfyUIService = Depends(get_comfy_
     if description_path.exists():
         info["description"] = file_service._read_file(description_path)
 
-    metadata_path = root / f"{name_without_ext}.civitai.info"
-    if metadata_path.exists():
-        try:
-            info["metadata"] = orjson.loads(file_service._read_file(metadata_path).replace("¥", "\\"))
-        except Exception as e:
-            logger.error("Error processing file %s: %s", metadata_path, e)
-            info["metadata"] = {}
-
-    civitai_nsfw = False
-    civitai_trained_words: list = []
-    if "metadata" in info:
-        civitai_nsfw = bool(info["metadata"].get("model", {}).get("nsfw", False))
-        raw_words = info["metadata"].get("trainedWords") or info["metadata"].get("trainedWord") or []
-        civitai_trained_words = raw_words if isinstance(raw_words, list) else []
-
     db_key = str(Path("models") / Path(path).relative_to("models")) if path.startswith("models/") else path
     db_meta = model_repository.get_model_meta(db_key)
+    
     if db_meta is not None:
+        info["url"] = db_meta.url
         info["nsfw"] = db_meta.nsfw
         info["rate"] = db_meta.rate
         info["favorite"] = db_meta.favorite
-        info["trainedWords"] = db_meta.trained_words if db_meta.trained_words else civitai_trained_words
+        info["trainedWords"] = db_meta.trained_words
     else:
-        info["nsfw"] = civitai_nsfw
-        info["rate"] = None
-        info["favorite"] = False
-        info["trainedWords"] = civitai_trained_words
+        civitai_meta_path = root / f"{name_without_ext}.civitai.info"
+        if civitai_meta_path.exists():
+            try:
+                metadata_dict = orjson.loads(file_service._read_file(civitai_meta_path).replace("¥", "\\"))
+                id = metadata_dict.get("id", None)
+                model_id = metadata_dict.get("modelId", None)
+                if id is not None and model_id is not None and "downloadUrl" in metadata_dict:
+                    download_url = metadata_dict["downloadUrl"]
+                    parts = urlsplit(download_url)
+                    site_url = urlunsplit((parts.scheme, parts.netloc, "/", "", ""))
+                    info["url"] = f"{site_url}/models/{model_id}/?modelVersionId={id}"
+                
+                info["nsfw"] = bool(metadata_dict.get("model", {}).get("nsfw", False))
+                raw_words = metadata_dict.get("trainedWords") or metadata_dict.get("trainedWord") or []
+                info["trainedWords"] = raw_words if isinstance(raw_words, list) else []
+            except Exception as e:
+                logger.error("Error processing file %s: %s", civitai_meta_path, e)
+
+        info.setdefault("url", None)
+        info.setdefault("nsfw", False)
+        info.setdefault("rate", None)
+        info.setdefault("favorite", False)
+        info.setdefault("trainedWords", [])
 
     return JSONResponse(info)
 
@@ -145,6 +154,8 @@ async def save_model_info(request: Request, path: str, comfy_service: ComfyUISer
             description_path.write_text(data["description"], encoding="utf-8")
 
         upsert_kwargs: dict = {}
+        if "url" in data:
+            upsert_kwargs["url"] = data["url"]
         if "nsfw" in data:
             upsert_kwargs["nsfw"] = bool(data["nsfw"])
         if "rate" in data:
@@ -240,11 +251,104 @@ def delete_image(type: str, filename: str, subfolder: str | None = None, comfy_s
         return JSONResponse({"error": str(e)}, status_code=500)
 
 
-@router.post("/huggingface_info")
-def get_huggingface_info(request: HuggingfaceRequest):
+def _expand_huggingface_gallery(text: str, widget_data: list, resolve_link) -> str:
+    if "<Gallery" not in text or not widget_data:
+        return text
+
+    gallery_html = '<div class="huggingface-gallery">\n'
+    for w in widget_data:
+        if isinstance(w, dict) and 'output' in w and 'url' in w['output']:
+            img_url = w['output']['url']
+            prompt_text = w.get('text', '')
+            prompt_text = prompt_text.replace('<', '&lt;').replace('>', '&gt;')
+            resolved_img_url = resolve_link(img_url, "resolve/main/") if not img_url.startswith("http") else img_url
+
+            gallery_html += f'''
+  <figure>
+    <img loading="lazy" src="{resolved_img_url}" alt="Gallery image" />
+    <figcaption>
+      <dl>
+        <dt>Prompt</dt>
+        <dd>{prompt_text}</dd>
+      </dl>
+    </figcaption>
+  </figure>
+'''
+    gallery_html += '</div>'
+    return re.sub(r'<Gallery\s*/?>', gallery_html, text)
+
+
+@router.post("/fetch_info")
+async def fetch_info(request: FetchInfoRequest):
+    url = request.url
     try:
-        card = ModelCard.load(request.repo_id)
-        return {"description": card.text}
+        domain = urlsplit(url).netloc
+
+        description = None
+        if "civitai" in domain:
+            model_id_match = re.search(r'/models/(\d+)/', url)
+            if model_id_match:
+                model_id = model_id_match.group(1)
+                api_url = f"https://{domain}/api/v1/models/{model_id}"
+                async with httpx.AsyncClient() as client:
+                    resp = await client.get(api_url, timeout=10.0)
+                    resp.raise_for_status()
+                    description = resp.json().get("description", None)
+            version_match = re.search(r'modelVersionId=(\d+)', url)
+            if version_match:
+                version_id = version_match.group(1)
+                api_url = f"https://{domain}/api/v1/model-versions/{version_id}"
+                async with httpx.AsyncClient() as client:
+                    resp = await client.get(api_url, timeout=10.0)
+                    resp.raise_for_status()
+                    json = resp.json()
+                    json["description"] = description
+                    return json
+            else:
+                return JSONResponse({"error": "modelVersionId not found in Civitai URL."}, status_code=400)
+
+        elif "huggingface" in domain:
+            match = re.search(r'huggingface\.co/([^/]+)/([^/]+)', url)
+            if not match:
+                return JSONResponse({"error": "Invalid HuggingFace URL format."}, status_code=400)
+            repo_id = f"{match.group(1)}/{match.group(2)}"
+
+            card = ModelCard.load(repo_id)
+            text = card.text
+            if text:
+                base_url_repo = f"https://huggingface.co/{repo_id}/"
+                base_url_root = "https://huggingface.co/"
+
+                def resolve_link(link, append_path=""):
+                    if link.startswith("../") or link.startswith("./"):
+                        return base_url_repo + link[2:]
+                    elif link.startswith("/"):
+                        return base_url_root + link[1:]
+                    elif link.startswith("docs/"):
+                        return base_url_repo + "resolve/main/" + link
+                    else:
+                        return base_url_repo + append_path + link
+
+                def repl_md(m):
+                    return f"[{m.group(1)}]({resolve_link(m.group(2))})"
+
+                text = re.sub(r"\[([^\]]*)\]\((?!http|https|#)([^)]+)\)", repl_md, text)
+
+                def repl_src(m):
+                    return f"{m.group(1)}=\"{resolve_link(m.group(2))}\""
+
+                text = re.sub(r"(src|href)=['\"](?!http|https|#|data:|mailto:)([^'\"]+)['\"]", repl_src, text)
+
+                widget_data = getattr(card.data, 'widget', None)
+                text = _expand_huggingface_gallery(text, widget_data, resolve_link)
+
+            return {
+                "description": text,
+                "model": {"nsfw": False},
+                "trainedWords": []
+            }
+        else:
+            return JSONResponse({"error": "Unsupported URL domain."}, status_code=400)
     except Exception as e:
-        logger.error("Failed to load huggingface model card %s: %s", request.repo_id, e)
+        logger.error("Failed to fetch info for %s: %s", request.url, e)
         return JSONResponse({"error": str(e)}, status_code=500)

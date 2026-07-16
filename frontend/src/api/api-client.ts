@@ -88,10 +88,7 @@ class ComfyGridApiClient {
     async getModelInfo(modelInfo: string): Promise<
         ApiResultJson<{
             description?: string;
-            metadata?: {
-                id: string;
-                modelId: string;
-            };
+            url?: string;
             rate?: number;
             favorite?: boolean;
             nsfw?: boolean;
@@ -101,11 +98,12 @@ class ComfyGridApiClient {
         return await fetchApiJson(`/comfygrid/api/model_info=${modelInfo}`);
     }
 
-    async postHuggingfaceInfo(repoId: string): Promise<ApiResultJson<{ description: string }>> {
-        return await fetchApiJson('/comfygrid/api/huggingface_info', {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    async postFetchInfo(url: string): Promise<ApiResultJson<any>> {
+        return await fetchApiJson('/comfygrid/api/fetch_info', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ repo_id: repoId }),
+            body: JSON.stringify({ url }),
         });
     }
 

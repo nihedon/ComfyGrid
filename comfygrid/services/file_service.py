@@ -3,8 +3,11 @@ import io
 import logging
 import os
 import time
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
+from urllib.parse import urlsplit, urlunsplit
+
+from tqdm import tqdm
 
 import cv2
 import numpy as np
@@ -68,7 +71,7 @@ def _get_models(comfyui_path: Path, dir_name: str, extensions: list[str]) -> lis
                         executor.submit(_make_model_info, root, filename, dir_name, sub_dir, model_path)
                     )
 
-        for future in futures:
+        for future in tqdm(as_completed(futures), total=len(futures), desc=f"Loading {dir_name}", unit="file"):
             model_info_list.append(future.result())
 
     cache_key = (str(model_path), tuple(sorted(extensions)))
@@ -116,11 +119,13 @@ def _make_model_info(root: str, filename: str, dir_name: str, sub_dir: str, mode
 
     db_meta = model_repository.get_model_meta(model_info["full_path"])
     if db_meta is not None:
+        model_info["url"] = db_meta.url
         model_info["nsfw"] = db_meta.nsfw
         model_info["rate"] = db_meta.rate
         model_info["favorite"] = db_meta.favorite
         model_info["trainedWords"] = db_meta.trained_words
     else:
+        url = None
         nsfw = False
         trained_words = []
         metadata_path = Path(root, name_without_ext + ".civitai.info")
@@ -130,6 +135,15 @@ def _make_model_info(root: str, filename: str, dir_name: str, sub_dir: str, mode
                 content = _read_file(metadata_path)
                 if content:
                     civitai_info = orjson.loads(content.replace("¥", "\\"))
+
+                    id = civitai_info.get("id", None)
+                    model_id = civitai_info.get("modelId", None)
+                    if id is not None and model_id is not None and "downloadUrl" in civitai_info:
+                        download_url = civitai_info["downloadUrl"]
+                        parts = urlsplit(download_url)
+                        site_url = urlunsplit((parts.scheme, parts.netloc, "/", "", ""))
+                        url = f"{site_url}/models/{model_id}/?modelVersionId={id}"
+
                     nsfw = bool(civitai_info.get("model", {}).get("nsfw", False))
                     raw_words = civitai_info.get("trainedWords") or civitai_info.get("trainedWord") or []
                     trained_words = raw_words if isinstance(raw_words, list) else []
@@ -139,6 +153,7 @@ def _make_model_info(root: str, filename: str, dir_name: str, sub_dir: str, mode
         try:
             model_repository.upsert_model_meta(
                 model_info["full_path"],
+                url=url,
                 nsfw=nsfw,
                 rate=None,
                 favorite=False,
@@ -147,6 +162,7 @@ def _make_model_info(root: str, filename: str, dir_name: str, sub_dir: str, mode
         except Exception as e:
             logger.error("Failed to insert initial model meta to DB for %s: %s", model_info["full_path"], e)
 
+        model_info["url"] = url
         model_info["nsfw"] = nsfw
         model_info["rate"] = None
         model_info["favorite"] = False

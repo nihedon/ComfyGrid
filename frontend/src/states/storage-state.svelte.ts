@@ -13,12 +13,9 @@ export class Model {
     extension: string = $state('');
     description?: string = $state();
     has_description: boolean = $state(false);
-    metadata?: {
-        id: string;
-        modelId: string;
-    } = $state();
     retrieved: boolean = $state(false);
     preview?: string = $state();
+    url?: string = $state();
     nsfw: boolean = $state(false);
     rate?: number = $state();
     favorite: boolean = $state(false);
