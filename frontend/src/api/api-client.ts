@@ -85,6 +85,10 @@ class ComfyGridApiClient {
         });
     }
 
+    private encodePath(path: string): string {
+        return path.split('/').map(encodeURIComponent).join('/');
+    }
+
     async getModelInfo(modelInfo: string): Promise<
         ApiResultJson<{
             description?: string;
@@ -95,7 +99,7 @@ class ComfyGridApiClient {
             trainedWords: string[];
         }>
     > {
-        return await fetchApiJson(`/comfygrid/api/model_info=${modelInfo}`);
+        return await fetchApiJson(`/comfygrid/api/model_info=${this.encodePath(modelInfo)}`);
     }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -108,7 +112,7 @@ class ComfyGridApiClient {
     }
 
     async postModelInfo(modelInfo: string, data: unknown): Promise<ApiResultJson<{ message: string }>> {
-        return await fetchApiJson(`/comfygrid/api/model_info=${modelInfo}`, {
+        return await fetchApiJson(`/comfygrid/api/model_info=${this.encodePath(modelInfo)}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data),
