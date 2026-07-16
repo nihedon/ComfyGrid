@@ -98,7 +98,7 @@ def get_model_info(path: str, comfy_service: ComfyUIService = Depends(get_comfy_
 
     db_key = str(Path("models") / Path(path).relative_to("models")) if path.startswith("models/") else path
     db_meta = model_repository.get_model_meta(db_key)
-    
+
     if db_meta is not None:
         info["url"] = db_meta.url
         info["nsfw"] = db_meta.nsfw
@@ -117,7 +117,7 @@ def get_model_info(path: str, comfy_service: ComfyUIService = Depends(get_comfy_
                     parts = urlsplit(download_url)
                     site_url = urlunsplit((parts.scheme, parts.netloc, "/", "", ""))
                     info["url"] = f"{site_url}/models/{model_id}/?modelVersionId={id}"
-                
+
                 info["nsfw"] = bool(metadata_dict.get("model", {}).get("nsfw", False))
                 raw_words = metadata_dict.get("trainedWords") or metadata_dict.get("trainedWord") or []
                 info["trainedWords"] = raw_words if isinstance(raw_words, list) else []
