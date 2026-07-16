@@ -2,20 +2,30 @@
   import { onMount } from 'svelte';
   import jQuery from 'jquery';
   import { appState } from '@/states/app-state.svelte';
-  import { ComfyGridNode, ComfyGridWidget } from '@/states/model-state.svelte';
-  import type { Model } from '@/states/storage-state.svelte';
+  import { ComfyGridWidget } from '@/states/model-state.svelte';
+  import type { Model, ModelTypes } from '@/states/storage-state.svelte';
+
+  type ComboWidget = ComfyGridWidget<
+    string,
+    {
+      values: string[];
+      fixed_values: string[];
+    }
+  >;
 
   let {
-    node,
     widget,
     select,
-    isValid,
+    modelDir,
+    modelSubdirs,
+    isValidOverride = undefined,
     handleInput,
   }: {
-    node: ComfyGridNode;
-    widget: ComfyGridWidget<string, unknown>;
+    widget: ComboWidget;
     select: string[];
-    isValid: boolean;
+    modelDir?: ModelTypes;
+    modelSubdirs?: string[];
+    isValidOverride?: boolean;
     handleInput: (e: CustomEvent, widget: ComfyGridWidget<string, unknown>, model?: Model) => void;
   } = $props();
 
@@ -26,6 +36,21 @@
   const storageState = appState.storageState;
   const popoverState = appState.popoverState;
   const workspaceState = appState.workspaceState;
+
+  const showNsfw = $derived(
+    appState.optionState.opts.get('show_nsfw') ??
+      appState.optionState.forms.get('show_nsfw')?.default,
+  );
+
+  const isValid = $derived.by(() => {
+    if (isValidOverride !== undefined) return isValidOverride;
+    return (
+      new Set(select).has(widget.value) ||
+      widget.value.toLocaleLowerCase() === 'none' ||
+      widget.value.indexOf('Select ') === 0 ||
+      new Set(widget.options?.fixed_values ?? []).has(widget.value)
+    );
+  });
 
   function teleportDropdown() {
     document.body.appendChild(ddEl);
@@ -56,14 +81,13 @@
       minLength: 0,
       events: {
         search: function (query: string, callback: (results: string[]) => void) {
-          const MAX_RESULTS = 100;
           if (showAllOnNextSearch) {
             showAllOnNextSearch = false;
-            callback(select.slice(0, MAX_RESULTS));
+            callback(select);
           } else {
             const lowerQuery = query.toLowerCase();
             const filtered = select.filter((v) => v.toLowerCase().includes(lowerQuery));
-            callback(filtered.slice(0, MAX_RESULTS));
+            callback(filtered);
           }
         },
       },
@@ -113,9 +137,26 @@
     };
   });
 
+  let originalValue = '';
+
+  function handleFocus() {
+    originalValue = widget.value;
+  }
+
   function handleClick() {
     showAllOnNextSearch = isValid;
     jQuery(inputDomEl).autoComplete('show');
+  }
+
+  function handleKeyDown(e: KeyboardEvent) {
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      e.stopPropagation();
+      widget.value = originalValue;
+      if (inputDomEl) inputDomEl.value = originalValue;
+      jQuery(inputDomEl).autoComplete('hide');
+      inputDomEl.blur();
+    }
   }
 
   function handleChanged() {
@@ -132,8 +173,6 @@
   }
 
   function handleMouseMove(e: Event) {
-    // TODO
-    const modelDir = 'models';
     if (modelDir !== 'models') {
       return;
     }
@@ -141,18 +180,18 @@
     if (!item) {
       popoverState.hidePopover();
     } else {
-      const model = storageState.findModelByPath(item.innerText);
-      if (model) {
+      const model = storageState.findModel(modelDir, modelSubdirs!, item.innerText);
+      if (model && (showNsfw || !model.nsfw)) {
         popoverState.showModelPopover(item, model, modelDir);
       }
     }
   }
 
   $effect(() => {
-    if (node.mode === 0 && !isValid) {
-      workspaceState.addErrorWidget(node.id, widget.id);
+    if (widget.node.mode === 0 && !isValid) {
+      workspaceState.addErrorWidget(widget.node.id, widget.id);
     } else {
-      workspaceState.deleteErrorWidget(node.id, widget.id);
+      workspaceState.deleteErrorWidget(widget.node.id, widget.id);
     }
   });
 </script>
@@ -160,12 +199,14 @@
 <input
   id={widget.id}
   class="form-control autoCompleteForm"
-  class:is-invalid={node.mode === 0 && !isValid}
+  class:is-invalid={widget.node.mode === 0 && !isValid}
   autocomplete="off"
   data-name={widget.name}
   bind:value={widget.value}
   onblur={handleChanged}
+  onfocus={handleFocus}
   onclick={handleClick}
+  onkeydown={handleKeyDown}
   bind:this={inputDomEl}
 />
 

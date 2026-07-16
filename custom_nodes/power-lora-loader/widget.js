@@ -180,7 +180,7 @@ class PowerLoraList extends HTMLElement {
 
   #updateRow(row, widget, listIndex, loraValues) {
     const value = widget.value ?? {};
-    const isValid = !value.on || loraValues.includes(value.lora ?? "");
+    const isValidOverride = !value.on ? true : (loraValues.includes(value.lora ?? "") ? undefined : false);
 
     row.dataset.listIndex = String(listIndex);
     setWidgetIndex(row, listIndex);
@@ -195,6 +195,8 @@ class PowerLoraList extends HTMLElement {
       const fakeWidget = {
         id: `lora_${this.#node.id}_${listIndex}`,
         name: `lora_${listIndex}`,
+        options: { values: loraValues, fixed_values: [] },
+        node: this.#node,
         get value() { return widget.value.lora ?? ""; },
         set value(v) { 
           widget.value.lora = v;
@@ -206,10 +208,8 @@ class PowerLoraList extends HTMLElement {
       };
 
       row._svelteComponent.update({
-        node: this.#node,
         widget: fakeWidget,
-        select: loraValues,
-        isValid: isValid
+        isValidOverride,
       });
     }
   }
@@ -232,6 +232,8 @@ class PowerLoraList extends HTMLElement {
     const fakeWidget = {
       id: `lora_${this.#node.id}_${listIndex}`,
       name: `lora_${listIndex}`,
+      options: { values: loraValues, fixed_values: [] },
+      node: this.#node,
       get value() { return widget.value.lora ?? ""; },
       set value(v) { 
         widget.value.lora = v;
@@ -243,11 +245,10 @@ class PowerLoraList extends HTMLElement {
     };
 
     if (api.mountModalComboWidget) {
+      const isValidOverride = !value.on ? true : (loraValues.includes(value.lora ?? "") ? undefined : false);
       row._svelteComponent = api.mountModalComboWidget(comboContainer, {
-        node: this.#node,
         widget: fakeWidget,
-        select: loraValues,
-        isValid: isValid,
+        isValidOverride,
         modelDir: 'models',
         modelSubdirs: ['loras'],
         handleInput: (e, w, model) => {

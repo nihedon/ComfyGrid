@@ -56,3 +56,15 @@ def load_thumbnail(key: str):
     except lmdb.Error as e:
         logging.warning("[Cache] Failed to read thumbnail cache: %s", e)
     return None
+
+
+def delete_thumbnail_cache(key: str) -> None:
+    env = _get_thumbnail_cache_env()
+    if env is None:
+        return
+
+    try:
+        with env.begin(write=True) as txn:
+            txn.delete(key.encode())
+    except lmdb.Error as e:
+        logging.warning("[Cache] Failed to delete thumbnail cache: %s", e)

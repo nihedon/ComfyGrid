@@ -54,6 +54,7 @@
             subdirs={modalState.modelSubdirs}
             valueSet={modalState.valueSet}
             action={null}
+            focusSelectedModel={true}
           />
         {/key}
       {/if}

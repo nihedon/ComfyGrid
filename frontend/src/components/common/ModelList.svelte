@@ -10,18 +10,20 @@
   import ModelInfoWrapper from './ModelInfoWrapper.svelte';
   import Thumbnail from './Thumbnail.svelte';
 
-  type SortType = 'path' | 'name' | 'modified' | 'created';
+  type SortType = 'path' | 'name' | 'modified' | 'created' | 'rate';
 
   let {
     dir,
     subdirs,
     valueSet,
     action,
+    focusSelectedModel = false,
   }: {
     dir: ModelTypes;
     subdirs: ReadonlyArray<string>;
     valueSet?: ReadonlySet<string>;
     action: ((model: Model) => void) | null;
+    focusSelectedModel?: boolean;
   } = $props();
 
   const modalState = appState.modalState;
@@ -51,6 +53,11 @@
 
   let filterText = $state('');
   let selectedFolder = $state('');
+  let showNsfw = $state(
+    appState.optionState.opts.get('show_nsfw') ??
+      appState.optionState.forms.get('show_nsfw')?.default,
+  );
+  let favoriteOnly = $state(false);
 
   const sortAsc = $derived<boolean>(optionState.opts.get(`${dir}_sort_asc`) ?? true);
   const sortMethod = $derived<SortType>(optionState.opts.get(`${dir}_sort`) ?? 'path');
@@ -71,8 +78,11 @@
   });
 
   const sortedModelList = $derived.by(() => {
-    const sortedModelList = sortBy(modelList, [sortMethod]);
-    return sortAsc ? sortedModelList : sortedModelList.reverse();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const sortParams: any[] =
+      sortMethod === 'rate' ? [(m: Model) => m.rate ?? 0, 'path'] : [sortMethod];
+    const sortedList = sortBy(modelList, sortParams);
+    return sortAsc ? sortedList : sortedList.reverse();
   });
 
   const folderFilteredModelList = $derived.by(() => {
@@ -86,14 +96,22 @@
   });
 
   const filteredModelList = $derived.by(() => {
+    let list = folderFilteredModelList;
+    if (!showNsfw) {
+      list = list.filter((model: Model) => !model.nsfw);
+    }
+    if (favoriteOnly) {
+      list = list.filter((model: Model) => model.favorite === true);
+    }
+
     const filters = filterText
       .toLowerCase()
       .split(' ')
       .filter((f) => f.trim() !== '');
     if (filters.length === 0) {
-      return folderFilteredModelList;
+      return list;
     }
-    return folderFilteredModelList.filter((model: Model) => {
+    return list.filter((model: Model) => {
       const path = (model.path ?? '').toLowerCase();
       return filters.every((f) => path.includes(f));
     });
@@ -108,12 +126,18 @@
     void selectedFolder;
     void sortMethod;
     void sortAsc;
+    void showNsfw;
+    void favoriteOnly;
     currentPage = 0;
   });
 
   $effect(() => {
+    optionState.setOptionValue('show_nsfw', showNsfw);
+  });
+
+  $effect(() => {
     // Jump to the page containing the selected model when the list changes
-    if (!modalState.selectedModelPath) return;
+    if (!focusSelectedModel || !modalState.selectedModelPath) return;
     const index = filteredModelList.findIndex((m) => m.path === modalState.selectedModelPath);
     if (index >= 0) {
       currentPage = Math.floor(index / PAGE_SIZE);
@@ -180,7 +204,28 @@
 
 <nav class="navbar navbar-light bg-light">
   <div class="container-fluid justify-content-end">
-    <ul class="navbar-nav d-flex flex-row gap-2">
+    <ul class="navbar-nav d-flex flex-row gap-2 align-items-center">
+      {#if dir === 'models'}
+        <li class="nav-item">
+          <input
+            class="btn-check"
+            type="checkbox"
+            id="favoriteOnlySwitch"
+            bind:checked={favoriteOnly}
+          />
+          <label
+            class="btn btn-sm btn-outline-primary"
+            for="favoriteOnlySwitch"
+            style="width: 70px;">Favorite</label
+          >
+        </li>
+        <li class="nav-item">
+          <input class="btn-check" type="checkbox" id="showNsfwSwitch" bind:checked={showNsfw} />
+          <label class="btn btn-sm btn-outline-primary" for="showNsfwSwitch" style="width: 70px;">
+            {showNsfw ? 'ALL' : 'NSFW'}
+          </label>
+        </li>
+      {/if}
       <li class="nav-item" style="min-width: 200px;">
         <select class="form-select" name="folder" bind:value={selectedFolder}>
           <option value="">All Folders</option>
@@ -189,7 +234,7 @@
           {/each}
         </select>
       </li>
-      <li class="nav-item" style="width: 300px;">
+      <li class="nav-item" style="width: 200px;">
         <input
           type="search"
           class="form-control"
@@ -204,7 +249,7 @@
             <!-- svelte-ignore a11y_consider_explicit_label -->
             <button
               type="button"
-              class="btn btn-outline-primary"
+              class="btn btn-sm btn-outline-primary"
               name="{dir}_sort-method"
               value={type}
               onclick={() => changeSortType(type)}
@@ -217,12 +262,13 @@
           {@render sortButton('name', 'pi-sort-alpha-down')}
           {@render sortButton('modified', 'pi-calendar-clock')}
           {@render sortButton('created', 'pi-calendar-plus')}
+          {@render sortButton('rate', 'pi-star')}
         </div>
       </li>
       <li class="nav-item">
         <button
           type="button"
-          class="btn btn-outline-primary"
+          class="btn btn-sm btn-outline-primary"
           aria-label="Sort order"
           onclick={toggleSortOrder}
           ><i class="pi pi-sort-amount-down{sortAsc ? '-alt' : ''}"></i></button
@@ -231,7 +277,7 @@
       <li class="nav-item">
         <button
           type="button"
-          class="btn btn-primary"
+          class="btn btn-sm btn-primary"
           aria-label="Reload models"
           onclick={reloadModels}><i class="pi pi-refresh"></i></button
         >
@@ -267,7 +313,7 @@
               <i class="pi pi-trash"></i>
             </button>
           {/if}
-          <ModelInfoWrapper {model}>
+          <ModelInfoWrapper {model} {subdirs}>
             <Thumbnail {model} type={dir} />
           </ModelInfoWrapper>
         </a>

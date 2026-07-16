@@ -8,9 +8,15 @@
 
   let {
     model,
+    subdirs,
     showMenuIcons = true,
     children,
-  }: { model: Model; showMenuIcons?: boolean; children: Snippet } = $props();
+  }: {
+    model: Model;
+    subdirs?: ReadonlyArray<string>;
+    showMenuIcons?: boolean;
+    children: Snippet;
+  } = $props();
 
   let triggerWordsPopoverElement = $state<HTMLElement | null>(null);
   let containerElement = $state<HTMLElement | null>(null);
@@ -28,7 +34,7 @@
   });
 
   const triggerWords = $derived.by(() => {
-    const words = model.metadata?.trainedWords;
+    const words = model.trainedWords;
     if (!words || words.length === 0) return [];
     return words;
   });
@@ -37,12 +43,11 @@
     e.preventDefault();
     e.stopPropagation();
     await fetchDetails();
-    appState.descriptionModalState.show(model);
+    appState.descriptionModalState.show(model, subdirs ?? []);
   }
 
   async function fetchDetails() {
     if (model.retrieved) return;
-    if (!model.has_metadata && !model.has_description) return;
 
     logger.info(`[${model.name}] fetching details`);
 
@@ -52,8 +57,20 @@
       if (data.description) {
         model.description = data.description;
       }
-      if (data.metadata) {
-        model.metadata = data.metadata;
+      if (data.url !== undefined) {
+        model.url = data.url;
+      }
+      if (data.nsfw !== undefined) {
+        model.nsfw = data.nsfw;
+      }
+      if (data.rate !== undefined) {
+        model.rate = data.rate;
+      }
+      if (data.favorite !== undefined) {
+        model.favorite = data.favorite;
+      }
+      if (Array.isArray(data.trainedWords)) {
+        model.trainedWords = data.trainedWords;
       }
     }
     model.retrieved = true;
@@ -83,7 +100,6 @@
 {@render children()}
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
-
 <div
   class="frosted-glass vstack position-absolute w-100 fw-bold bottom-0 start-0 text-white text-break pt-1"
   onmouseenter={fetchDetails}
@@ -91,17 +107,13 @@
 >
   {#if showMenuIcons}
     <div class="d-flex px-1 menu-icon">
-      {#if model.description}
-        <!-- svelte-ignore a11y_invalid_attribute -->
-        <a href="#" aria-label="Show description" onclick={showDescription}>
-          <i class="pi pi-info-circle text-white"></i>
-        </a>
-      {/if}
-      {#if model.metadata?.modelId}
-        {@const civitaiDomain = model.metadata?.model?.nsfw ? 'civitai.red' : 'civitai.com'}
-        {@const modelVersionId = model.metadata?.id ? `?modelVersionId=${model.metadata?.id}` : ''}
+      <!-- svelte-ignore a11y_invalid_attribute -->
+      <a href="#" aria-label="Show description" onclick={showDescription}>
+        <i class="pi pi-info-circle text-white"></i>
+      </a>
+      {#if model.url}
         <a
-          href={`https://${civitaiDomain}/models/${model.metadata?.modelId}/${modelVersionId}`}
+          href={`${model.url}`}
           target="_blank"
           aria-label="Open Civitai"
           onclick={(e) => e.stopPropagation()}
@@ -122,7 +134,7 @@
 
         <div class="d-none">
           <div class="list-group overflow-y-auto fs-6" bind:this={triggerWordsElement}>
-            {#each triggerWords as tag (tag)}
+            {#each triggerWords as tag, i (i)}
               <span class="list-group-item d-flex align-items-center gap-3">
                 <span class="tag flex-grow-1">{tag}</span>
                 <!-- svelte-ignore a11y_click_events_have_key_events -->

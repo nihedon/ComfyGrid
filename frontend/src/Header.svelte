@@ -9,6 +9,7 @@
   import logger from '@/utils/logger';
   import { comfyGridApiClient } from './api/api-client';
   import SystemMonitorGroup from './components/widgets/SystemMonitorGroup.svelte';
+  import { workflowManager } from './managers/workflow-manager';
 
   const toastState = appState.toastState;
   const workspaceState = appState.workspaceState;
@@ -98,6 +99,10 @@
     if (ret?.success) {
       logger.log('Workflow applied successfully');
       toastState.addToast({ type: 'success', message: $t('toast.workflow_applied') });
+      const res = await appState.bridge?.getWorkflow();
+      if (res) {
+        workflowManager.handleWorkflow(res);
+      }
     } else {
       logger.error('Failed to apply workflow:', ret?.error);
       toastState.addToast({ type: 'error', message: $t('toast.workflow_apply_failed') });

@@ -8,6 +8,10 @@ type = "dropdown"
 choices = ["auto", "light", "dark"]
 default = "auto"
 
+[show_nsfw]
+type = "checkbox"
+default = true
+
 [save_directory]
 type = "text"
 default = "save"

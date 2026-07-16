@@ -124,18 +124,20 @@ class InpaintModalState {
     }
 }
 
-export const modalState = new ModalState();
-export const inpaintModalState = new InpaintModalState();
-
 class DescriptionModalState {
     #model = $state<Model | null>(null);
+    #subdirs = $state<ReadonlyArray<string>>([]);
 
     get model() {
         return this.#model;
     }
+    get subdirs() {
+        return this.#subdirs;
+    }
 
-    show(model: Model) {
+    show(model: Model, subdirs: ReadonlyArray<string>) {
         this.#model = model;
+        this.#subdirs = subdirs;
     }
 
     close() {
@@ -143,4 +145,6 @@ class DescriptionModalState {
     }
 }
 
+export const modalState = new ModalState();
+export const inpaintModalState = new InpaintModalState();
 export const descriptionModalState = new DescriptionModalState();

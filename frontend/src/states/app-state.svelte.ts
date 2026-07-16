@@ -17,69 +17,57 @@ class AppState {
     name: string = $state('ComfyGrid');
     version: Version = $state({ branch: 'unknown', commit: 'unknown', tag: 'unknown', date: 'unknown', comitter: 'unknown' });
 
-    readonly #comfyUiState = comfyUiState;
-    readonly #workspaceState = workspaceState;
-    readonly #galleryState = galleryState;
-    readonly #popoverState = popoverState;
-    readonly #toastState = toastState;
-    readonly #dialogState = dialogState;
-    readonly #modalState = modalState;
-    readonly #inpaintModalState = inpaintModalState;
-    readonly #descriptionModalState = descriptionModalState;
-    readonly #optionState = optionManager;
-    readonly #executionState = executionState;
-    readonly #jobState = jobState;
-    readonly #storageState = storageState;
-    readonly #uiState = uiState;
-    readonly #systemState = systemState;
-
-    readonly bridge = $derived(comfyUiState.bridge);
-    readonly isDebugMode = $derived(optionManager.getOptionValue('debug_mode'));
+    get bridge() {
+        return comfyUiState.bridge;
+    }
+    get isDebugMode() {
+        return optionManager.getOptionValue('debug_mode');
+    }
 
     get comfyUiState() {
-        return this.#comfyUiState;
+        return comfyUiState;
     }
     get workspaceState() {
-        return this.#workspaceState;
+        return workspaceState;
     }
     get galleryState() {
-        return this.#galleryState;
+        return galleryState;
     }
     get popoverState() {
-        return this.#popoverState;
+        return popoverState;
     }
     get toastState() {
-        return this.#toastState;
+        return toastState;
     }
     get dialogState() {
-        return this.#dialogState;
+        return dialogState;
     }
     get modalState() {
-        return this.#modalState;
+        return modalState;
     }
     get inpaintModalState() {
-        return this.#inpaintModalState;
+        return inpaintModalState;
     }
     get descriptionModalState() {
-        return this.#descriptionModalState;
+        return descriptionModalState;
     }
     get optionState() {
-        return this.#optionState;
+        return optionManager;
     }
     get executionState() {
-        return this.#executionState;
+        return executionState;
     }
     get jobState() {
-        return this.#jobState;
+        return jobState;
     }
     get storageState() {
-        return this.#storageState;
+        return storageState;
     }
     get uiState() {
-        return this.#uiState;
+        return uiState;
     }
     get systemState() {
-        return this.#systemState;
+        return systemState;
     }
 }
 

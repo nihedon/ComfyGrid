@@ -13,11 +13,13 @@ export class Model {
     extension: string = $state('');
     description?: string = $state();
     has_description: boolean = $state(false);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    metadata?: Record<string, any> = $state();
-    has_metadata: boolean = $state(false);
     retrieved: boolean = $state(false);
     preview?: string = $state();
+    url?: string = $state();
+    nsfw: boolean = $state(false);
+    rate?: number = $state();
+    favorite: boolean = $state(false);
+    trainedWords: string[] = $state([]);
     modified: number = $state(0);
     created: number = $state(0);
     size: number;
@@ -65,11 +67,17 @@ class StorageState {
         this.#videos.set(reactiveModel.full_path, reactiveModel);
     }
 
-    findModelByPath(path: string): Model | undefined {
-        for (const model of this.#models.values()) {
-            if (model.path === path) return model;
-        }
-        return undefined;
+    findModel(modelDir: string, modelSubdirs: string[], path: string): Model | undefined {
+        return modelSubdirs
+            .map((subdir) => {
+                const fullPath = [modelDir, subdir, path].join('\\');
+                return this.#models.get(fullPath);
+            })
+            .find(Boolean);
+    }
+
+    findModelByFullPath(fullPath: string): Model | undefined {
+        return this.#models.get(fullPath);
     }
 
     clearFor(key: ModelTypes) {
