@@ -74,11 +74,9 @@ xcopy frontend\dist release\frontend /E /I /Q >nul
 xcopy hook release\hook /E /I /Q >nul
 if exist "custom_nodes\" xcopy custom_nodes release\custom_nodes /E /I /Q >nul
 
-:: Create a launch script for the release
-echo @echo off > release\comfygrid.bat
-echo echo Starting ComfyGrid... >> release\comfygrid.bat
-echo comfygrid.exe --host 127.0.0.1 --port 6210 >> release\comfygrid.bat
-echo pause >> release\comfygrid.bat
+:: Copy launch and updater scripts
+copy update.bat release\ >nul
+copy update.ps1 release\ >nul
 
 echo.
 echo ==========================================
