@@ -1,5 +1,4 @@
 import { tick } from 'svelte';
-import { comfyUiToComfyGridAdapter as adapter } from '@/bridge/comfyui-to-comfygrid-adapter';
 import { callLayoutChangedCallbacks } from '@/services/callback-service';
 import { notifyNodeChanged } from '@/services/custom-node-service.svelte';
 import { applyFloatingPositions, loadLayout } from '@/services/gridstack-service';
@@ -7,13 +6,11 @@ import { appState } from '@/states/app-state.svelte';
 import { ComfyGridGroup, ComfyGridNode } from '@/states/model-state.svelte';
 import type { BoardId } from '@/types/board';
 import type { FloatingPosition, LayoutType } from '@/types/layout';
-import type { NodeProps } from '@/types/model-props';
 
 class WorkflowManager {
-    async handleWorkflow(payload: { graphId: string; name: string; nodes: NodeProps[] }) {
-        const { graphId, nodes: rawNodes, name } = payload;
+    async handleWorkflow(payload: { graphId: string; name: string; nodes: ComfyGridNode[] }) {
+        const { graphId, nodes, name } = payload;
 
-        const nodes = rawNodes.map((props) => new ComfyGridNode(props));
         const sortedNodes = ComfyGridNode.sortNodesByPosition(nodes);
 
         const loadedLayout = loadLayout(graphId);
@@ -41,14 +38,7 @@ class WorkflowManager {
             if (!node.groups || node.groups.length === 0) {
                 let ungrouped = groupMap.get('__ungrouped__');
                 if (!ungrouped) {
-                    ungrouped = new ComfyGridGroup({
-                        comfyGroup: null,
-                        id: undefined,
-                        title: 'Ungrouped',
-                        children: [],
-                        nodes: [],
-                        color: null,
-                        pos: { x: 0, y: 0 },
+                    ungrouped = new ComfyGridGroup(null, {
                         expanded: expandedMap.get(undefined) ?? false,
                     });
                     groupMap.set('__ungrouped__', ungrouped);
@@ -62,19 +52,12 @@ class WorkflowManager {
             let currentGroup: ComfyGridGroup | undefined;
             const nodeGroups: ComfyGridGroup[] = [];
 
-            for (let i = 0; i < node.groups.length; i++) {
-                const g = node.groups[i];
+            for (let i = 0; i < node.comfyGroups.length; i++) {
+                const g = node.comfyGroups[i];
                 currentGroup = groupMap.get(g.id);
 
                 if (!currentGroup) {
-                    currentGroup = new ComfyGridGroup({
-                        comfyGroup: g.comfyGroup,
-                        id: g.id,
-                        title: g.title,
-                        children: [],
-                        nodes: [],
-                        color: g.color,
-                        pos: g.pos ?? { x: 0, y: 0 },
+                    currentGroup = new ComfyGridGroup(g, {
                         expanded: expandedMap.get(g.id) ?? false,
                     });
                     groupMap.set(g.id, currentGroup);
@@ -83,7 +66,7 @@ class WorkflowManager {
 
                 nodeGroups.push(currentGroup);
 
-                if (i === node.groups.length - 1) {
+                if (i === node.comfyGroups.length - 1) {
                     currentGroup.addNode(node);
                 }
 
@@ -119,8 +102,7 @@ class WorkflowManager {
 
         const node = appState.workspaceState.getRealNode(nodeId);
         if (node) {
-            const widgetPropsList = adapter.toWidgetPropsList(appState.comfyUiState.app, node.comfyNode);
-            node.updateWidgetsFromProps(node, widgetPropsList);
+            node.updateWidgets(appState.comfyUiState.app);
             setTimeout(() => {
                 notifyNodeChanged(node.id, node);
             }, 100);
