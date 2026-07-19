@@ -9,8 +9,8 @@ export type WidgetContext = {
 
 export const COMFY_NODE_MODE = {
     NORMAL: 0,
-    MUTE: 4,
-    BYPASS: 2,
+    MUTE: 2,
+    BYPASS: 4,
 } as const;
 
 export type ComfyNodeMode = (typeof COMFY_NODE_MODE)[keyof typeof COMFY_NODE_MODE];
