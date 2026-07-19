@@ -3,7 +3,7 @@
  */
 import type { ComfyApp, ComfyGroup, ComfyNode, ComfyWidget } from '@/types/comfy-model';
 import type { GroupProps, NodeProps, WidgetProps } from '@/types/model-props';
-import type { ComfyNodeMode, ImageInfo } from '@/types/model-shared';
+import type { ImageInfo } from '@/types/model-shared';
 
 /**
  * Safely parse an object to JSON, handling circular references
@@ -50,7 +50,6 @@ class ComfyUiToComfyGridAdapter {
      */
     toNodeProps(app: ComfyApp, node: ComfyNode): NodeProps {
         const widgetPropsList = this.toWidgetPropsList(app, node);
-        const hasOutputNode = node.constructor.nodeData?.output_node;
 
         const groups = app.rootGraph.groups
             .filter((g) => isNodeInGroup(node, g))
@@ -96,25 +95,11 @@ class ComfyUiToComfyGridAdapter {
 
         return {
             comfyNode: node,
-            id: String(node.id),
             parentNodeId: undefined,
-            title: node.title,
-            type: node.type,
-            pos: {
-                x: node.pos[0],
-                y: node.pos[1],
-            },
-            collapsed: node.collapsed,
-            hasOutputNode: hasOutputNode,
-            mode: node.mode as ComfyNodeMode,
-            bgcolor: node.bgcolor,
             inputs: inputs,
             outputs: outputs,
             widgets: widgetPropsList,
             groups: groupProps,
-            subgraph: node.subgraph,
-            comfyClass: node.constructor.comfyClass,
-            constructorName: node.constructor.name,
             properties: typeof node.properties === 'object' ? safeParse(node.properties) : node.properties,
         };
     }
@@ -298,11 +283,11 @@ class ComfyUiToComfyGridAdapter {
      * @param parent - Parent NodeProps
      */
     *toPackedNodePropsList(app: ComfyApp, parent: NodeProps | null): Generator<NodeProps> {
-        if (parent?.subgraph && parent.id != null) {
-            for (const node of parent.subgraph.nodes) {
+        if (parent?.comfyNode?.subgraph && parent?.comfyNode?.id != null) {
+            for (const node of parent.comfyNode.subgraph.nodes) {
                 if (node.id) {
                     const nodeProps = this.toNodeProps(app, node);
-                    nodeProps.parentNodeId = parent.id;
+                    nodeProps.parentNodeId = String(parent.comfyNode.id);
                     yield nodeProps;
                     yield* this.toPackedNodePropsList(app, nodeProps);
                 }

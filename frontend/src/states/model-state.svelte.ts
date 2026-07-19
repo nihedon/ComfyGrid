@@ -178,11 +178,10 @@ export class ComfyGridGroup {
 
 export class ComfyGridNode<P = undefined> {
     readonly #comfyNode: ComfyNode;
-    #id: string = $state();
     #parentNodeId: string = $state();
     #title: string = $state();
     #type: string = $state();
-    readonly #pos: { x: number; y: number } = { x: 0, y: 0 };
+    #pos: { x: number; y: number } = $state();
     #collapsed: boolean = $state();
     #hasOutputNode: boolean = false;
     #mode: ComfyNodeMode = $state();
@@ -192,19 +191,17 @@ export class ComfyGridNode<P = undefined> {
     readonly #widgets: ComfyGridWidget[] = $state([]);
     readonly #groups: ComfyGridGroup[] = [];
     #properties: P = $state();
-    #comfyClass: string;
-    #constructorName: string;
 
     constructor(node: NodeProps) {
         this.#comfyNode = node.comfyNode;
-        this.#id = node.id;
         this.#parentNodeId = node.parentNodeId;
-        this.#title = node.title;
-        this.#type = node.type;
-        this.#collapsed = node.collapsed;
-        this.#hasOutputNode = node.hasOutputNode;
-        this.#mode = node.mode;
-        this.#bgcolor = node.bgcolor;
+        this.#title = node.comfyNode.title;
+        this.#type = node.comfyNode.type;
+        this.#pos = { x: node.comfyNode.pos[0], y: node.comfyNode.pos[1] };
+        this.#collapsed = node.comfyNode.collapsed;
+        this.#hasOutputNode = node.comfyNode.constructor.nodeData?.output_node;
+        this.#mode = node.comfyNode.mode as ComfyNodeMode;
+        this.#bgcolor = node.comfyNode.bgcolor;
         this.#inputs.length = 0;
         for (const input of node.inputs ?? []) {
             this.#inputs.push(input);
@@ -219,8 +216,6 @@ export class ComfyGridNode<P = undefined> {
             this.#groups.push(new ComfyGridGroup(group));
         }
         this.#properties = node.properties as P;
-        this.#comfyClass = node.comfyClass;
-        this.#constructorName = node.constructorName;
     }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -245,7 +240,7 @@ export class ComfyGridNode<P = undefined> {
         return this.#comfyNode;
     }
     get id() {
-        return this.#id;
+        return String(this.#comfyNode.id);
     }
     get parentNodeId(): string {
         return this.#parentNodeId;
@@ -287,39 +282,34 @@ export class ComfyGridNode<P = undefined> {
         return this.#properties;
     }
     get comfyClass() {
-        return this.#comfyClass;
+        return this.#comfyNode.constructor.comfyClass;
     }
     get constructorName() {
-        return this.#constructorName;
+        return this.#comfyNode.constructor.name;
     }
 
-    set id(id: string) {
-        this.#id = id;
-    }
-    set parentNodeId(parentNodeId: string) {
-        this.#parentNodeId = parentNodeId;
-    }
     set title(title: string) {
         this.#title = title;
+        this.#comfyNode.title = title;
     }
     set type(type: string) {
         this.#type = type;
-    }
-    set pos(pos: { x: number; y: number }) {
-        this.#pos.x = pos.x;
-        this.#pos.y = pos.y;
+        this.#comfyNode.type = type;
     }
     set collapsed(collapsed: boolean) {
         this.#collapsed = collapsed;
+        this.#comfyNode.collapsed = collapsed;
     }
     set hasOutputNode(hasOutputNode: boolean) {
         this.#hasOutputNode = hasOutputNode;
     }
     set mode(mode: ComfyNodeMode) {
         this.#mode = mode;
+        this.comfyNode.mode = mode as 0 | 1 | 2 | 3;
     }
     set bgcolor(bgcolor: string | null) {
         this.#bgcolor = bgcolor;
+        this.#comfyNode.bgcolor = bgcolor;
     }
     addInput(id: string, slot: string) {
         this.#inputs.push({ id, slot });
@@ -347,12 +337,6 @@ export class ComfyGridNode<P = undefined> {
     set properties(properties: P) {
         this.#properties = properties;
     }
-    set comfyClass(comfyClass: string) {
-        this.#comfyClass = comfyClass;
-    }
-    set constructorName(constructorName: string) {
-        this.#constructorName = constructorName;
-    }
 
     static sortNodesByPosition(nodes: ComfyGridNode[]): ComfyGridNode[] {
         return [...nodes].sort(ComfyGridNode.#compareNodesByPosition);
@@ -371,7 +355,8 @@ export class ComfyGridNode<P = undefined> {
     }
 
     setComfyUiProperty(key: string, value: unknown) {
-        setNestedProperty(this as unknown as Record<string, unknown>, key, value);
+        this.comfyNode[key] = value;
+        // setNestedProperty(this as unknown as Record<string, unknown>, key, value);
     }
 }
 

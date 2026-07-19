@@ -1,5 +1,5 @@
-import type { ComfyGraph, ComfyGroup, ComfyNode, ComfyWidget } from './comfy-model';
-import type { ComfyNodeMode, ImageInfo } from './model-shared';
+import type { ComfyGroup, ComfyNode, ComfyWidget } from './comfy-model';
+import type { ImageInfo } from './model-shared';
 
 export interface GroupProps {
     comfyGroup: ComfyGroup | null;
@@ -11,26 +11,12 @@ export interface GroupProps {
 
 export interface NodeProps {
     comfyNode: ComfyNode;
-    id: string;
     parentNodeId: string | undefined;
-    title: string;
-    type: string | null;
-    pos: {
-        x: number;
-        y: number;
-    };
-    collapsed: boolean;
-    hasOutputNode: boolean | undefined;
-    mode: ComfyNodeMode;
-    bgcolor: string | null;
     inputs: { id: string; slot: string }[] | null;
     outputs: { id: string; slot: string }[][] | null;
     widgets: WidgetProps[];
     groups: GroupProps[];
     properties: unknown;
-    comfyClass: string | undefined;
-    constructorName: string | undefined;
-    subgraph?: ComfyGraph;
 }
 
 export interface WidgetProps {
