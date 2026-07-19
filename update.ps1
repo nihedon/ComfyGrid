@@ -129,12 +129,15 @@ $userDataDirs = @("config", "custom_nodes", "cache", "logs")
 Write-Step "Installing update..."
 $sourceItems = Get-ChildItem -Path $tempDir
 foreach ($item in $sourceItems) {
-    if ($item.Name -in $userDataDirs) {
-        Write-Host "  [SKIP] $($item.Name) (user data preserved)"
-        continue
-    }
-
     $dest = Join-Path $scriptDir $item.Name
+    if ($item.Name -in $userDataDirs) {
+        if (Test-Path $dest) {
+            Write-Host "  [SKIP] $($item.Name) (user data preserved)"
+            continue
+        } else {
+            Write-Host "  [INIT] $($item.Name) (creating default user data)"
+        }
+    }
     if ($item.PSIsContainer) {
         if (Test-Path $dest) { Remove-Item $dest -Recurse -Force }
         Copy-Item -Path $item.FullName -Destination $dest -Recurse -Force
