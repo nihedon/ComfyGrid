@@ -50,9 +50,9 @@ The following basic operations in ComfyUI can be directly modified and reflected
 
 ## Launch Instructions (Standalone Version)
 
-1. Download the latest `ComfyGrid-vX.X.X.zip` from the [Releases page](../../releases).
+1. Download the latest `ComfyGrid-portable-x.x.x.zip` from the [Releases page](../../releases).
 2. Extract the downloaded Zip file.
-3. Run `comfygrid.exe` inside the extracted folder.
+3. Run `run.bat` inside the extracted folder.
 4. Open `http://127.0.0.1:6210/comfygrid/` in your browser.
 
 _Note: A setup screen will appear on startup asking you to specify the ComfyUI (Portable) script path and Python executable._
