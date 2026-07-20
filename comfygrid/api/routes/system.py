@@ -145,9 +145,20 @@ async def check_update():
     version_file = Path("version.json")
     if version_file.exists():
         try:
-            current_version = orjson.loads(version_file.read_text(encoding="utf-8"))["tag"]
+            tag = orjson.loads(version_file.read_text(encoding="utf-8")).get("tag")
+            if tag:
+                current_version = tag
         except Exception:
             pass
+
+    if current_version == "dev":
+        return {
+            "current_version": current_version,
+            "latest_version": current_version,
+            "has_update": False,
+            "download_url": None,
+            "release_notes": ""
+        }
 
     try:
         async with httpx.AsyncClient() as client:
@@ -162,7 +173,7 @@ async def check_update():
                     break
 
             has_update = False
-            if current_version != "dev" and latest_version != current_version:
+            if latest_version != current_version:
                 has_update = True
 
             return {

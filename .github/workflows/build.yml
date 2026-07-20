@@ -83,6 +83,7 @@ jobs:
           xcopy frontend\dist release\frontend /E /I /Q
           xcopy hook release\hook /E /I /Q
           if exist "custom_nodes\" xcopy custom_nodes release\custom_nodes /E /I /Q
+          if exist "extensions\" xcopy extensions release\extensions /E /I /Q
           copy update.bat release\
           copy update.ps1 release\
           python -c "import json; from pathlib import Path; from comfygrid.services.git import get_version_info; Path('release/version.json').write_text(json.dumps(get_version_info(), ensure_ascii=False), encoding='utf-8')"
@@ -96,12 +97,13 @@ jobs:
           copy pyproject.toml release_portable\
           copy README.md release_portable\
           copy run.bat release_portable\
-          copy install.bat release_portable\
           xcopy comfygrid release_portable\comfygrid /E /I /Q
           xcopy config release_portable\config /E /I /Q
-          xcopy frontend\dist release_portable\frontend /E /I /Q
+          xcopy frontend\dist release_portable\frontend\dist /E /I /Q
           xcopy hook release_portable\hook /E /I /Q
           if exist "custom_nodes\" xcopy custom_nodes release_portable\custom_nodes /E /I /Q
+          if exist "extensions\" xcopy extensions release_portable\extensions /E /I /Q
+          if exist "modules\" xcopy modules release_portable\modules /E /I /Q
           python -c "import json; from pathlib import Path; from comfygrid.services.git import get_version_info; Path('release_portable/version.json').write_text(json.dumps(get_version_info(), ensure_ascii=False), encoding='utf-8')"
 
       - name: Create zip archives
