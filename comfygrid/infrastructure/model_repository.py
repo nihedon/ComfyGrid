@@ -1,8 +1,11 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
+import threading
 from dataclasses import dataclass
 
 from comfygrid.infrastructure.database import get_connection
+
+_write_lock = threading.Lock()
 
 
 @dataclass
@@ -49,52 +52,53 @@ def upsert_model_meta(
     favorite: bool | None = None,
     trained_words: list[str] | None = None,
 ) -> None:
-    with get_connection() as conn:
-        conn.execute("PRAGMA foreign_keys=ON;")
-        existing = conn.execute(
-            "SELECT id FROM model_meta WHERE full_path = ?", (full_path,)
-        ).fetchone()
+    with _write_lock:
+        with get_connection() as conn:
+            conn.execute("PRAGMA foreign_keys=ON;")
+            existing = conn.execute(
+                "SELECT id FROM model_meta WHERE full_path = ?", (full_path,)
+            ).fetchone()
 
-        if existing is None:
-            conn.execute(
-                """
-                INSERT INTO model_meta (full_path, url, nsfw, rate, favorite)
-                VALUES (?, ?, ?, ?, ?)
-                """,
-                (
-                    full_path,
-                    None if url is ... else url,
-                    int(nsfw) if nsfw is not None else 0,
-                    None if rate is ... else rate,
-                    int(favorite) if favorite is not None else 0,
-                ),
-            )
-        else:
-            fields: list[str] = ["updated_at = datetime('now')"]
-            params: list = []
-            if url is not ...:
-                fields.append("url = ?")
-                params.append(url)
-            if nsfw is not None:
-                fields.append("nsfw = ?")
-                params.append(int(nsfw))
-            if rate is not ...:
-                fields.append("rate = ?")
-                params.append(rate)
-            if favorite is not None:
-                fields.append("favorite = ?")
-                params.append(int(favorite))
-            params.append(full_path)
-            conn.execute(
-                f"UPDATE model_meta SET {', '.join(fields)} WHERE full_path = ?",
-                params,
-            )
+            if existing is None:
+                conn.execute(
+                    """
+                    INSERT INTO model_meta (full_path, url, nsfw, rate, favorite)
+                    VALUES (?, ?, ?, ?, ?)
+                    """,
+                    (
+                        full_path,
+                        None if url is ... else url,
+                        int(nsfw) if nsfw is not None else 0,
+                        None if rate is ... else rate,
+                        int(favorite) if favorite is not None else 0,
+                    ),
+                )
+            else:
+                fields: list[str] = ["updated_at = datetime('now')"]
+                params: list = []
+                if url is not ...:
+                    fields.append("url = ?")
+                    params.append(url)
+                if nsfw is not None:
+                    fields.append("nsfw = ?")
+                    params.append(int(nsfw))
+                if rate is not ...:
+                    fields.append("rate = ?")
+                    params.append(rate)
+                if favorite is not None:
+                    fields.append("favorite = ?")
+                    params.append(int(favorite))
+                params.append(full_path)
+                conn.execute(
+                    f"UPDATE model_meta SET {', '.join(fields)} WHERE full_path = ?",
+                    params,
+                )
 
-        if trained_words is not None:
-            conn.execute(
-                "DELETE FROM model_trained_words WHERE full_path = ?", (full_path,)
-            )
-            conn.executemany(
-                "INSERT INTO model_trained_words (full_path, word, sort_order) VALUES (?, ?, ?)",
-                [(full_path, word, i) for i, word in enumerate(trained_words)],
-            )
+            if trained_words is not None:
+                conn.execute(
+                    "DELETE FROM model_trained_words WHERE full_path = ?", (full_path,)
+                )
+                conn.executemany(
+                    "INSERT INTO model_trained_words (full_path, word, sort_order) VALUES (?, ?, ?)",
+                    [(full_path, word, i) for i, word in enumerate(trained_words)],
+                )
