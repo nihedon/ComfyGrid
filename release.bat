@@ -75,6 +75,7 @@ xcopy config release\config /E /I /Q >nul
 xcopy frontend\dist release\frontend /E /I /Q >nul
 xcopy hook release\hook /E /I /Q >nul
 if exist "custom_nodes\" xcopy custom_nodes release\custom_nodes /E /I /Q >nul
+if exist "extensions\" xcopy extensions release\extensions /E /I /Q >nul
 
 :: Copy launch and updater scripts
 copy update.bat release\ >nul

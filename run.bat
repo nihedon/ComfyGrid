@@ -9,10 +9,13 @@ echo.
 
 :: Check virtual environment
 if not exist venv (
-    echo [ERROR] Virtual environment not found.
-    echo Please run install_and_run.bat first to complete the setup.
-    pause
-    exit /b 1
+    echo Virtual environment not found. Running setup...
+    call install.bat
+    if errorlevel 1 (
+        echo [ERROR] Setup failed.
+        pause
+        exit /b 1
+    )
 )
 
 :: Launch ComfyGrid
