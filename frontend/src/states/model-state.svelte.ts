@@ -161,8 +161,10 @@ export class ComfyGridGroup {
         this.#id = id;
     }
     set title(title: string) {
-        this.#comfyGroup.title = title;
         this.#title = title;
+        if (this.#comfyGroup) {
+            this.#comfyGroup.title = title;
+        }
     }
     addChild(child: ComfyGridGroup) {
         this.#children.push(child);
@@ -177,8 +179,10 @@ export class ComfyGridGroup {
         this.#nodes.length = 0;
     }
     set color(color: string | null) {
-        this.#comfyGroup.color = color;
         this.#color = color;
+        if (this.#comfyGroup) {
+            this.#comfyGroup.color = color;
+        }
     }
     set expanded(expanded: boolean) {
         this.#expanded = expanded;
@@ -309,11 +313,10 @@ export class ComfyGridNode<P = undefined> {
     updateWidgets(app: ComfyApp) {
         const configs = ComfyGridNode.#buildWidgetConfigList(this.#comfyNode);
         // eslint-disable-next-line svelte/prefer-svelte-reactivity
-        const existingMap = new Map(this.#widgets.map((w) => [w.id, w]));
+        const existingMap = new Map(this.#widgets.map((w) => [w.comfyWidget, w]));
         const newWidgets: ComfyGridWidget[] = [];
         for (const config of configs) {
-            const widgetId = `${this.#comfyNode.id}_${config.idx}`;
-            const existing = existingMap.get(widgetId);
+            const existing = existingMap.get(config.widget);
             if (existing) {
                 existing.update(app, config.idx, config.image, config.overrides);
                 newWidgets.push(existing);
@@ -374,26 +377,36 @@ export class ComfyGridNode<P = undefined> {
 
     set title(title: string) {
         this.#title = title;
-        this.#comfyNode.title = title;
+        if (this.#comfyNode) {
+            this.#comfyNode.title = title;
+        }
     }
     set type(type: string) {
         this.#type = type;
-        this.#comfyNode.type = type;
+        if (this.#comfyNode) {
+            this.#comfyNode.type = type;
+        }
     }
     set collapsed(collapsed: boolean) {
         this.#collapsed = collapsed;
-        this.#comfyNode.collapsed = collapsed;
+        if (this.#comfyNode) {
+            this.#comfyNode.collapsed = collapsed;
+        }
     }
     set hasOutputNode(hasOutputNode: boolean) {
         this.#hasOutputNode = hasOutputNode;
     }
     set mode(mode: ComfyNodeMode) {
         this.#mode = mode;
-        this.comfyNode.mode = mode as 0 | 1 | 2 | 3;
+        if (this.#comfyNode) {
+            this.#comfyNode.mode = mode as 0 | 1 | 2 | 3;
+        }
     }
     set bgcolor(bgcolor: string | null) {
         this.#bgcolor = bgcolor;
-        this.#comfyNode.bgcolor = bgcolor;
+        if (this.#comfyNode) {
+            this.#comfyNode.bgcolor = bgcolor;
+        }
     }
     addWidget(widget: ComfyGridWidget) {
         this.#widgets.push(widget);
