@@ -46,7 +46,11 @@ def load_extensions():
                     logging.info("Running installer: %s", install_py)
                     env = os.environ.copy()
                     env["PYTHONPATH"] = project_root + os.pathsep + env.get("PYTHONPATH", "")
-                    subprocess.run([sys.executable, str(install_py)], env=env, check=True)
+                    if getattr(sys, "frozen", False):
+                        import runpy
+                        runpy.run_path(str(install_py))
+                    else:
+                        subprocess.run([sys.executable, str(install_py)], env=env, check=True)
                 except Exception as e:
                     logging.error("Failed to run installer %s: %s", install_py, e)
                     continue

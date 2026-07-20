@@ -17,7 +17,14 @@ def is_installed(dist_name: str) -> bool:
 
 
 def run_pip(command: str, package_name: str, *comfyui_args: str) -> None:
-    subprocess.check_call([sys.executable, "-m", "pip", command, package_name, *comfyui_args])
+    if getattr(sys, "frozen", False):
+        try:
+            from pip._internal.cli.main import main as pip_main
+            pip_main([command, package_name, *comfyui_args])
+        except Exception as e:
+            raise RuntimeError(f"Failed to run pip in frozen mode: {e}")
+    else:
+        subprocess.check_call([sys.executable, "-m", "pip", command, package_name, *comfyui_args])
 
 
 def ensure_installed(import_name: str, dist_name: str | None = None) -> None:
