@@ -55,6 +55,8 @@ if exist "comfygrid.spec" del /q comfygrid.spec
     --hidden-import uvicorn.protocols.websockets.auto ^
     --hidden-import uvicorn.lifespan.on ^
     --hidden-import uvicorn.lifespan.off ^
+    --hidden-import polars ^
+    --hidden-import piexif ^
     main.py
 
 if not exist "release\comfygrid.exe" (

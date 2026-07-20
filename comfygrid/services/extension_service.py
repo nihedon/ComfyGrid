@@ -8,6 +8,10 @@ from pathlib import Path
 import orjson
 
 from comfygrid.services.git import update_git_repository
+import comfygrid.infrastructure.plugin_dependencies  # Force PyInstaller to bundle this
+import modules.shared  # Force PyInstaller to bundle this for extensions
+import modules.script_callbacks  # Force PyInstaller to bundle this for extensions
+import modules.options  # Force PyInstaller to bundle this for extensions
 
 plugin_folders = []
 if getattr(sys, "frozen", False):
@@ -59,7 +63,7 @@ def load_extensions():
             mod_name = ".".join(rel_pkg.parts)
             try:
                 importlib.import_module(mod_name)
-                folder = "/".join(rel_pkg.parts[:-1])
+                folder = str(PROJECT_ROOT / Path(*rel_pkg.parts[:-1]))
                 if folder not in plugin_folders:
                     plugin_folders.append(folder)
                 logging.info("Loaded plugin module: %s", mod_name)

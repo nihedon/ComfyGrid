@@ -70,6 +70,8 @@ jobs:
             --hidden-import uvicorn.protocols.websockets.auto ^
             --hidden-import uvicorn.lifespan.on ^
             --hidden-import uvicorn.lifespan.off ^
+            --hidden-import polars ^
+            --hidden-import piexif ^
             main.py
 
       - name: Assemble Release Folder
