@@ -68,19 +68,10 @@
     e.stopPropagation();
   }
 
-  function handleChangeTitle() {
-    group.title = group.title.trim();
-    group.setComfyUiProperty('title', group.title);
-  }
-
   const nodeColorOpts = $derived(
     appState.optionState.opts.get('node_color') ??
       appState.optionState.forms.get('node_color')?.default,
   );
-
-  function handleChangeColor() {
-    group.setComfyUiProperty('color', group.color);
-  }
 
   function focusOnMount(e: HTMLInputElement) {
     e.focus();
@@ -106,7 +97,6 @@
           type="color"
           bind:value={group.color}
           onclick={(e) => e.stopPropagation()}
-          onchange={handleChangeColor}
           list="comfyUiGroupColors"
         />
         <datalist id="comfyUiGroupColors">
@@ -141,7 +131,6 @@
         onkeydown={(e) => {
           if (e.key === 'Enter') {
             isTitleEditing = false;
-            handleChangeTitle();
           }
         }}
       />

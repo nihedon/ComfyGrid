@@ -1,10 +1,9 @@
 import { ComfyUiApiHook } from '@/bridge/comfyui-api-hook';
-import { comfyUiToComfyGridAdapter as adapter } from '@/bridge/comfyui-to-comfygrid-adapter';
 import { nodeQueueManager } from '@/bridge/node-queue-manager';
 import type { ComfyGraph } from '@/types/comfy-model';
-import type { NodeProps } from '@/types/model-props';
 import logger from '@/utils/logger';
 import { appState } from './app-state.svelte';
+import { ComfyGridNode } from './model-state.svelte';
 
 /**
  *
@@ -38,15 +37,13 @@ export class ComfyUiBridge {
     async getWorkflow(): Promise<{
         graphId: string;
         name: string;
-        nodes: NodeProps[];
+        nodes: ComfyGridNode[];
     }> {
         const app = appState.comfyUiState.app;
-
-        const nodePropsList: NodeProps[] = [];
+        const nodes: ComfyGridNode[] = [];
 
         await waitOnDrawBackgroundAll(app.rootGraph);
 
-        // ComfyUiApiHook.hookForGraphSetDirtyCanvas(app.rootGraph);
         for (const topNode of app.rootGraph.nodes) {
             ComfyUiApiHook.hookForAddCustomWidget(topNode);
             ComfyUiApiHook.hookForNodeWidgetChanged(topNode);
@@ -54,13 +51,11 @@ export class ComfyUiBridge {
             ComfyUiApiHook.hookForNodeSetDirtyCanvas(topNode);
         }
 
-        for (const node of app.rootGraph.nodes) {
-            const nodeProps = adapter.toNodeProps(app, node);
-            nodePropsList.push(nodeProps);
-            if (nodeProps) {
-                for (const packedNode of adapter.toPackedNodePropsList(app, nodeProps)) {
-                    nodePropsList.push(packedNode);
-                }
+        for (const comfyNode of app.rootGraph.nodes) {
+            const node = new ComfyGridNode(comfyNode, app);
+            nodes.push(node);
+            for (const subNode of ComfyGridNode.subgraphNodes(app, node)) {
+                nodes.push(subNode);
             }
         }
 
@@ -70,7 +65,7 @@ export class ComfyUiBridge {
         return {
             graphId: app.rootGraph.id,
             name: title,
-            nodes: nodePropsList,
+            nodes,
         };
     }
 
