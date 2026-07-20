@@ -1,12 +1,16 @@
 import asyncio
+import os
 import shutil
 import subprocess
+import zipfile
+from pathlib import Path
 
+import httpx
 import orjson
 import psutil
-from fastapi import APIRouter, FastAPI
+from fastapi import APIRouter, BackgroundTasks, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 
 app = FastAPI()
 
@@ -133,3 +137,41 @@ async def stream_stats():
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
+
+
+@router.get("/update/check")
+async def check_update():
+    current_version = "dev"
+    version_file = Path("version.json")
+    if version_file.exists():
+        try:
+            current_version = orjson.loads(version_file.read_text(encoding="utf-8"))["tag"]
+        except Exception:
+            pass
+
+    try:
+        async with httpx.AsyncClient() as client:
+            resp = await client.get("https://api.github.com/repos/nihedon/ComfyGrid/releases/latest", timeout=5.0)
+            resp.raise_for_status()
+            release = resp.json()
+            latest_version = release.get("tag_name", current_version)
+            download_url = None
+            for asset in release.get("assets", []):
+                if asset.get("name", "").endswith(".zip"):
+                    download_url = asset["browser_download_url"]
+                    break
+
+            has_update = False
+            if current_version != "dev" and latest_version != current_version:
+                has_update = True
+
+            return {
+                "current_version": current_version,
+                "latest_version": latest_version,
+                "has_update": has_update,
+                "download_url": download_url,
+                "release_notes": release.get("body", "")
+            }
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
+
