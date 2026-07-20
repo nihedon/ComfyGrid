@@ -10,6 +10,7 @@
     "opts.color_theme.choice.light": "Light",
     "opts.color_theme.choice.dark": "Dark",
     "opts.show_nsfw.label": "Show NSFW Models",
+    "opts.model_tree_view.label": "Show Model Folder as Tree",
     "opts.save_directory.label": "Save Images to Directory",
     "opts.save_directory.hint": "Specifies the directory where images will be saved.",
     "opts.create_subdirectory.label": "Create Subdirectory",
