@@ -31,6 +31,13 @@
 
   let isConnectingToBackend = $state(true);
 
+  let updateInfo = $state<{
+    has_update: boolean;
+    latest_version: string;
+    download_url: string | null;
+    release_notes: string;
+  } | null>(null);
+
   onMount(() => {
     let unmounted = false;
 
@@ -50,6 +57,15 @@
           }
           isConnectingToBackend = false;
           errorMessage = '';
+
+          try {
+            const updateRes = await comfyGridApiClient.getUpdateCheck();
+            if (updateRes.ok) {
+              updateInfo = updateRes.json;
+            }
+          } catch (e) {
+            logger.error('Failed to check for updates:', e);
+          }
           break;
         } else {
           logger.debug('Waiting for backend...');
@@ -158,6 +174,7 @@
       editingWorkspace.python_path = data.json.path;
     }
   }
+
 </script>
 
 <form
@@ -179,6 +196,18 @@
           <p class="text-muted small">Please wait while the backend starts up.</p>
         </div>
       {:else}
+        {#if updateInfo?.has_update && updateInfo.download_url}
+          <div class="alert alert-info mb-4 shadow-sm border-0 bg-info-subtle">
+            <h6 class="mb-1">
+              <i class="bi bi-stars me-1 text-primary"></i>New Update Available:
+              <strong>{updateInfo.latest_version}</strong>
+            </h6>
+            <p class="mb-0 small opacity-75">
+              A newer version of ComfyGrid is ready to download.
+            </p>
+          </div>
+        {/if}
+
         <!-- Mode selector -->
         <div class="mb-4">
           <div class="btn-group w-100" role="group">

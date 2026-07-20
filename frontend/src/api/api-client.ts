@@ -142,6 +142,18 @@ class ComfyGridApiClient {
         });
     }
 
+    async getUpdateCheck(): Promise<
+        ApiResultJson<{
+            current_version: string;
+            latest_version: string;
+            has_update: boolean;
+            download_url: string | null;
+            release_notes: string;
+        }>
+    > {
+        return await fetchApiJson('/comfygrid/api/update/check');
+    }
+
     async postDialogFile(title: string, filetypes: string[][], initialDir?: string): Promise<ApiResultJson<{ path: string }>> {
         return await fetchApiJson('/comfygrid/api/dialog/file', {
             method: 'POST',
