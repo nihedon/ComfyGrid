@@ -10,6 +10,7 @@
     "opts.color_theme.choice.light": "ライトテーマ",
     "opts.color_theme.choice.dark": "ダークテーマ",
     "opts.show_nsfw.label": "NSFWモデルを表示する",
+    "opts.model_tree_view.label": "モデルのフォルダをツリービュー表示する",
     "opts.save_directory.label": "画像の保存先ディレクトリ",
     "opts.save_directory.hint": "画像を保存するディレクトリを指定します。",
     "opts.create_subdirectory.label": "サブディレクトリを作成",

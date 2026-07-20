@@ -12,6 +12,10 @@ default = "auto"
 type = "checkbox"
 default = true
 
+[model_tree_view]
+type = "checkbox"
+default = true
+
 [save_directory]
 type = "text"
 default = "save"
