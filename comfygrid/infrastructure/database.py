@@ -1,4 +1,4 @@
-﻿import sqlite3
+import sqlite3
 from contextlib import contextmanager
 from pathlib import Path
 
@@ -45,7 +45,7 @@ def initialize_db() -> None:
 
 @contextmanager
 def get_connection():
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(DB_PATH, timeout=30.0)
     conn.row_factory = sqlite3.Row
     try:
         yield conn
