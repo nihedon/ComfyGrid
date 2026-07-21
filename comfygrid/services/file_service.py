@@ -51,6 +51,10 @@ def _get_models(comfyui_path: Path, dir_name: str, extensions: list[str]) -> lis
     seen_abs_paths: set[str] = set()
     futures = []
 
+    all_db_metas = {}
+    if dir_name == "models":
+        all_db_metas = model_repository.get_all_model_metas()
+
     with ThreadPoolExecutor() as executor:
         for root, _, files in os.walk(model_path, followlinks=True):
             if dir_name == "models":
@@ -69,18 +73,25 @@ def _get_models(comfyui_path: Path, dir_name: str, extensions: list[str]) -> lis
                         continue
                     seen_abs_paths.add(abs_path)
                     futures.append(
-                        executor.submit(_make_model_info, root, filename, dir_name, sub_dir, model_path)
+                        executor.submit(_make_model_info, root, filename, dir_name, sub_dir, model_path, all_db_metas)
                     )
 
+        new_models = []
         for future in tqdm(as_completed(futures), total=len(futures), desc=f"Loading {dir_name}", unit="file"):
-            model_info_list.append(future.result())
+            res = future.result()
+            if res.pop("_is_new", False):
+                new_models.append(res)
+            model_info_list.append(res)
+
+        if new_models:
+            model_repository.bulk_upsert_model_metas(new_models)
 
     cache_key = (str(model_path), tuple(sorted(extensions)))
     _model_cache[cache_key] = (time.time(), model_info_list)
     return model_info_list
 
 
-def _make_model_info(root: str, filename: str, dir_name: str, sub_dir: str, model_path: Path) -> dict:
+def _make_model_info(root: str, filename: str, dir_name: str, sub_dir: str, model_path: Path, all_db_metas: dict) -> dict:
     model_info = {}
     rel_dir = os.path.relpath(root, model_path)
     if rel_dir == ".":
@@ -118,7 +129,7 @@ def _make_model_info(root: str, filename: str, dir_name: str, sub_dir: str, mode
 
     model_info["metadata"] = {}
 
-    db_meta = model_repository.get_model_meta(model_info["full_path"])
+    db_meta = all_db_metas.get(model_info["full_path"])
     if db_meta is not None:
         model_info["url"] = db_meta.url
         model_info["nsfw"] = db_meta.nsfw
@@ -151,18 +162,7 @@ def _make_model_info(root: str, filename: str, dir_name: str, sub_dir: str, mode
             except Exception:
                 pass
 
-        try:
-            model_repository.upsert_model_meta(
-                model_info["full_path"],
-                url=url,
-                nsfw=nsfw,
-                rate=None,
-                favorite=False,
-                trained_words=trained_words,
-            )
-        except Exception as e:
-            logger.error("Failed to insert initial model meta to DB for %s: %s", model_info["full_path"], e)
-
+        model_info["_is_new"] = True
         model_info["url"] = url
         model_info["nsfw"] = nsfw
         model_info["rate"] = None
