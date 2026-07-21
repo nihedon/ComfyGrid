@@ -215,6 +215,8 @@
   async function reloadModels() {
     isReloading = true;
     try {
+      const app = appState.comfyUiState.app;
+      await app?.refreshComboInNodes();
       await refreshModels(dir);
     } finally {
       isReloading = false;
@@ -346,7 +348,8 @@
           class="btn btn-sm btn-primary"
           aria-label="Reload models"
           disabled={isReloading}
-          onclick={reloadModels}><i class="pi pi-refresh {isReloading ? 'pi-spin' : ''}"></i></button
+          onclick={reloadModels}
+          ><i class="pi pi-refresh {isReloading ? 'pi-spin' : ''}"></i></button
         >
       </li>
     </ul>
