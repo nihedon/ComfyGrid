@@ -23,6 +23,8 @@
   let tempFavorite = $state(false);
   let tempTrainedWords = $state<string[]>([]);
   let isEditingDescription = $state(false);
+  let fetchedImages = $state<string[]>([]);
+  let selectedImageIndex = $state(0);
 
   DOMPurify.addHook('afterSanitizeAttributes', function (node) {
     if ('target' in node) {
@@ -68,6 +70,8 @@
       tempFavorite = model.favorite ?? false;
       tempTrainedWords = [...(model.trainedWords ?? [])];
       isEditingDescription = false;
+      fetchedImages = [];
+      selectedImageIndex = 0;
       bsModal.show();
     } else {
       bsModal.hide();
@@ -87,11 +91,14 @@
       data.trainedWords = [];
     }
 
-    const imgUrl = (data.images ?? [{}]).filter(
-      (image: Record<string, string>) => image.type === 'image',
-    )?.[0]?.url;
-    if (imgUrl) {
-      tempPreviewUrl = imgUrl;
+    const imgUrls = (data.images ?? [])
+      .filter((image: Record<string, string>) => image.type === 'image' && image.url)
+      .map((image: Record<string, string>) => image.url);
+
+    if (imgUrls.length > 0) {
+      fetchedImages = imgUrls;
+      selectedImageIndex = 0;
+      tempPreviewUrl = imgUrls[0];
     }
 
     tempNsfw = data.model?.nsfw ?? false;
@@ -308,29 +315,59 @@
                 </div>
               {/if}
             </div>
-            <div style="width: 300px; min-width: 300px; height: 400px;">
-              {#if model.preview || tempPreviewUrl}
-                <!-- svelte-ignore a11y_click_events_have_key_events -->
-                <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-                <img
-                  src={tempPreviewUrl ||
-                    `/comfygrid/api/thumbnail=${model.preview}?t=${model.modified}`}
-                  class="img-fluid rounded border h-100 object-fit-cover"
-                  style="min-width: 300px; cursor: pointer;"
-                  alt="Preview"
-                  title="Click to set image URL"
-                  onclick={inputImageUrl}
-                />
-              {:else}
-                <!-- svelte-ignore a11y_click_events_have_key_events -->
-                <!-- svelte-ignore a11y_no_static_element_interactions -->
-                <div
-                  class="w-100 h-100"
-                  style="cursor: pointer;"
-                  onclick={inputImageUrl}
-                  title="Click to set image URL"
-                >
-                  <NoPreview />
+            <div class="d-flex flex-column gap-2" style="width: 300px; min-width: 300px;">
+              <div style="height: 400px;">
+                {#if model.preview || tempPreviewUrl}
+                  <!-- svelte-ignore a11y_click_events_have_key_events -->
+                  <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+                  <img
+                    src={tempPreviewUrl ||
+                      `/comfygrid/api/thumbnail=${model.preview}?t=${model.modified}`}
+                    class="img-fluid rounded border h-100 object-fit-cover w-100"
+                    style="min-width: 300px; cursor: pointer;"
+                    alt="Preview"
+                    title="Click to set image URL"
+                    onclick={inputImageUrl}
+                  />
+                {:else}
+                  <!-- svelte-ignore a11y_click_events_have_key_events -->
+                  <!-- svelte-ignore a11y_no_static_element_interactions -->
+                  <div
+                    class="w-100 h-100"
+                    style="cursor: pointer;"
+                    onclick={inputImageUrl}
+                    title="Click to set image URL"
+                  >
+                    <NoPreview />
+                  </div>
+                {/if}
+              </div>
+              
+              {#if fetchedImages.length > 1 && fetchedImages.includes(tempPreviewUrl || '')}
+                <div class="d-flex align-items-center justify-content-between px-1">
+                  <button
+                    class="btn btn-sm btn-outline-secondary"
+                    onclick={(e) => {
+                      e.stopPropagation();
+                      selectedImageIndex = (selectedImageIndex - 1 + fetchedImages.length) % fetchedImages.length;
+                      tempPreviewUrl = fetchedImages[selectedImageIndex];
+                    }}
+                  >
+                    <i class="pi pi-chevron-left"></i> Prev
+                  </button>
+                  <span class="text-muted small fw-bold">
+                    {selectedImageIndex + 1} / {fetchedImages.length}
+                  </span>
+                  <button
+                    class="btn btn-sm btn-outline-secondary"
+                    onclick={(e) => {
+                      e.stopPropagation();
+                      selectedImageIndex = (selectedImageIndex + 1) % fetchedImages.length;
+                      tempPreviewUrl = fetchedImages[selectedImageIndex];
+                    }}
+                  >
+                    Next <i class="pi pi-chevron-right"></i>
+                  </button>
                 </div>
               {/if}
             </div>
