@@ -7,12 +7,11 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from urllib.parse import urlsplit, urlunsplit
 
-from tqdm import tqdm
-
 import cv2
 import numpy as np
 from charset_normalizer import from_path
 from PIL import Image
+from tqdm import tqdm
 
 from comfygrid.domain.image import resize_with_crop
 from comfygrid.infrastructure import model_repository
@@ -22,6 +21,8 @@ logger = logging.getLogger(__name__)
 
 _model_cache: dict[tuple, tuple[float, list[dict]]] = {}
 CACHE_TTL_SECONDS = 30
+
+cv2.setNumThreads(0)
 
 
 def clear_model_cache(comfyui_path: Path, dir_name: str) -> None:
