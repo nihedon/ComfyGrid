@@ -210,8 +210,15 @@
     saveOptsWithCallback();
   }
 
-  function reloadModels() {
-    refreshModels(dir);
+  let isReloading = $state(false);
+
+  async function reloadModels() {
+    isReloading = true;
+    try {
+      await refreshModels(dir);
+    } finally {
+      isReloading = false;
+    }
   }
 
   function apply(model: Model) {
@@ -338,7 +345,8 @@
           type="button"
           class="btn btn-sm btn-primary"
           aria-label="Reload models"
-          onclick={reloadModels}><i class="pi pi-refresh"></i></button
+          disabled={isReloading}
+          onclick={reloadModels}><i class="pi pi-refresh {isReloading ? 'pi-spin' : ''}"></i></button
         >
       </li>
     </ul>
