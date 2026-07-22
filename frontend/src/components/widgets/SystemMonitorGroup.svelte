@@ -23,15 +23,13 @@
   let systemState = appState.systemState;
   let optionState = appState.optionState;
 
-  const systemMonitor = $derived(
-    optionState.opts.get('system_monitor') ?? optionState.forms.get('system_monitor')?.default,
-  );
+  const systemMonitor = $derived(optionState.get('ComfyGrid.ui.system_monitor'));
 
   function changePosition() {
     if (systemMonitor === 'top') {
-      optionState.setOptionValue('system_monitor', 'left');
+      optionState.set('ComfyGrid.ui.system_monitor', 'left');
     } else if (systemMonitor === 'left') {
-      optionState.setOptionValue('system_monitor', 'top');
+      optionState.set('ComfyGrid.ui.system_monitor', 'top');
     }
     saveOptsWithCallback();
   }
@@ -40,7 +38,10 @@
   let menuEl: HTMLDivElement | null = $state(null);
 
   function setMonitorPosition(position: 'top' | 'left' | 'none') {
-    optionState.setOptionValue('system_monitor', position);
+    if (position === systemMonitor) {
+      return;
+    }
+    optionState.set('ComfyGrid.ui.system_monitor', position);
     saveOptsWithCallback();
   }
 

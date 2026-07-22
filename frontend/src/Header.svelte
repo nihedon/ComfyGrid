@@ -16,9 +16,7 @@
   const uiState = appState.uiState;
   const optionState = appState.optionState;
 
-  const systemMonitor = $derived(
-    optionState.opts.get('system_monitor') ?? optionState.forms.get('system_monitor')?.default,
-  );
+  const systemMonitor = $derived(optionState.get('ComfyGrid.ui.system_monitor'));
 
   function isValidDragData(e: DragEvent): boolean {
     const types = e.dataTransfer?.types || [];

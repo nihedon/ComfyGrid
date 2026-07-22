@@ -108,24 +108,24 @@
 
   // Initial language load: triggered once on startup to load available translations
   $effect(() => {
-    if (!optionState.forms.has('language')) {
+    if (!optionState.forms.has('ComfyGrid.ui.language')) {
       return;
     }
-    const choices = (optionState.forms.get('language') as DropdownFormInfo).choices;
+    const choices = (optionState.forms.get('ComfyGrid.ui.language') as DropdownFormInfo).choices;
     loadTranslations(choices.filter((c: string) => c !== 'auto')).then(() => {
-      setLanguage(optionState.opts.get('language'));
+      setLanguage(optionState.opts.get('ComfyGrid.ui.language'));
     });
   });
 
   // Language change: triggered when the language setting of options changes
   $effect(() => {
-    const selectedLang = optionState.opts.get('language');
+    const selectedLang = optionState.opts.get('ComfyGrid.ui.language');
     setLanguage(selectedLang);
   });
 
   // Theme change: triggered when the color theme setting of options changes
   $effect(() => {
-    const theme = optionState.opts.get('color_theme');
+    const theme = optionState.opts.get('ComfyGrid.ui.color_theme');
     if (!theme) {
       return;
     }

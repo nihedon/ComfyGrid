@@ -23,9 +23,7 @@
     return workspaceState.groups.toSorted(ComfyGridGroup.sortGroupsByPriority);
   });
 
-  const systemMonitor = $derived(
-    optionState.opts.get('system_monitor') ?? optionState.forms.get('system_monitor')?.default,
-  );
+  const systemMonitor = $derived(optionState.get('ComfyGrid.ui.system_monitor'));
 
   function handleOptionChanged() {
     saveLayoutObject(workspaceState.layout);

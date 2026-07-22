@@ -7,8 +7,13 @@
   let { optionKey, formInfo }: { optionKey: string; formInfo: FormInfo } = $props();
 
   // Computed properties for display
-  const label = $derived($t(`opts.${optionKey}.label`) ?? formInfo.label ?? optionKey);
-  const hint = $derived($t(`opts.${optionKey}.hint`) ?? formInfo.hint);
+  const baseKey = $derived(optionKey.includes('.') ? optionKey.split('.').pop() : optionKey);
+  const label = $derived(
+    $t(`opts.${optionKey}.label`) ?? $t(`opts.${baseKey}.label`) ?? formInfo.label ?? optionKey,
+  );
+  const hint = $derived(
+    $t(`opts.${optionKey}.hint`) ?? $t(`opts.${baseKey}.hint`) ?? formInfo.hint,
+  );
 
   // Current value with fallback to default
   const optionState = appState.optionState;
@@ -18,7 +23,7 @@
    * Handle value change for all input types
    */
   function handleChange(newValue: unknown) {
-    optionState.setOptionValue(optionKey, newValue);
+    optionState.set(optionKey, newValue);
     saveOptsWithCallback();
   }
 
@@ -166,7 +171,9 @@
       >
         {#each formInfo.choices as choice (choice)}
           <option value={choice} selected={choice === currentValue}>
-            {$t(`opts.${optionKey}.choice.${choice}`) || choice}
+            {$t(`opts.${optionKey}.choice.${choice}`) ??
+              $t(`opts.${baseKey}.choice.${choice}`) ??
+              choice}
           </option>
         {/each}
       </select>
@@ -189,7 +196,9 @@
               onchange={handleRadioChange}
             />
             <label for="{optionKey}_{choice}">
-              {$t(`opts.${optionKey}.choice.${choice}`) || choice}
+              {$t(`opts.${optionKey}.choice.${choice}`) ??
+                $t(`opts.${baseKey}.choice.${choice}`) ??
+                choice}
             </label>
           </div>
         {/each}

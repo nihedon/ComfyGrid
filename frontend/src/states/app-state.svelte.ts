@@ -21,7 +21,7 @@ class AppState {
         return comfyUiState.bridge;
     }
     get isDebugMode() {
-        return optionManager.getOptionValue('debug_mode');
+        return optionManager.get('debug_mode');
     }
 
     get comfyUiState() {

@@ -104,6 +104,15 @@ class OptionManager {
     readonly #forms = new SvelteMap<string, FormInfo>();
     readonly #extForms = new SvelteMap<string, ExtensionForms>();
 
+    get(key: string): any {
+        return this.#opts.get(key) ?? this.#forms.get(key)?.default;
+    }
+
+    set(key: string, value: unknown): void {
+        this.#opts.set(key, value);
+        globalThis.opts = { ...globalThis.opts, ...Object.fromEntries(this.#opts) };
+    }
+
     get opts(): ReadonlyMap<string, any> {
         return this.#opts;
     }
@@ -140,26 +149,6 @@ class OptionManager {
     }
     setExtForms(key: string, val: ExtensionForms) {
         this.#extForms.set(key, val);
-    }
-
-    getOptionValue<T>(key: string): T {
-        const value = this.#opts.get(key);
-        if (value !== undefined) {
-            return value as T;
-        }
-        const formInfo = this.#forms.get(key);
-        if (formInfo?.default !== undefined) {
-            return formInfo.default as T;
-        }
-        return undefined as T;
-    }
-
-    /**
-     * Set the value for an option key and sync to globalThis.opts
-     */
-    setOptionValue(key: string, value: unknown): void {
-        this.#opts.set(key, value);
-        globalThis.opts = { ...globalThis.opts, ...Object.fromEntries(this.#opts) };
     }
 }
 

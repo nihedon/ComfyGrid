@@ -12,7 +12,7 @@ export interface BootswatchTheme {
 
 const BOOTSWATCH_API_URL = 'https://bootswatch.com/api/5.json';
 const BOOTSWATCH_LINK_ID = 'bootswatch-theme-css';
-export const BOOTSWATCH_THEME_OPT_KEY = 'bootswatch_theme_url';
+export const BOOTSWATCH_THEME_OPT_KEY = 'ComfyGrid.ui.bootswatch_theme_url';
 
 export async function fetchBootswatchThemes(): Promise<BootswatchTheme[]> {
     const res = await fetch(BOOTSWATCH_API_URL);
@@ -39,6 +39,6 @@ export function applyBootswatchTheme(cssCdnUrl: string | null): void {
 }
 
 export function selectBootswatchTheme(cssCdnUrl: string): void {
-    appState.optionState.setOptionValue(BOOTSWATCH_THEME_OPT_KEY, cssCdnUrl);
+    appState.optionState.set(BOOTSWATCH_THEME_OPT_KEY, cssCdnUrl);
     applyBootswatchTheme(cssCdnUrl || null);
 }

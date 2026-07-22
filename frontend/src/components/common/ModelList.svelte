@@ -31,10 +31,7 @@
   const optionState = appState.optionState;
   const storageState = appState.storageState;
 
-  const modelThumbWidth = $derived(
-    optionState.opts.get('model_thumbnail_width') ??
-      optionState.forms.get('model_thumbnail_width')?.default,
-  );
+  const modelThumbWidth = $derived(optionState.get('ComfyGrid.ui.model_thumbnail_width'));
 
   const modelList = $derived.by(() => {
     let values: Model[] = [];
@@ -54,16 +51,12 @@
 
   let filterText = $state('');
   let selectedFolder = $state('');
-  let showNsfw = $state(
-    optionState.opts.get('show_nsfw') ?? optionState.forms.get('show_nsfw')?.default,
-  );
+  let showNsfw = $state(optionState.get('ComfyGrid.ui.show_nsfw'));
   let favoriteOnly = $state(false);
-  let modelTreeView = $state(
-    optionState.opts.get('model_tree_view') ?? optionState.forms.get('model_tree_view')?.default,
-  );
+  let modelTreeView = $state(optionState.get('ComfyGrid.ui.model_tree_view'));
 
-  const sortAsc = $derived<boolean>(optionState.opts.get(`${dir}_sort_asc`) ?? true);
-  const sortMethod = $derived<SortType>(optionState.opts.get(`${dir}_sort`) ?? 'path');
+  const sortAsc = $derived<boolean>(optionState.opts.get(`ComfyGrid.ui.${dir}_sort_asc`) ?? true);
+  const sortMethod = $derived<SortType>(optionState.opts.get(`ComfyGrid.ui.${dir}_sort`) ?? 'path');
 
   const folderList = $derived.by(() => {
     const folders: string[] = [];
@@ -180,11 +173,11 @@
   });
 
   $effect(() => {
-    optionState.setOptionValue('show_nsfw', showNsfw);
+    optionState.set('ComfyGrid.ui.show_nsfw', showNsfw);
   });
 
   $effect(() => {
-    optionState.setOptionValue('model_tree_view', modelTreeView);
+    optionState.set('ComfyGrid.ui.model_tree_view', modelTreeView);
   });
 
   $effect(() => {
@@ -202,12 +195,12 @@
   );
 
   function toggleSortOrder() {
-    optionState.setOptionValue(`${dir}_sort_asc`, !sortAsc);
+    optionState.set(`ComfyGrid.ui.${dir}_sort_asc`, !sortAsc);
     saveOptsWithCallback();
   }
 
   function changeSortType(value: SortType) {
-    optionState.setOptionValue(`${dir}_sort`, value);
+    optionState.set(`ComfyGrid.ui.${dir}_sort`, value);
     saveOptsWithCallback();
   }
 
