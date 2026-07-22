@@ -2,6 +2,7 @@
   import { sortBy } from 'es-toolkit/array';
   import { comfyGridApiClient } from '@/api/api-client';
   import { t } from '@/i18n/i18n';
+  import { workflowManager } from '@/managers/workflow-manager';
   import { refreshModels } from '@/services/models-service';
   import { saveOptsWithCallback } from '@/services/options-service';
   import { appState } from '@/states/app-state.svelte';
@@ -214,13 +215,20 @@
 
   async function reloadModels() {
     isReloading = true;
-    try {
-      const app = appState.comfyUiState.app;
-      await app?.refreshComboInNodes();
+    const app = appState.comfyUiState.app;
+    appState.toastState.addToast({ type: 'info', message: $t('toast.update_requested') });
+    app?.refreshComboInNodes().then(async () => {
+      const res = await appState.bridge?.getWorkflow();
+      if (res) {
+        workflowManager.handleWorkflow(res);
+      }
       await refreshModels(dir);
-    } finally {
+      appState.toastState.addToast({
+        type: 'success',
+        message: $t('toast.update_request_completed'),
+      });
       isReloading = false;
-    }
+    });
   }
 
   function apply(model: Model) {
