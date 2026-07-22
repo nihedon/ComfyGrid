@@ -1,4 +1,5 @@
 import logging
+import threading
 from pathlib import Path
 
 import lmdb
@@ -7,6 +8,8 @@ MAP_SIZE_UNIT = 10**7
 
 thumbnail_cache_path = Path("cache", "thumbnail")
 thumbnail_cache_env = None
+_env_lock = threading.Lock()
+_resize_lock = threading.Lock()
 
 
 def _get_thumbnail_cache_env():
@@ -14,13 +17,17 @@ def _get_thumbnail_cache_env():
     if thumbnail_cache_env is not None:
         return thumbnail_cache_env
 
-    thumbnail_cache_path.mkdir(parents=True, exist_ok=True)
-    try:
-        thumbnail_cache_env = lmdb.open(str(thumbnail_cache_path), map_size=MAP_SIZE_UNIT)
-    except lmdb.Error as e:
-        logging.warning("[Cache] Failed to open thumbnail cache: %s", e)
-        return None
-    return thumbnail_cache_env
+    with _env_lock:
+        if thumbnail_cache_env is not None:
+            return thumbnail_cache_env
+
+        thumbnail_cache_path.mkdir(parents=True, exist_ok=True)
+        try:
+            thumbnail_cache_env = lmdb.open(str(thumbnail_cache_path), map_size=MAP_SIZE_UNIT)
+        except lmdb.Error as e:
+            logging.warning("[Cache] Failed to open thumbnail cache: %s", e)
+            return None
+        return thumbnail_cache_env
 
 
 def cache_thumbnail(key: str, buffer: bytes) -> None:
@@ -32,13 +39,22 @@ def cache_thumbnail(key: str, buffer: bytes) -> None:
         with env.begin(write=True) as txn:
             txn.put(key.encode(), buffer)
     except lmdb.MapFullError:
-        curr_size = env.info()["map_size"]
-        new_size = curr_size + MAP_SIZE_UNIT
-        logging.info("[Cache] LMDB Map full. Resizing cache to %s bytes", new_size)
+        with _resize_lock:
+            try:
+                # Retry in case another thread already resized it
+                with env.begin(write=True) as txn:
+                    txn.put(key.encode(), buffer)
+                return
+            except lmdb.MapFullError:
+                pass
 
-        env.set_mapsize(new_size)
-        with env.begin(write=True) as txn:
-            txn.put(key.encode(), buffer)
+            curr_size = env.info()["map_size"]
+            new_size = curr_size + MAP_SIZE_UNIT
+            logging.info("[Cache] LMDB Map full. Resizing cache to %s bytes", new_size)
+
+            env.set_mapsize(new_size)
+            with env.begin(write=True) as txn:
+                txn.put(key.encode(), buffer)
     except lmdb.Error as e:
         logging.warning("[Cache] Failed to write thumbnail cache: %s", e)
 
