@@ -201,7 +201,7 @@
   }
 </script>
 
-<div class="modal fade" tabindex="-1" aria-hidden="true" bind:this={modalElement}>
+<div class="modal" tabindex="-1" aria-hidden="true" bind:this={modalElement}>
   <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
     <div class="modal-content">
       {#if model}
@@ -231,7 +231,7 @@
         </div>
         <div class="modal-body">
           <div class="d-flex gap-3">
-            <div class="vstack flex-grow-1">
+            <div class="vstack flex-grow-1" style="min-width: 0;">
               <div class="mb-1 d-flex align-items-center justify-content-between">
                 <div class="form-check">
                   <input
@@ -342,14 +342,15 @@
                   </div>
                 {/if}
               </div>
-              
+
               {#if fetchedImages.length > 1 && fetchedImages.includes(tempPreviewUrl || '')}
                 <div class="d-flex align-items-center justify-content-between px-1">
                   <button
                     class="btn btn-sm btn-outline-secondary"
                     onclick={(e) => {
                       e.stopPropagation();
-                      selectedImageIndex = (selectedImageIndex - 1 + fetchedImages.length) % fetchedImages.length;
+                      selectedImageIndex =
+                        (selectedImageIndex - 1 + fetchedImages.length) % fetchedImages.length;
                       tempPreviewUrl = fetchedImages[selectedImageIndex];
                     }}
                   >
