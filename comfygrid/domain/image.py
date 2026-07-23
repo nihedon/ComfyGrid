@@ -71,18 +71,27 @@ def get_metadata(file) -> dict | None:
                 zeroth = exif_base["0th"]
 
                 header = "Prompt: "
+                # pyrefly: ignore [missing-attribute]
                 prompt = zeroth.get(piexif.ImageIFD.Make, bytes()).decode('utf-8', errors='ignore').strip('\x00')
                 if prompt.startswith(header):
                     metadata["prompt"] = prompt[len(header):]
 
                 header = "Workflow: "
+                # pyrefly: ignore [missing-attribute]
                 workflow = zeroth.get(piexif.ImageIFD.ImageDescription, bytes()).decode('utf-8', errors='ignore').strip('\x00')
                 if workflow.startswith(header):
                     metadata["workflow"] = workflow[len(header):]
 
+                header = "ComfyGrid: "
+                # pyrefly: ignore [missing-attribute]
+                comfygrid = zeroth.get(piexif.ImageIFD.Software, bytes()).decode('utf-8', errors='ignore').strip('\x00')
+                if comfygrid.startswith(header):
+                    metadata["comfygrid"] = comfygrid[len(header):]
+
             if not metadata and "Exif" in exif_base:
                 exif = exif_base["Exif"]
 
+                # pyrefly: ignore [missing-attribute]
                 user_comment = exif.get(piexif.ExifIFD.UserComment, None)
                 if user_comment:
                     metadata = piexif.helper.UserComment.load(user_comment)

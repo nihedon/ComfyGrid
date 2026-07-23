@@ -45,7 +45,7 @@ type = "radio"
 default = "top"
 choices = ["none", "top", "left"]
 
-[ComfyGrid.save.save_directory]
+[ComfyGrid.save.directory]
 type = "text"
 default = "save"
 
@@ -57,22 +57,39 @@ default = true
 type = "text"
 default = "{date}"
 
-[ComfyGrid.save.save_image_filename_format]
+[ComfyGrid.save.image_filename_format]
 type = "text"
 default = "[{ckpt_name}]_{datetime}_({seed})"
 
-[ComfyGrid.save.save_image_format]
+[ComfyGrid.save.image_format]
 type = "dropdown"
 choices = ["original", "png", "webp", "jpeg", "jxl"]
 default = "original"
 
-[ComfyGrid.save.save_image_quality]
+[ComfyGrid.save.image_quality]
 type = "slider"
 default = "90"
 minimum = "1"
 maximum = "100"
 step = "1"
 
-[ComfyGrid.save.save_image_embed_metadata]
+[ComfyGrid.save.image_embed_metadata]
 type = "checkbox"
 default = true
+
+[ComfyGrid.ollama.url]
+type = "text"
+default = "http://localhost:11434"
+
+[ComfyGrid.ollama.model]
+type = "text"
+default = "llama3.1:8b"
+
+[ComfyGrid.ollama.system]
+type = "textarea"
+default = "You are an AI artist."
+
+[ComfyGrid.ollama.translate_timing]
+type = "dropdown"
+choices = ["on_blur", "after_input", "on_generate"]
+default = "on_blur"

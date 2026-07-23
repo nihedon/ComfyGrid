@@ -79,7 +79,7 @@ export class ComfyGridGroup {
     }
 
     readonly isTabify = $derived.by(() => {
-        const groupTabify = appState.optionState.opts.get('group_tabify') || 'all_top_groups';
+        const groupTabify = appState.optionState.get('group_tabify') || 'all_top_groups';
         if (groupTabify === 'all_top_groups') {
             return this.#id;
         }
@@ -481,6 +481,7 @@ export class ComfyGridWidget<V = string, O = undefined> {
     #options: O = $state();
     #className: string = $state();
     #textarea: HTMLTextAreaElement | null = null;
+    #isTranslating: boolean = $state(false);
     #callback: (value?: unknown) => void;
 
     constructor(
@@ -548,6 +549,9 @@ export class ComfyGridWidget<V = string, O = undefined> {
     get textarea() {
         return this.#textarea;
     }
+    get isTranslating() {
+        return this.#isTranslating;
+    }
     get callback() {
         return this.#callback;
     }
@@ -593,6 +597,9 @@ export class ComfyGridWidget<V = string, O = undefined> {
     }
     set textarea(textarea: HTMLTextAreaElement) {
         this.#textarea = textarea;
+    }
+    set isTranslating(isTranslating: boolean) {
+        this.#isTranslating = isTranslating;
     }
     set callback(callback: (value?: unknown) => void) {
         this.#callback = callback;

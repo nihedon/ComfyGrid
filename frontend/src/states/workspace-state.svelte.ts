@@ -11,6 +11,10 @@ export class Layout {
     readonly #floatingWidgets = new SvelteMap<string, BoardId>();
     readonly #floatingPositions = new SvelteMap<string, Record<string, FloatingPosition>>();
     readonly #promptWidgetIds = new SvelteSet<string>();
+    readonly #translateWidgetIds = new SvelteSet<string>();
+    readonly #rawTexts = new SvelteMap<string, string>();
+    readonly #translateModels = new SvelteMap<string, string>();
+    readonly #translateSystems = new SvelteMap<string, string>();
     #positivePromptWidgetId = $state<string | null>(null);
     #negativePromptWidgetId = $state<string | null>(null);
     #noControlNodes = $state<boolean>(false);
@@ -34,6 +38,41 @@ export class Layout {
     }
     get promptWidgetIds(): ReadonlySet<string> {
         return this.#promptWidgetIds;
+    }
+    isTranslateWidget(widgetId: string): boolean {
+        return this.#translateWidgetIds.has(widgetId);
+    }
+    get translateWidgetIds(): ReadonlySet<string> {
+        return this.#translateWidgetIds;
+    }
+    getRawText(widgetId: string): string | undefined {
+        return this.#rawTexts.get(widgetId);
+    }
+    setRawText(widgetId: string, text: string) {
+        this.#rawTexts.set(widgetId, text);
+    }
+    deleteRawText(widgetId: string) {
+        this.#rawTexts.delete(widgetId);
+    }
+    getTranslateModel(widgetId: string): string | undefined {
+        return this.#translateModels.get(widgetId);
+    }
+    setTranslateModel(widgetId: string, model: string) {
+        if (model) {
+            this.#translateModels.set(widgetId, model);
+        } else {
+            this.#translateModels.delete(widgetId);
+        }
+    }
+    getTranslateSystem(widgetId: string): string | undefined {
+        return this.#translateSystems.get(widgetId);
+    }
+    setTranslateSystem(widgetId: string, system: string) {
+        if (system) {
+            this.#translateSystems.set(widgetId, system);
+        } else {
+            this.#translateSystems.delete(widgetId);
+        }
     }
     get positivePromptWidgetId(): string | null {
         return this.#positivePromptWidgetId;
@@ -72,6 +111,12 @@ export class Layout {
     deletePromptWidgetId(widgetId: string) {
         this.#promptWidgetIds.delete(widgetId);
     }
+    addTranslateWidgetId(widgetId: string) {
+        this.#translateWidgetIds.add(widgetId);
+    }
+    deleteTranslateWidgetId(widgetId: string) {
+        this.#translateWidgetIds.delete(widgetId);
+    }
     setPositivePromptWidgetId(positivePromptWidgetId: string | null) {
         this.#positivePromptWidgetId = positivePromptWidgetId;
     }
@@ -89,17 +134,63 @@ export class Layout {
     }
 
     export(): LayoutType {
+        const nodes = appState.workspaceState.nodes;
+        const hasNodes = nodes.size > 0;
+        // eslint-disable-next-line svelte/prefer-svelte-reactivity
+        const validNodeIds = new Set<string>();
+        // eslint-disable-next-line svelte/prefer-svelte-reactivity
+        const validWidgetIds = new Set<string>();
+
+        if (hasNodes) {
+            for (const node of nodes.values()) {
+                validNodeIds.add(String(node.id));
+                for (const widget of node.widgets) {
+                    validWidgetIds.add(String(widget.id));
+                }
+            }
+
+            for (const key of Array.from(this.#rawTexts.keys())) {
+                if (!validWidgetIds.has(key)) this.#rawTexts.delete(key);
+            }
+            for (const key of Array.from(this.#translateModels.keys())) {
+                if (!validWidgetIds.has(key)) this.#translateModels.delete(key);
+            }
+            for (const key of Array.from(this.#translateSystems.keys())) {
+                if (!validWidgetIds.has(key)) this.#translateSystems.delete(key);
+            }
+            for (const id of Array.from(this.#translateWidgetIds)) {
+                if (!validWidgetIds.has(id)) this.#translateWidgetIds.delete(id);
+            }
+            for (const id of Array.from(this.#promptWidgetIds)) {
+                if (!validWidgetIds.has(id)) this.#promptWidgetIds.delete(id);
+            }
+            for (const key of Array.from(this.#floatingNodes.keys())) {
+                if (!validNodeIds.has(key)) this.#floatingNodes.delete(key);
+            }
+            for (const key of Array.from(this.#floatingWidgets.keys())) {
+                if (!validWidgetIds.has(key)) this.#floatingWidgets.delete(key);
+            }
+            if (this.#positivePromptWidgetId && !validWidgetIds.has(this.#positivePromptWidgetId)) {
+                this.#positivePromptWidgetId = null;
+            }
+            if (this.#negativePromptWidgetId && !validWidgetIds.has(this.#negativePromptWidgetId)) {
+                this.#negativePromptWidgetId = null;
+            }
+        }
+
         const allBoardLayouts: Record<string, Record<string, FloatingPosition>> = {};
         for (const [boardId, grid] of appState.workspaceState.gridStackBoards) {
             const layout = (grid.save(true) ?? []) as GridStackWidget[];
             const idKeyLayout = layout.reduce(
                 (acc, item) => {
-                    acc[item.id] = {
-                        x: item.x,
-                        y: item.y,
-                        w: item.w ?? 1,
-                        h: item.h ?? 1,
-                    };
+                    if (!hasNodes || validNodeIds.has(item.id) || validWidgetIds.has(item.id)) {
+                        acc[item.id] = {
+                            x: item.x,
+                            y: item.y,
+                            w: item.w ?? 1,
+                            h: item.h ?? 1,
+                        };
+                    }
                     return acc;
                 },
                 {} as Record<string, FloatingPosition>,
@@ -115,6 +206,10 @@ export class Layout {
             promptWidgetIds: [...this.#promptWidgetIds],
             positivePromptWidgetId: this.#positivePromptWidgetId,
             negativePromptWidgetId: this.#negativePromptWidgetId,
+            translateWidgetIds: [...this.#translateWidgetIds],
+            rawTexts: Object.fromEntries(Array.from(this.#rawTexts.entries()).filter(([, text]) => Boolean(text))),
+            translateModels: Object.fromEntries(Array.from(this.#translateModels.entries()).filter(([, v]) => Boolean(v))),
+            translateSystems: Object.fromEntries(Array.from(this.#translateSystems.entries()).filter(([, v]) => Boolean(v))),
             noControlNodes: this.#noControlNodes,
             noCollapsedNodes: this.#noCollapsedNodes,
             sortOrder: this.#sortOrder,
@@ -141,6 +236,22 @@ export class Layout {
         });
         this.#positivePromptWidgetId = layout.positivePromptWidgetId;
         this.#negativePromptWidgetId = layout.negativePromptWidgetId;
+        this.#translateWidgetIds.clear();
+        (layout.translateWidgetIds ?? []).forEach((widgetId) => {
+            this.#translateWidgetIds.add(widgetId);
+        });
+        this.#rawTexts.clear();
+        Object.entries(layout.rawTexts ?? {}).forEach(([key, value]) => {
+            this.#rawTexts.set(key, value);
+        });
+        this.#translateModels.clear();
+        Object.entries(layout.translateModels ?? {}).forEach(([key, value]) => {
+            this.#translateModels.set(key, value);
+        });
+        this.#translateSystems.clear();
+        Object.entries(layout.translateSystems ?? {}).forEach(([key, value]) => {
+            this.#translateSystems.set(key, value);
+        });
         this.#noControlNodes = layout.noControlNodes ?? true;
         this.#noCollapsedNodes = layout.noCollapsedNodes ?? true;
         this.#sortOrder = layout.sortOrder ?? 'default';

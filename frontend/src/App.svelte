@@ -9,6 +9,7 @@
   import Dialog from '@/components/modals/Dialog.svelte';
   import ModelsModal from '@/components/modals/ModelsModal.svelte';
   import PaintModal from '@/components/modals/PaintModal.svelte';
+  import OllamaSettingModal from '@/components/modals/OllamaSettingModal.svelte';
   import { loadTranslations, setLanguage } from '@/i18n/i18n';
   import { BOOTSWATCH_THEME_OPT_KEY, applyBootswatchTheme } from '@/services/bootswatch-service';
   import {
@@ -228,6 +229,7 @@
   <ToastContainer />
   <Dialog />
   <SharedThumbnailPopover />
+  <OllamaSettingModal />
 
   {#snippet failed(error, reset)}
     {@const err = error as Error}

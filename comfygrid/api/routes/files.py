@@ -109,7 +109,9 @@ def get_model_info(path: str, comfy_service: ComfyUIService = Depends(get_comfy_
         civitai_meta_path = root / f"{name_without_ext}.civitai.info"
         if civitai_meta_path.exists():
             try:
-                metadata_dict = orjson.loads(file_service._read_file(civitai_meta_path).replace("¥", "\\"))
+                civitai_meta_file = file_service._read_file(civitai_meta_path)
+                # pyrefly: ignore [missing-attribute]
+                metadata_dict = orjson.loads(civitai_meta_file.replace("¥", "\\"))
                 id = metadata_dict.get("id", None)
                 model_id = metadata_dict.get("modelId", None)
                 if id is not None and model_id is not None and "downloadUrl" in metadata_dict:
@@ -340,6 +342,7 @@ async def fetch_info(request: FetchInfoRequest):
                 text = re.sub(r"(src|href)=['\"](?!http|https|#|data:|mailto:)([^'\"]+)['\"]", repl_src, text)
 
                 widget_data = getattr(card.data, 'widget', None)
+                # pyrefly: ignore [bad-argument-type]
                 text = _expand_huggingface_gallery(text, widget_data, resolve_link)
 
             return {

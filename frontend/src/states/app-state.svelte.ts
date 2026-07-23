@@ -4,7 +4,7 @@ import { dialogState } from './dialog-state.svelte';
 import { executionState } from './execution-state.svelte';
 import { galleryState } from './gallery-state.svelte';
 import { jobState } from './job-state.svelte';
-import { descriptionModalState, inpaintModalState, modalState } from './modal-state.svelte';
+import { descriptionModalState, inpaintModalState, modalState, ollamaSettingModalState } from './modal-state.svelte';
 import { optionManager } from './option-state.svelte';
 import { popoverState } from './popover-state.svelte';
 import { storageState } from './storage-state.svelte';
@@ -50,6 +50,9 @@ class AppState {
     }
     get descriptionModalState() {
         return descriptionModalState;
+    }
+    get ollamaSettingModalState() {
+        return ollamaSettingModalState;
     }
     get optionState() {
         return optionManager;

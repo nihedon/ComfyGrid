@@ -145,6 +145,30 @@ class DescriptionModalState {
     }
 }
 
+class OllamaSettingModalState {
+    #isOpen = $state(false);
+    #widgetId = $state<string | null>(null);
+
+    get isOpen() {
+        return this.#isOpen;
+    }
+
+    get widgetId() {
+        return this.#widgetId;
+    }
+
+    show(widgetId: string) {
+        this.#widgetId = widgetId;
+        this.#isOpen = true;
+    }
+
+    close() {
+        this.#isOpen = false;
+        this.#widgetId = null;
+    }
+}
+
 export const modalState = new ModalState();
 export const inpaintModalState = new InpaintModalState();
 export const descriptionModalState = new DescriptionModalState();
+export const ollamaSettingModalState = new OllamaSettingModalState();

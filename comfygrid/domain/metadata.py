@@ -24,6 +24,8 @@ def _build_png_metadata_kwargs(metadata: dict[str, str]) -> dict:
         pnginfo.add_text("prompt", metadata["prompt"])
     if "workflow" in metadata:
         pnginfo.add_text("workflow", metadata["workflow"])
+    if "comfygrid" in metadata:
+        pnginfo.add_text("comfygrid", metadata["comfygrid"])
 
     return {"pnginfo": pnginfo}
 
@@ -41,5 +43,7 @@ def _build_exif_metadata_kwargs(metadata: dict[str, str]) -> dict:
         exif_dict["0th"][piexif.ImageIFD.Make] = ("Prompt: " + metadata["prompt"]).encode("utf-8")
     if "workflow" in metadata:
         exif_dict["0th"][piexif.ImageIFD.ImageDescription] = ("Workflow: " + metadata["workflow"]).encode("utf-8")
+    if "comfygrid" in metadata:
+        exif_dict["0th"][piexif.ImageIFD.Software] = ("ComfyGrid: " + metadata["comfygrid"]).encode("utf-8")
 
     return {"exif": piexif.dump(exif_dict)}

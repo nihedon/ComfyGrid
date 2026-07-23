@@ -33,8 +33,8 @@ def build_download_media(url: str, image_info: dict) -> tuple[bytes | None, str 
             bin_data = embed_video_metadata(bin_data, metadata, ext)
         return bin_data, format_image_filename(filename, image_info, ext)
 
-    target_format = state.opts.data.get("ComfyGrid.save.save_image_format", "original")
-    quality = int(state.opts.data.get("ComfyGrid.save.save_image_quality", 90))
+    target_format = state.opts.data.get("ComfyGrid.save.image_format", "original")
+    quality = int(state.opts.data.get("ComfyGrid.save.image_quality", 90))
     bin_data, ext = convert_image(bin_data, target_format, quality, metadata)
     return bin_data, format_image_filename(filename, image_info, ext)
 
@@ -83,7 +83,7 @@ def format_image_filename(url: str, image_info: dict, ext_override: str | None =
     batch_job_index = int(image_info.get("batchJobIndex", "0"))
     suffix = "_" + str(batch_job_index) if batch_job_index else ""
     try:
-        template = state.opts.data.get("ComfyGrid.save.save_image_filename_format", "[{ckpt_name}]_{datetime}_({seed})")
+        template = state.opts.data.get("ComfyGrid.save.image_filename_format", "[{ckpt_name}]_{datetime}_({seed})")
         return template.format(**image_info) + suffix + ext
     except Exception:
         basename = os.path.splitext(os.path.basename(url))[0]
@@ -91,7 +91,7 @@ def format_image_filename(url: str, image_info: dict, ext_override: str | None =
 
 
 def extract_workflow_metadata(image_info: dict) -> dict[str, str] | None:
-    if not state.opts.data.get("ComfyGrid.save.save_image_embed_metadata", True):
+    if not state.opts.data.get("ComfyGrid.save.image_embed_metadata", True):
         return None
 
     metadata = {}
@@ -99,6 +99,8 @@ def extract_workflow_metadata(image_info: dict) -> dict[str, str] | None:
         metadata["prompt"] = image_info["prompt"]
     if "workflow" in image_info:
         metadata["workflow"] = image_info["workflow"]
+    if "comfygrid" in image_info:
+        metadata["comfygrid"] = image_info["comfygrid"]
     return metadata if metadata else None
 
 
@@ -155,7 +157,7 @@ def get_datetime(image_info: dict) -> datetime:
 
 
 def make_directory(output_dir: Path, image_info: dict) -> Path:
-    save_dir = state.opts.data.get("ComfyGrid.save.save_directory", "save")
+    save_dir = state.opts.data.get("ComfyGrid.save.directory", "save")
     if state.opts.data.get("ComfyGrid.save.create_subdirectory", True):
         template = state.opts.data.get("ComfyGrid.save.subdirectory_name_format", "{date}")
         subdir = template.format(**image_info)

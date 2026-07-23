@@ -57,6 +57,10 @@ class ExecutionManager {
 
         this.#registerJob(jobId, { ckpt_name, prompt, workflow, owner });
 
+        const layout = appState.workspaceState.layout.export();
+        const jobInfo = appState.jobState.jobs.get(jobId);
+        jobInfo.metadata = { ...jobInfo.metadata, comfygrid: JSON.stringify(layout) };
+
         appState.executionState.progress.status = 'processing';
         appState.executionState.progress.setNodeSet(jobId, nodeIds);
     }

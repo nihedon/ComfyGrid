@@ -1,5 +1,6 @@
 import { ComfyUiApiHook } from '@/bridge/comfyui-api-hook';
 import { nodeQueueManager } from '@/bridge/node-queue-manager';
+import { translationManager } from '@/services/translation-service';
 import type { ComfyGraph } from '@/types/comfy-model';
 import logger from '@/utils/logger';
 import { appState } from './app-state.svelte';
@@ -74,10 +75,12 @@ export class ComfyUiBridge {
      * @param batchCount - Number of batches to queue
      */
     async queuePrompt(batchCount: number): Promise<void> {
+        await translationManager.translateAllPending();
         this.#app.queuePrompt(0, batchCount);
     }
 
     async nodeQueue(payload: { nodeId: string }): Promise<void> {
+        await translationManager.translateAllPending();
         const { nodeId } = payload;
         await nodeQueueManager.queueOutputNodes(this.#app, nodeId);
     }

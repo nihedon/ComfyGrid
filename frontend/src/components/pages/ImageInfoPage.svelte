@@ -46,7 +46,7 @@
           logger.error('Failed to parse workflow JSON from image', e);
         }
       }
-      if (res.json['metadata']) {
+      if (res.json.metadata) {
         const metadata = res.json['metadata'];
         // Not a ComfyUI format
         let [positivePrompt, tmp] = metadata.split('\nNegative prompt:');
@@ -61,9 +61,16 @@
         } else {
           metadataJson = { positive: positivePrompt?.trim(), negative: negativePrompt?.trim() };
         }
-      } else if (res.json['prompt']) {
+      } else if (res.json.prompt || res.json.comfygrid) {
         // ComfyUI format
-        metadataJson = JSON.parse(res.json['prompt']);
+        let json: { [key: string]: unknown } = {};
+        if (res.json.prompt) {
+          json = JSON.parse(res.json.prompt);
+        }
+        if (res.json.comfygrid) {
+          json.comfygrid = JSON.parse(res.json.comfygrid);
+        }
+        metadataJson = json;
       }
     } else {
       metadataJson = { error: 'No recognizable prompt metadata found.' };

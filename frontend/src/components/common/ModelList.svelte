@@ -55,8 +55,8 @@
   let favoriteOnly = $state(false);
   let modelTreeView = $state(optionState.get('ComfyGrid.ui.model_tree_view'));
 
-  const sortAsc = $derived<boolean>(optionState.opts.get(`ComfyGrid.ui.${dir}_sort_asc`) ?? true);
-  const sortMethod = $derived<SortType>(optionState.opts.get(`ComfyGrid.ui.${dir}_sort`) ?? 'path');
+  const sortAsc = $derived<boolean>(optionState.get(`ComfyGrid.ui.${dir}_sort_asc`) ?? true);
+  const sortMethod = $derived<SortType>(optionState.get(`ComfyGrid.ui.${dir}_sort`) ?? 'path');
 
   const folderList = $derived.by(() => {
     const folders: string[] = [];

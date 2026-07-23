@@ -76,7 +76,7 @@ class ComfyGridApiClient {
         return await fetchApiJson('/comfygrid/api/version_info');
     }
 
-    async postImageInfo(file: File): Promise<ApiResultJson<{ metadata?: string; prompt?: string; workflow?: string }>> {
+    async postImageInfo(file: File): Promise<ApiResultJson<{ metadata?: string; prompt?: string; workflow?: string; comfygrid?: string }>> {
         const formData = new FormData();
         formData.append('file', file);
         return await fetchApiJson('/comfygrid/api/image_info', {
@@ -276,6 +276,18 @@ class ComfyGridApiClient {
 
     async getPages(): Promise<ApiResultJson<Array<{ id: string; title: string }>>> {
         return await fetchApiJson('/comfygrid/api/pages');
+    }
+
+    async getLlmStatus(): Promise<ApiResultJson<{ available: boolean; models: string[] }>> {
+        return await fetchApiJson('/comfygrid/api/llm/status');
+    }
+
+    async translate(model: string, text: string, system?: string): Promise<ApiResultJson<{ ok: boolean; translated_text: string }>> {
+        return await fetchApiJson('/comfygrid/api/llm/translate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ model, text, system }),
+        });
     }
 }
 

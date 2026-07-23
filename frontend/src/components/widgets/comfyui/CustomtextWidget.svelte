@@ -1,6 +1,9 @@
 <script lang="ts">
+  import { onDestroy, untrack } from 'svelte';
+  import { comfyGridApiClient } from '@/api/api-client';
   import { t } from '@/i18n/i18n';
-  import { updateBoardFloatingState } from '@/services/gridstack-service';
+  import { saveLayoutObject, updateBoardFloatingState } from '@/services/gridstack-service';
+  import { translationManager } from '@/services/translation-service';
   import { appState } from '@/states/app-state.svelte';
   import type { ComfyGridWidget } from '@/states/model-state.svelte';
   import { keyupEditAttention } from '../../../helpers/edit-attention';
@@ -21,15 +24,161 @@
   const isPrompt = $derived(layout.isPromptWidget(widget.id));
   const isPositivePrompt = $derived(layout.positivePromptWidgetId === widget.id);
   const isNegativePrompt = $derived(layout.negativePromptWidgetId === widget.id);
+  const isTranslate = $derived(layout.isTranslateWidget(widget.id));
   const isPromptGroup = $derived(isPrompt || isPositivePrompt || isNegativePrompt);
+
+  let originalText = $state<string>(
+    untrack(() => layout.getRawText(widget.id) ?? widget.value ?? ''),
+  );
+  let lastTranslatedSourceText = $state<string>('');
+  let prevIsTranslate = $state<boolean>(false);
+  let inputTimer: ReturnType<typeof setTimeout> | null = null;
+  let translationRequestId = 0;
 
   const floatingButtonTitle = $derived(
     layout.floatingWidgets.get(widget.id) ? 'node.move_to_group.title' : 'node.move_to_grid.title',
   );
 
-  function handleInput() {
-    widget.updateComfyUiValue();
+  async function triggerTranslation(text: string) {
+    const currentReqId = ++translationRequestId;
+
+    if (!text.trim()) {
+      if (currentReqId === translationRequestId) {
+        widget.value = text;
+        widget.updateComfyUiValue();
+        lastTranslatedSourceText = text;
+        widget.isTranslating = false;
+        translationManager.unregister(widget.id);
+      }
+      return;
+    }
+
+    widget.isTranslating = true;
+    const model = layout.getTranslateModel(widget.id) || appState.optionState.get('ComfyGrid.ollama.model');
+    const system = layout.getTranslateSystem(widget.id) || appState.optionState.get('ComfyGrid.ollama.system');
+
+    if (!model) {
+      console.warn('Ollama model not specified.');
+      if (currentReqId === translationRequestId) {
+        widget.value = text;
+        widget.isTranslating = false;
+        translationManager.unregister(widget.id);
+      }
+      return;
+    }
+
+    try {
+      const res = await comfyGridApiClient.translate(model, text, system);
+      if (currentReqId !== translationRequestId) {
+        return;
+      }
+
+      if (res.ok && res.json?.translated_text) {
+        widget.value = res.json.translated_text;
+      } else {
+        widget.value = text;
+      }
+      lastTranslatedSourceText = text;
+    } catch {
+      if (currentReqId === translationRequestId) {
+        widget.value = text;
+      }
+    } finally {
+      if (currentReqId === translationRequestId) {
+        widget.updateComfyUiValue();
+        widget.isTranslating = false;
+        saveLayoutObject(layout);
+        registerOrUnregisterPending();
+      }
+    }
   }
+
+  function registerOrUnregisterPending() {
+    if (isTranslate && originalText.trim() !== '' && originalText !== lastTranslatedSourceText) {
+      translationManager.register(widget.id, () => triggerTranslation(originalText));
+    } else {
+      translationManager.unregister(widget.id);
+    }
+  }
+
+  function handleInput() {
+    if (isTranslate) {
+      layout.setRawText(widget.id, originalText);
+      registerOrUnregisterPending();
+      const timing = appState.optionState.get('ComfyGrid.ollama.translate_timing') ?? 'on_blur';
+      if (timing === 'after_input') {
+        if (inputTimer) clearTimeout(inputTimer);
+        inputTimer = setTimeout(() => {
+          if (originalText !== lastTranslatedSourceText) {
+            triggerTranslation(originalText);
+          }
+        }, 1000);
+      }
+    } else {
+      widget.updateComfyUiValue();
+    }
+  }
+
+  function handleBlur() {
+    const timing = appState.optionState.get('ComfyGrid.ollama.translate_timing') ?? 'on_blur';
+    if (isTranslate && timing === 'on_blur' && originalText !== lastTranslatedSourceText) {
+      triggerTranslation(originalText);
+    }
+  }
+
+  $effect(() => {
+    const currentIsTranslate = isTranslate;
+    if (currentIsTranslate !== prevIsTranslate) {
+      prevIsTranslate = currentIsTranslate;
+      if (currentIsTranslate) {
+        let raw = layout.getRawText(widget.id);
+        if (raw === undefined || raw === null) {
+          raw = widget.value ?? '';
+          layout.setRawText(widget.id, raw);
+        }
+        originalText = raw;
+        registerOrUnregisterPending();
+        const timing = appState.optionState.get('ComfyGrid.ollama.translate_timing') ?? 'on_blur';
+        if (timing !== 'on_generate' && originalText.trim() && originalText !== lastTranslatedSourceText) {
+          triggerTranslation(originalText);
+        }
+      } else {
+        const raw = layout.getRawText(widget.id);
+        if (raw !== undefined && raw === widget.value) {
+          layout.deleteRawText(widget.id);
+        }
+        translationManager.unregister(widget.id);
+      }
+    }
+  });
+
+  const currentOllamaConfig = $derived(
+    `${layout.getTranslateModel(widget.id) ?? appState.optionState.get('ComfyGrid.ollama.model') ?? ''}::${layout.getTranslateSystem(widget.id) ?? appState.optionState.get('ComfyGrid.ollama.system') ?? ''}`,
+  );
+  let prevOllamaConfig = $state<string>(untrack(() => currentOllamaConfig));
+
+  $effect(() => {
+    const config = currentOllamaConfig;
+    if (prevOllamaConfig && config && config !== prevOllamaConfig) {
+      prevOllamaConfig = config;
+      if (isTranslate && originalText.trim()) {
+        const timing = appState.optionState.get('ComfyGrid.ollama.translate_timing') ?? 'on_blur';
+        if (timing === 'on_generate') {
+          lastTranslatedSourceText = '';
+          registerOrUnregisterPending();
+        } else {
+          triggerTranslation(originalText);
+        }
+      }
+    } else {
+      prevOllamaConfig = config;
+    }
+  });
+
+  onDestroy(() => {
+    if (inputTimer) clearTimeout(inputTimer);
+    translationManager.unregister(widget.id);
+  });
 
   function keydown(e: KeyboardEvent) {
     if (e.ctrlKey) {
@@ -52,18 +201,34 @@
 </script>
 
 {#snippet textarea()}
-  <textarea
-    class="flex-grow-1 form-control overflow-y-scroll rounded-top-0"
-    class:positive-prompt={isPositivePrompt}
-    class:prompt={isPromptGroup}
-    onkeydown={keydown}
-    oninput={handleInput}
-    rows={options.isFloating ? 1 : 6}
-    style:min-height={options.isFloating ? '0' : undefined}
-    readonly={widget.readonly}
-    bind:value={widget.value}
-    bind:this={textareaElement}
-  ></textarea>
+  {#if isTranslate}
+    <textarea
+      class="flex-grow-1 form-control overflow-y-scroll rounded-top-0"
+      class:positive-prompt={isPositivePrompt}
+      class:prompt={isPromptGroup}
+      onkeydown={keydown}
+      oninput={handleInput}
+      onblur={handleBlur}
+      rows={options.isFloating ? 1 : 6}
+      style:min-height={options.isFloating ? '0' : undefined}
+      readonly={widget.readonly}
+      bind:value={originalText}
+      bind:this={textareaElement}
+    ></textarea>
+  {:else}
+    <textarea
+      class="flex-grow-1 form-control overflow-y-scroll rounded-top-0"
+      class:positive-prompt={isPositivePrompt}
+      class:prompt={isPromptGroup}
+      onkeydown={keydown}
+      oninput={handleInput}
+      rows={options.isFloating ? 1 : 6}
+      style:min-height={options.isFloating ? '0' : undefined}
+      readonly={widget.readonly}
+      bind:value={widget.value}
+      bind:this={textareaElement}
+    ></textarea>
+  {/if}
 {/snippet}
 
 {#if !layout.floatingWidgets.get(widget.id) && !options.isTextareaOnly}
@@ -74,7 +239,9 @@
     data-name={widget.name}
   >
     <div class="vstack h-100 flex-grow-1 rounded textarea-container">
-      <div class="d-flex border rounded-top border-bottom-0 bg-light d-flex py-0 ps-3 pe-0">
+      <div
+        class="d-flex border rounded-top border-bottom-0 bg-light d-flex py-0 ps-3 pe-0 align-items-center"
+      >
         <TextareaCategory {widget} />
         <button
           class="btn btn-xs ms-auto"
