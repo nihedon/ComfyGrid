@@ -92,7 +92,9 @@
     }
 
     const imgUrls = (data.images ?? [])
-      .filter((image: Record<string, string>) => (image.type === 'image' || !image.type) && image.url)
+      .filter(
+        (image: Record<string, string>) => (image.type === 'image' || !image.type) && image.url,
+      )
       .map((image: Record<string, string>) => image.url);
 
     if (imgUrls.length > 0) {

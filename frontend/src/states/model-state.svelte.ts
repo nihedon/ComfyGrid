@@ -70,12 +70,8 @@ export class ComfyGridGroup {
             if (diff !== 0) return diff;
             return a.title.localeCompare(b.title);
         } else {
-            return ComfyGridGroup.#compareGroupsByPosition(a, b);
+            return comparePositions(a, b);
         }
-    }
-
-    static #compareGroupsByPosition(a: ComfyGridGroup, b: ComfyGridGroup): number {
-        return comparePositions(a, b);
     }
 
     readonly isTabify = $derived.by(() => {
@@ -430,11 +426,7 @@ export class ComfyGridNode<P = undefined> {
     }
 
     static sortNodesByPosition(nodes: ComfyGridNode[]): ComfyGridNode[] {
-        return [...nodes].sort(ComfyGridNode.#compareNodesByPosition);
-    }
-
-    static #compareNodesByPosition(a: ComfyGridNode, b: ComfyGridNode): number {
-        return comparePositions(a, b);
+        return [...nodes].sort(comparePositions);
     }
 
     static *subgraphNodes(app: ComfyApp, parent: ComfyGridNode): Generator<ComfyGridNode> {

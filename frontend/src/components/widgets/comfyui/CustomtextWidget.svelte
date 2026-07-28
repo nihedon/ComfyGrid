@@ -54,8 +54,10 @@
     }
 
     widget.isTranslating = true;
-    const model = layout.getTranslateModel(widget.id) || appState.optionState.get('ComfyGrid.ollama.model');
-    const system = layout.getTranslateSystem(widget.id) || appState.optionState.get('ComfyGrid.ollama.system');
+    const model =
+      layout.getTranslateModel(widget.id) || appState.optionState.get('ComfyGrid.ollama.model');
+    const system =
+      layout.getTranslateSystem(widget.id) || appState.optionState.get('ComfyGrid.ollama.system');
 
     if (!model) {
       console.warn('Ollama model not specified.');
@@ -139,7 +141,11 @@
         originalText = raw;
         registerOrUnregisterPending();
         const timing = appState.optionState.get('ComfyGrid.ollama.translate_timing') ?? 'on_blur';
-        if (timing !== 'on_generate' && originalText.trim() && originalText !== lastTranslatedSourceText) {
+        if (
+          timing !== 'on_generate' &&
+          originalText.trim() &&
+          originalText !== lastTranslatedSourceText
+        ) {
           triggerTranslation(originalText);
         }
       } else {

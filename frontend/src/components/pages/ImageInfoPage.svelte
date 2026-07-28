@@ -157,9 +157,7 @@
     if (ret?.success) {
       logger.log('Workflow applied successfully');
       toastState.addToast({ type: 'success', message: $t('toast.workflow_applied') });
-      appState.bridge?.getWorkflow()?.then((res) => {
-        workflowManager.handleWorkflow(res);
-      });
+      workflowManager.loadCurrentWorkflow();
       uiState.activePageId = 'grid';
     } else {
       logger.error('Failed to apply workflow:', ret?.error);

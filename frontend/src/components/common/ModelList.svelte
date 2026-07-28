@@ -211,10 +211,7 @@
     const app = appState.comfyUiState.app;
     appState.toastState.addToast({ type: 'info', message: $t('toast.update_requested') });
     app?.refreshComboInNodes().then(async () => {
-      const res = await appState.bridge?.getWorkflow();
-      if (res) {
-        workflowManager.handleWorkflow(res);
-      }
+      await workflowManager.loadCurrentWorkflow();
       await refreshModels(dir);
       appState.toastState.addToast({
         type: 'success',

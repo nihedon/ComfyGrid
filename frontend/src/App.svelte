@@ -8,8 +8,8 @@
   import DescriptionModal from '@/components/modals/DescriptionModal.svelte';
   import Dialog from '@/components/modals/Dialog.svelte';
   import ModelsModal from '@/components/modals/ModelsModal.svelte';
-  import PaintModal from '@/components/modals/PaintModal.svelte';
   import OllamaSettingModal from '@/components/modals/OllamaSettingModal.svelte';
+  import PaintModal from '@/components/modals/PaintModal.svelte';
   import { loadTranslations, setLanguage } from '@/i18n/i18n';
   import { BOOTSWATCH_THEME_OPT_KEY, applyBootswatchTheme } from '@/services/bootswatch-service';
   import {
@@ -100,9 +100,7 @@
 
       // !!! Waiting for ComfyUI's data structure to be organized as the execution is too early. !!!
       setTimeout(() => {
-        appState.bridge?.getWorkflow().then((res) => {
-          workflowManager.handleWorkflow(res);
-        });
+        workflowManager.loadCurrentWorkflow();
       }, 1000);
     }
   });

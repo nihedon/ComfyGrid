@@ -113,10 +113,7 @@ class FileManager {
         if (ret?.success) {
             logger.log('Workflow applied successfully');
             toastState.addToast({ type: 'success', message: get(t)('toast.workflow_applied') });
-            const res = await appState.bridge?.getWorkflow();
-            if (res) {
-                await workflowManager.handleWorkflow(res);
-            }
+            await workflowManager.loadCurrentWorkflow();
             return true;
         } else {
             logger.error('Failed to apply workflow:', ret?.error);

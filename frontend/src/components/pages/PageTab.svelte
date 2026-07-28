@@ -28,9 +28,7 @@
       uiState.needRefresh = true;
     } else if (id === 'grid' && uiState.needRefresh) {
       uiState.needRefresh = false;
-      appState.bridge?.getWorkflow()?.then((res) => {
-        workflowManager.handleWorkflow(res);
-      });
+      workflowManager.loadCurrentWorkflow();
     }
   }
 

@@ -8,19 +8,14 @@
   const workspaceState = appState.workspaceState;
 
   function handleClickReloadGraph() {
-    appState.bridge?.getWorkflow()?.then((res) => {
-      workflowManager.handleWorkflow(res);
-    });
+    workflowManager.loadCurrentWorkflow();
   }
 
   function handleRefreshComboInNodes() {
     const app = appState.comfyUiState.app;
     appState.toastState.addToast({ type: 'info', message: $t('toast.update_requested') });
     app?.refreshComboInNodes().then(async () => {
-      const res = await appState.bridge?.getWorkflow();
-      if (res) {
-        workflowManager.handleWorkflow(res);
-      }
+      await workflowManager.loadCurrentWorkflow();
       await refreshModels('models');
       appState.toastState.addToast({
         type: 'success',
@@ -39,7 +34,7 @@
 
   function handleClickExportWorkflow() {
     const app = appState.comfyUiState.app;
-    const workflow = app?.graph?.serialize();
+    const workflow = app?.rootGraph?.serialize();
     if (workflow) {
       workflowManager.exportWorkflow(workflow);
     }
@@ -48,7 +43,7 @@
   function handleClickExportAll() {
     if (workspaceState.layout) {
       const app = appState.comfyUiState.app;
-      const workflow = app?.graph?.serialize();
+      const workflow = app?.rootGraph?.serialize();
       if (workflow) {
         workflowManager.exportAll(workflow);
       }
