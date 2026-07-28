@@ -54,9 +54,6 @@
         if (parts.length >= 3) {
           // Format: Group.Category.Option
           sectionName = parts[1];
-        } else if (parts.length === 2) {
-          // Format: Category.Option
-          sectionName = parts[0];
         }
       }
 
