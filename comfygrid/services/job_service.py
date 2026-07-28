@@ -68,11 +68,12 @@ def patch_job(job_id: str, partial: Dict[str, Any]) -> bool:
     conn = _get_connection()
     row = conn.execute("SELECT data FROM jobs WHERE job_id = ?", (job_id,)).fetchone()
     if row is None:
-        return False
-    merged = {**orjson.loads(zlib.decompress(row[0])), **partial}
+        merged = {"jobId": job_id, **partial}
+    else:
+        merged = {**orjson.loads(zlib.decompress(row[0])), **partial}
     conn.execute(
-        "UPDATE jobs SET data = ? WHERE job_id = ?",
-        (zlib.compress(orjson.dumps(merged)), job_id),
+        "INSERT OR REPLACE INTO jobs (job_id, data, created_at) VALUES (?, ?, ?)",
+        (job_id, zlib.compress(orjson.dumps(merged)), int(time.time())),
     )
     conn.commit()
     return True
