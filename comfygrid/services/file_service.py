@@ -121,7 +121,7 @@ def _make_model_info(root: str, filename: str, dir_name: str, sub_dir: str, mode
 
     preview = name_without_ext + ".preview.png"
     if Path(root, preview).exists():
-        model_info["preview"] = str(Path(rel_dir, preview))
+        model_info["preview"] = Path(rel_dir, preview).as_posix()
 
     description_path = Path(root, name_without_ext + ".description.txt")
     model_info["description"] = None

@@ -62,13 +62,15 @@ def pick_file(req: FileDialogRequest):
 
 
 @router.get("/list")
-def list_files(dir_name: str, ext: str, comfy_service: ComfyUIService = Depends(get_comfy_service)):
+def list_files(dir_name: str, ext: str, refresh: bool = False, comfy_service: ComfyUIService = Depends(get_comfy_service)):
     dir_name = dir_name.strip()
     extensions = [e.strip() for e in ext.split(",") if e.strip()]
     if not dir_name or not extensions:
         return JSONResponse({"error": "dir_name and ext are required"}, status_code=400)
 
     comfyui_path = Path(comfy_service.comfyui_path)
+    if refresh:
+        file_service.clear_model_cache(comfyui_path, dir_name)
     return JSONResponse(file_service.list_models(comfyui_path, dir_name, extensions))
 
 
@@ -184,6 +186,7 @@ async def save_model_info(request: Request, path: str, comfy_service: ComfyUISer
             except Exception as e:
                 logger.error("Error downloading preview image: %s", e)
 
+        file_service.clear_model_cache(comfyui_path, "models")
         return {"message": "success"}
     except Exception as e:
         logger.error("Error saving model info: %s", e)
@@ -281,33 +284,47 @@ def _expand_huggingface_gallery(text: str, widget_data: list, resolve_link) -> s
 
 
 @router.post("/fetch_info")
-async def fetch_info(request: FetchInfoRequest):
+def fetch_info(request: FetchInfoRequest):
     url = request.url
     try:
         domain = urlsplit(url).netloc
+        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
 
-        description = None
         if "civitai" in domain:
-            model_id_match = re.search(r'/models/(\d+)/', url)
-            if model_id_match:
-                model_id = model_id_match.group(1)
-                api_url = f"https://{domain}/api/v1/models/{model_id}"
-                async with httpx.AsyncClient() as client:
-                    resp = await client.get(api_url, timeout=10.0)
-                    resp.raise_for_status()
-                    description = resp.json().get("description", None)
+            model_id_match = re.search(r'/models/(\d+)', url)
             version_match = re.search(r'modelVersionId=(\d+)', url)
-            if version_match:
-                version_id = version_match.group(1)
-                api_url = f"https://{domain}/api/v1/model-versions/{version_id}"
-                async with httpx.AsyncClient() as client:
-                    resp = await client.get(api_url, timeout=10.0)
+
+            with httpx.Client(follow_redirects=True, timeout=15.0, headers=headers) as client:
+                description = None
+                if model_id_match:
+                    model_id = model_id_match.group(1)
+                    try:
+                        resp = client.get(f"https://{domain}/api/v1/models/{model_id}")
+                        if resp.status_code == 200:
+                            description = resp.json().get("description", None)
+                    except Exception as e:
+                        logger.warning("Failed to fetch Civitai model info: %s", e)
+
+                if version_match:
+                    version_id = version_match.group(1)
+                    resp = client.get(f"https://{domain}/api/v1/model-versions/{version_id}")
                     resp.raise_for_status()
-                    json = resp.json()
-                    json["description"] = description
-                    return json
-            else:
-                return JSONResponse({"error": "modelVersionId not found in Civitai URL."}, status_code=400)
+                    result = resp.json()
+                    result["description"] = description
+                    return result
+                elif model_id_match:
+                    model_id = model_id_match.group(1)
+                    resp = client.get(f"https://{domain}/api/v1/models/{model_id}")
+                    resp.raise_for_status()
+                    model_json = resp.json()
+                    versions = model_json.get("modelVersions", [])
+                    if versions:
+                        result = versions[0]
+                        result["description"] = model_json.get("description", None)
+                        return result
+                    return JSONResponse({"error": "No model versions found in Civitai model info."}, status_code=404)
+                else:
+                    return JSONResponse({"error": "Could not parse Model ID or Version ID from Civitai URL."}, status_code=400)
 
         elif "huggingface" in domain:
             match = re.search(r'huggingface\.co/([^/]+)/([^/]+)', url)

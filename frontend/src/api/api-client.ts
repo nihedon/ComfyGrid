@@ -248,11 +248,14 @@ class ComfyGridApiClient {
         return await fetchApiJson('/comfygrid/api/extension/resources');
     }
 
-    async getList(dirName: string, extensions: string[]): Promise<ApiResultJson<Model[]>> {
+    async getList(dirName: string, extensions: string[], refresh: boolean = false): Promise<ApiResultJson<Model[]>> {
         const params = new URLSearchParams({
             dir_name: dirName,
             ext: extensions.join(','),
         });
+        if (refresh) {
+            params.append('refresh', 'true');
+        }
         return await fetchApiJson(`/comfygrid/api/list?${params.toString()}`);
     }
 
