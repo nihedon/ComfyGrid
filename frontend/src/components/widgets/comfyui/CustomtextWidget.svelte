@@ -93,7 +93,7 @@
   }
 
   function registerOrUnregisterPending() {
-    const text = widget.rawText ?? '';
+    const text = widget.rawValue ?? '';
     if (isTranslate && text.trim() !== '' && text !== lastTranslatedSourceText) {
       translationManager.register(widget.id, () => triggerTranslation(text));
     } else {
@@ -108,7 +108,7 @@
       if (timing === 'after_input') {
         if (inputTimer) clearTimeout(inputTimer);
         inputTimer = setTimeout(() => {
-          const text = widget.rawText ?? '';
+          const text = widget.rawValue ?? '';
           if (text !== lastTranslatedSourceText) {
             triggerTranslation(text);
           }
@@ -121,7 +121,7 @@
 
   function handleBlur() {
     const timing = appState.optionState.get('ComfyGrid.ollama.translate_timing') ?? 'on_blur';
-    const text = widget.rawText ?? '';
+    const text = widget.rawValue ?? '';
     if (isTranslate && timing === 'on_blur' && text !== lastTranslatedSourceText) {
       triggerTranslation(text);
     }
@@ -132,22 +132,18 @@
     if (currentIsTranslate !== prevIsTranslate) {
       prevIsTranslate = currentIsTranslate;
       if (currentIsTranslate) {
-        if (widget.rawText === undefined || widget.rawText === null) {
-          widget.rawText = widget.value ?? '';
+        if (widget.rawValue === undefined || widget.rawValue === null) {
+          widget.rawValue = widget.value ?? '';
         }
         registerOrUnregisterPending();
         const timing = appState.optionState.get('ComfyGrid.ollama.translate_timing') ?? 'on_blur';
-        const text = widget.rawText ?? '';
-        if (
-          timing !== 'on_generate' &&
-          text.trim() &&
-          text !== lastTranslatedSourceText
-        ) {
+        const text = widget.rawValue ?? '';
+        if (timing !== 'on_generate' && text.trim() && text !== lastTranslatedSourceText) {
           triggerTranslation(text);
         }
       } else {
-        if (widget.rawText !== undefined && widget.rawText === widget.value) {
-          widget.rawText = undefined;
+        if (widget.rawValue !== undefined && widget.rawValue === widget.value) {
+          widget.rawValue = undefined;
         }
         translationManager.unregister(widget.id);
       }
@@ -163,7 +159,7 @@
     const config = currentOllamaConfig;
     if (prevOllamaConfig && config && config !== prevOllamaConfig) {
       prevOllamaConfig = config;
-      const text = widget.rawText ?? '';
+      const text = widget.rawValue ?? '';
       if (isTranslate && text.trim()) {
         const timing = appState.optionState.get('ComfyGrid.ollama.translate_timing') ?? 'on_blur';
         if (timing === 'on_generate') {
@@ -215,7 +211,7 @@
       rows={options.isFloating ? 1 : 6}
       style:min-height={options.isFloating ? '0' : undefined}
       readonly={widget.readonly}
-      bind:value={widget.rawText}
+      bind:value={widget.rawValue}
       bind:this={textareaElement}
     ></textarea>
   {:else}

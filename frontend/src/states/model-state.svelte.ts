@@ -466,7 +466,7 @@ export class ComfyGridWidget<V = string, O = undefined> {
     #tooltip: string | null = $state();
     #type: string = $state();
     #value: V = $state();
-    #rawText: string | undefined = $state();
+    #rawValue: string | undefined = $state();
     #image: ImageInfo = $state({ filename: '', subfolder: '', type: '' });
     #element: HTMLElement = $state();
     #readonly: boolean = $state();
@@ -521,8 +521,8 @@ export class ComfyGridWidget<V = string, O = undefined> {
     get value() {
         return this.#value;
     }
-    get rawText() {
-        return this.#rawText;
+    get rawValue() {
+        return this.#rawValue;
     }
     get image() {
         return this.#image;
@@ -573,8 +573,8 @@ export class ComfyGridWidget<V = string, O = undefined> {
     set value(value: V) {
         this.#value = value;
     }
-    set rawText(rawText: string | undefined) {
-        this.#rawText = rawText;
+    set rawValue(rawValue: string | undefined) {
+        this.#rawValue = rawValue;
     }
     set image(image: ImageInfo) {
         this.#image = { filename: '', subfolder: '', type: '', ...image };

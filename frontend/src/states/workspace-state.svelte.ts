@@ -185,6 +185,16 @@ export class Layout {
             const key = boardId.split('-')[0];
             allBoardLayouts[key] = { ...allBoardLayouts[key], ...idKeyLayout };
         }
+
+        const rawValues: Record<string, string> = {};
+        for (const node of appState.workspaceState.nodes.values()) {
+            for (const widget of node.widgets) {
+                if (widget.rawValue) {
+                    rawValues[widget.id] = widget.rawValue;
+                }
+            }
+        }
+
         return {
             graphId: this.#graphId,
             floatingPositions: allBoardLayouts,
@@ -194,17 +204,7 @@ export class Layout {
             positivePromptWidgetId: this.#positivePromptWidgetId,
             negativePromptWidgetId: this.#negativePromptWidgetId,
             translateWidgetIds: [...this.#translateWidgetIds],
-            rawTexts: (() => {
-                const map: Record<string, string> = {};
-                for (const node of appState.workspaceState.nodes.values()) {
-                    for (const widget of node.widgets) {
-                        if (widget.rawText) {
-                            map[widget.id] = widget.rawText;
-                        }
-                    }
-                }
-                return map;
-            })(),
+            rawValues,
             translateModels: Object.fromEntries(Array.from(this.#translateModels.entries()).filter(([, v]) => Boolean(v))),
             translateSystems: Object.fromEntries(Array.from(this.#translateSystems.entries()).filter(([, v]) => Boolean(v))),
             noControlNodes: this.#noControlNodes,
@@ -237,11 +237,11 @@ export class Layout {
         (layout.translateWidgetIds ?? []).forEach((widgetId) => {
             this.#translateWidgetIds.add(widgetId);
         });
-        Object.entries(layout.rawTexts ?? {}).forEach(([key, value]) => {
+        Object.entries(layout.rawValues ?? {}).forEach(([key, value]) => {
             for (const node of appState.workspaceState.nodes.values()) {
                 const widget = node.widgets.find((w) => w.id === key);
                 if (widget) {
-                    widget.rawText = value;
+                    widget.rawValue = value;
                     break;
                 }
             }

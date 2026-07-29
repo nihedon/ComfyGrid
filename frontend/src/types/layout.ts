@@ -16,7 +16,7 @@ export type LayoutType = {
     positivePromptWidgetId: string | null;
     negativePromptWidgetId: string | null;
     translateWidgetIds?: string[];
-    rawTexts?: Record<string, string>;
+    rawValues?: Record<string, string>;
     translateModels?: Record<string, string>;
     translateSystems?: Record<string, string>;
     noControlNodes: boolean;
