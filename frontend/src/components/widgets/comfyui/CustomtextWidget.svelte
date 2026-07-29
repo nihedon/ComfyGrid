@@ -27,9 +27,6 @@
   const isTranslate = $derived(layout.isTranslateWidget(widget.id));
   const isPromptGroup = $derived(isPrompt || isPositivePrompt || isNegativePrompt);
 
-  let originalText = $state<string>(
-    untrack(() => layout.getRawText(widget.id) ?? widget.value ?? ''),
-  );
   let lastTranslatedSourceText = $state<string>('');
   let prevIsTranslate = $state<boolean>(false);
   let inputTimer: ReturnType<typeof setTimeout> | null = null;
@@ -96,8 +93,9 @@
   }
 
   function registerOrUnregisterPending() {
-    if (isTranslate && originalText.trim() !== '' && originalText !== lastTranslatedSourceText) {
-      translationManager.register(widget.id, () => triggerTranslation(originalText));
+    const text = widget.rawText ?? '';
+    if (isTranslate && text.trim() !== '' && text !== lastTranslatedSourceText) {
+      translationManager.register(widget.id, () => triggerTranslation(text));
     } else {
       translationManager.unregister(widget.id);
     }
@@ -105,14 +103,14 @@
 
   function handleInput() {
     if (isTranslate) {
-      layout.setRawText(widget.id, originalText);
       registerOrUnregisterPending();
       const timing = appState.optionState.get('ComfyGrid.ollama.translate_timing') ?? 'on_blur';
       if (timing === 'after_input') {
         if (inputTimer) clearTimeout(inputTimer);
         inputTimer = setTimeout(() => {
-          if (originalText !== lastTranslatedSourceText) {
-            triggerTranslation(originalText);
+          const text = widget.rawText ?? '';
+          if (text !== lastTranslatedSourceText) {
+            triggerTranslation(text);
           }
         }, 1000);
       }
@@ -123,8 +121,9 @@
 
   function handleBlur() {
     const timing = appState.optionState.get('ComfyGrid.ollama.translate_timing') ?? 'on_blur';
-    if (isTranslate && timing === 'on_blur' && originalText !== lastTranslatedSourceText) {
-      triggerTranslation(originalText);
+    const text = widget.rawText ?? '';
+    if (isTranslate && timing === 'on_blur' && text !== lastTranslatedSourceText) {
+      triggerTranslation(text);
     }
   }
 
@@ -133,25 +132,22 @@
     if (currentIsTranslate !== prevIsTranslate) {
       prevIsTranslate = currentIsTranslate;
       if (currentIsTranslate) {
-        let raw = layout.getRawText(widget.id);
-        if (raw === undefined || raw === null) {
-          raw = widget.value ?? '';
-          layout.setRawText(widget.id, raw);
+        if (widget.rawText === undefined || widget.rawText === null) {
+          widget.rawText = widget.value ?? '';
         }
-        originalText = raw;
         registerOrUnregisterPending();
         const timing = appState.optionState.get('ComfyGrid.ollama.translate_timing') ?? 'on_blur';
+        const text = widget.rawText ?? '';
         if (
           timing !== 'on_generate' &&
-          originalText.trim() &&
-          originalText !== lastTranslatedSourceText
+          text.trim() &&
+          text !== lastTranslatedSourceText
         ) {
-          triggerTranslation(originalText);
+          triggerTranslation(text);
         }
       } else {
-        const raw = layout.getRawText(widget.id);
-        if (raw !== undefined && raw === widget.value) {
-          layout.deleteRawText(widget.id);
+        if (widget.rawText !== undefined && widget.rawText === widget.value) {
+          widget.rawText = undefined;
         }
         translationManager.unregister(widget.id);
       }
@@ -167,13 +163,14 @@
     const config = currentOllamaConfig;
     if (prevOllamaConfig && config && config !== prevOllamaConfig) {
       prevOllamaConfig = config;
-      if (isTranslate && originalText.trim()) {
+      const text = widget.rawText ?? '';
+      if (isTranslate && text.trim()) {
         const timing = appState.optionState.get('ComfyGrid.ollama.translate_timing') ?? 'on_blur';
         if (timing === 'on_generate') {
           lastTranslatedSourceText = '';
           registerOrUnregisterPending();
         } else {
-          triggerTranslation(originalText);
+          triggerTranslation(text);
         }
       }
     } else {
@@ -218,7 +215,7 @@
       rows={options.isFloating ? 1 : 6}
       style:min-height={options.isFloating ? '0' : undefined}
       readonly={widget.readonly}
-      bind:value={originalText}
+      bind:value={widget.rawText}
       bind:this={textareaElement}
     ></textarea>
   {:else}

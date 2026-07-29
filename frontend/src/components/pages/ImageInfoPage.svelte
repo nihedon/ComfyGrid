@@ -3,7 +3,6 @@
   import { comfyGridApiClient } from '@/api/api-client';
   import { t } from '@/i18n/i18n';
   import { workflowManager } from '@/managers/workflow-manager';
-  import { importLayout } from '@/services/gridstack-service';
   import { appState } from '@/states/app-state.svelte';
   import logger from '@/utils/logger';
 
@@ -187,24 +186,23 @@
       return;
     }
 
+    const comfygridData = (metadataJson as Record<string, unknown>).comfygrid;
+    const layout = comfygridData
+      ? typeof comfygridData === 'string'
+        ? JSON.parse(comfygridData)
+        : comfygridData
+      : undefined;
+
     const ret = await appState.bridge?.loadWorkflow({
       filename: currentFileName,
       json: currentWorkflowJson,
     });
 
     if (ret?.success) {
-      let layoutApplied = false;
-      const comfygridData = (metadataJson as Record<string, unknown>).comfygrid;
-      if (comfygridData) {
-        const layoutStr =
-          typeof comfygridData === 'string' ? comfygridData : JSON.stringify(comfygridData);
-        await importLayout(layoutStr);
-        layoutApplied = true;
-      }
+      toastState.addToast({ type: 'success', message: $t('toast.workflow_applied') });
+      await workflowManager.loadCurrentWorkflow(layout);
 
-      await workflowManager.loadCurrentWorkflow();
-
-      if (layoutApplied) {
+      if (layout) {
         toastState.addToast({ type: 'success', message: $t('toast.layout_applied') });
       } else {
         toastState.addToast({ type: 'info', message: $t('toast.no_layout_found') });

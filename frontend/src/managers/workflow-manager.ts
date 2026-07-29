@@ -1,7 +1,7 @@
 import { tick } from 'svelte';
 import { callLayoutChangedCallbacks } from '@/services/callback-service';
 import { notifyNodeChanged } from '@/services/custom-node-service.svelte';
-import { applyFloatingPositions, loadLayout } from '@/services/gridstack-service';
+import { applyFloatingPositions, loadLayout, saveLayout } from '@/services/gridstack-service';
 import { appState } from '@/states/app-state.svelte';
 import { ComfyGridGroup, ComfyGridNode } from '@/states/model-state.svelte';
 import type { BoardId } from '@/types/board';
@@ -31,15 +31,15 @@ function findParentGroup(child: ComfyGroup, allGroups: ComfyGroup[]): ComfyGroup
 }
 
 class WorkflowManager {
-    async loadCurrentWorkflow(): Promise<void> {
+    async loadCurrentWorkflow(layout?: LayoutType): Promise<void> {
         const payload = await appState.bridge?.getWorkflow();
         if (payload) {
-            await this.handleWorkflow(payload);
+            await this.handleWorkflow({ ...payload, layout });
         }
     }
 
-    async handleWorkflow(payload: { graphId: string; name: string; nodes: ComfyNode[] }) {
-        const { graphId, nodes: comfyNodes, name } = payload;
+    async handleWorkflow(payload: { graphId: string; name: string; nodes: ComfyNode[]; layout?: LayoutType }) {
+        const { graphId, nodes: comfyNodes, name, layout: customLayout } = payload;
 
         const app = appState.comfyUiState.app;
         let nodes = comfyNodes.map((n) => new ComfyGridNode(n, app)).filter((n) => !this.#isIgnoreNode(n));
@@ -101,8 +101,21 @@ class WorkflowManager {
             }
         }
 
-        const loadedLayout = loadLayout(graphId);
+        const loadedLayout = customLayout ?? loadLayout(graphId);
+        if (customLayout) {
+            saveLayout(customLayout);
+        }
         const { floatingPositions: orgFloatingPositions, floatingNodes: orgFloatingNodes, floatingWidgets: orgFloatingWidgets } = loadedLayout;
+
+        if (loadedLayout.rawTexts) {
+            for (const node of nodes) {
+                for (const widget of node.widgets) {
+                    if (loadedLayout.rawTexts[widget.id] != null) {
+                        widget.rawText = loadedLayout.rawTexts[widget.id];
+                    }
+                }
+            }
+        }
 
         const floatingNodes: Record<string, BoardId> = {};
         const floatingWidgets: Record<string, BoardId> = {};

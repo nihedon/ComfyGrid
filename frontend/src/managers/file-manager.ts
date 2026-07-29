@@ -2,8 +2,8 @@ import { get } from 'svelte/store';
 import { comfyGridApiClient } from '@/api/api-client';
 import { t } from '@/i18n/i18n';
 import { workflowManager } from '@/managers/workflow-manager';
-import { importLayout } from '@/services/gridstack-service';
 import { appState } from '@/states/app-state.svelte';
+import type { LayoutType } from '@/types/layout';
 import logger from '@/utils/logger';
 
 class FileManager {
@@ -43,13 +43,14 @@ class FileManager {
                     return;
                 }
 
+                const layout = json.comfygrid ? (typeof json.comfygrid === 'string' ? JSON.parse(json.comfygrid) : json.comfygrid) : undefined;
+
                 let workflowLoaded = false;
                 if (keySize > 1) {
-                    workflowLoaded = await this.loadWorkflow(file.name, json);
+                    workflowLoaded = await this.loadWorkflow(file.name, json, layout);
                 }
 
-                if (json.comfygrid) {
-                    await importLayout(JSON.stringify(json.comfygrid));
+                if (layout && workflowLoaded) {
                     toastState.addToast({ type: 'success', message: get(t)('toast.layout_applied') });
                 } else if (workflowLoaded) {
                     toastState.addToast({ type: 'info', message: get(t)('toast.no_layout_found') });
@@ -78,19 +79,19 @@ class FileManager {
             const metadata = res.json;
             let workflowLoaded = false;
 
+            const comfygridData = metadata.comfygrid;
+            const layout = comfygridData ? (typeof comfygridData === 'string' ? JSON.parse(comfygridData) : comfygridData) : undefined;
+
             if (metadata.workflow) {
                 try {
                     const workflowJson = typeof metadata.workflow === 'string' ? JSON.parse(metadata.workflow) : metadata.workflow;
-                    workflowLoaded = await this.loadWorkflow(file.name, workflowJson as Record<string, unknown>);
+                    workflowLoaded = await this.loadWorkflow(file.name, workflowJson as Record<string, unknown>, layout);
                 } catch (e) {
                     logger.error('Failed to parse workflow from image metadata:', e);
                 }
             }
 
-            const comfygridData = metadata.comfygrid;
-            if (comfygridData) {
-                const layoutStr = typeof comfygridData === 'string' ? comfygridData : JSON.stringify(comfygridData);
-                await importLayout(layoutStr);
+            if (layout && workflowLoaded) {
                 toastState.addToast({ type: 'success', message: get(t)('toast.layout_applied') });
             } else if (workflowLoaded) {
                 toastState.addToast({ type: 'info', message: get(t)('toast.no_layout_found') });
@@ -103,7 +104,7 @@ class FileManager {
         }
     }
 
-    async loadWorkflow(fileName: string, workflowJson: Record<string, unknown>): Promise<boolean> {
+    async loadWorkflow(fileName: string, workflowJson: Record<string, unknown>, layout?: LayoutType): Promise<boolean> {
         const toastState = appState.toastState;
         const ret = await appState.bridge?.loadWorkflow({
             filename: fileName,
@@ -113,7 +114,7 @@ class FileManager {
         if (ret?.success) {
             logger.log('Workflow applied successfully');
             toastState.addToast({ type: 'success', message: get(t)('toast.workflow_applied') });
-            await workflowManager.loadCurrentWorkflow();
+            await workflowManager.loadCurrentWorkflow(layout);
             return true;
         } else {
             logger.error('Failed to apply workflow:', ret?.error);
