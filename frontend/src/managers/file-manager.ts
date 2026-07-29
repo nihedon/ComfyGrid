@@ -63,7 +63,7 @@ class FileManager {
             return;
         }
 
-        if (!/\.(png|jfif|pjpeg|jpeg|pjp|jpg|webp|mp4|webm|m4v|mkv)$/i.test(fileName)) {
+        if (!/\.(png|jfif|pjpeg|jpeg|pjp|jpg|webp|jxl|mp4|webm|m4v|mkv)$/i.test(fileName)) {
             toastState.addToast({ type: 'warning', message: get(t)('toast.unsupported_file_type') });
             return;
         }
