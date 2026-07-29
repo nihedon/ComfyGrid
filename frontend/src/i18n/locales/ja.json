@@ -88,6 +88,7 @@
     "widget.select.negative_prompt.title": "ネガティブプロンプト",
     "widget.select.translate.title": "翻訳",
     "widget.translate.indicator": "翻訳中...",
+    "widget.translate.failed": "翻訳失敗",
     "alert_no_positive_prompt_selected": "ポジティブプロンプトが選択されていません。",
     "alert_delete_image": "画像を削除してよろしいですか？",
     "gallery.clear": "画像をクリア",

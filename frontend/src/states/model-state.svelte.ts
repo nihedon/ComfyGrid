@@ -475,6 +475,7 @@ export class ComfyGridWidget<V = string, O = undefined> {
     #className: string = $state();
     #textarea: HTMLTextAreaElement | null = null;
     #isTranslating: boolean = $state(false);
+    #translationFailed: boolean = $state(false);
     #callback: (value?: unknown) => void;
 
     constructor(
@@ -548,6 +549,9 @@ export class ComfyGridWidget<V = string, O = undefined> {
     get isTranslating() {
         return this.#isTranslating;
     }
+    get translationFailed() {
+        return this.#translationFailed;
+    }
     get callback() {
         return this.#callback;
     }
@@ -599,6 +603,9 @@ export class ComfyGridWidget<V = string, O = undefined> {
     }
     set isTranslating(isTranslating: boolean) {
         this.#isTranslating = isTranslating;
+    }
+    set translationFailed(translationFailed: boolean) {
+        this.#translationFailed = translationFailed;
     }
     set callback(callback: (value?: unknown) => void) {
         this.#callback = callback;

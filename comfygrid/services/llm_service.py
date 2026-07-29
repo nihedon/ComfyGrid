@@ -11,12 +11,10 @@ OLLAMA_BASE_URL = "http://127.0.0.1:11434"
 
 
 def is_ollama_available() -> bool:
-    """Check if ollama service is available and responding."""
+    """Check if ollama service is available and responding with models."""
     try:
-        ollama_base_url = state.opts.data.get("ComfyGrid.ollama.url", OLLAMA_BASE_URL)
-        req = urllib.request.Request(f"{ollama_base_url}/api/tags", headers={"User-Agent": "ComfyGrid"})
-        with urllib.request.urlopen(req, timeout=2.0) as resp:
-            return resp.status == 200
+        models = get_ollama_models()
+        return len(models) > 0
     except Exception:
         return False
 
@@ -27,7 +25,11 @@ def get_ollama_models() -> list[str]:
         ollama_base_url = state.opts.data.get("ComfyGrid.ollama.url", OLLAMA_BASE_URL)
         req = urllib.request.Request(f"{ollama_base_url}/api/tags", headers={"User-Agent": "ComfyGrid"})
         with urllib.request.urlopen(req, timeout=3.0) as resp:
+            if resp.status != 200:
+                return []
             data = json.loads(resp.read().decode("utf-8"))
+            if not isinstance(data, dict):
+                return []
             models = [m.get("name", "") for m in data.get("models", []) if m.get("name")]
             return models
     except Exception as e:
@@ -42,7 +44,7 @@ def translate_text(model: str | None, prompt: str, system: str | None = None) ->
 
     if not is_ollama_available():
         logger.warning("Ollama is not available for translation.")
-        return prompt
+        raise RuntimeError("Ollama is not available.")
 
     if model is None:
         raise ValueError("Ollama model is not specified.")
@@ -77,7 +79,9 @@ def translate_text(model: str | None, prompt: str, system: str | None = None) ->
         with urllib.request.urlopen(req, timeout=30.0) as resp:
             res_data = json.loads(resp.read().decode("utf-8"))
             translated = res_data.get("response", "").strip()
-            return translated if translated else prompt
+            if not translated:
+                raise RuntimeError("Ollama returned empty translation response.")
+            return translated
     except Exception as e:
         logger.error("Ollama translation failed: %s", e)
-        return prompt
+        raise RuntimeError(f"Ollama translation failed: {e}")

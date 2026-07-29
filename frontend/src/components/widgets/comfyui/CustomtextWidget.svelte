@@ -45,12 +45,14 @@
         widget.updateComfyUiValue();
         lastTranslatedSourceText = text;
         widget.isTranslating = false;
+        widget.translationFailed = false;
         translationManager.unregister(widget.id);
       }
       return;
     }
 
     widget.isTranslating = true;
+    widget.translationFailed = false;
     const model =
       layout.getTranslateModel(widget.id) || appState.optionState.get('ComfyGrid.ollama.model');
     const system =
@@ -61,6 +63,7 @@
       if (currentReqId === translationRequestId) {
         widget.value = text;
         widget.isTranslating = false;
+        widget.translationFailed = true;
         translationManager.unregister(widget.id);
       }
       return;
@@ -77,10 +80,14 @@
       } else {
         widget.value = text;
       }
-      lastTranslatedSourceText = text;
+      widget.translationFailed = !res.ok;
+      if (res.ok) {
+        lastTranslatedSourceText = text;
+      }
     } catch {
       if (currentReqId === translationRequestId) {
         widget.value = text;
+        widget.translationFailed = true;
       }
     } finally {
       if (currentReqId === translationRequestId) {
@@ -145,6 +152,7 @@
         if (widget.rawValue !== undefined && widget.rawValue === widget.value) {
           widget.rawValue = undefined;
         }
+        widget.translationFailed = false;
         translationManager.unregister(widget.id);
       }
     }

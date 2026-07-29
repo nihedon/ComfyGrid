@@ -121,6 +121,11 @@
       <i class="pi pi-spin pi-spinner me-1"></i>
       {$t('widget.translate.indicator')}
     </span>
+  {:else if isTranslate && widget.translationFailed}
+    <span class="badge text-bg-danger ms-2 fs-7">
+      <i class="pi pi-exclamation-triangle me-1"></i>
+      {$t('widget.translate.failed')}
+    </span>
   {/if}
   <ul class="dropdown-menu">
     <li>
