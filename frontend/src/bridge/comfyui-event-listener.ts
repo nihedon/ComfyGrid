@@ -273,7 +273,7 @@ export class ComfyUiEventListener {
         executionManager.handlePromptQueued({
             jobId: jobId,
             nodeIds: Object.keys(prompt.output).map((nodeId) => nodeId),
-            prompt: JSON.stringify(prompt),
+            prompt: JSON.stringify(prompt.output ?? prompt),
             workflow: JSON.stringify(prompt.workflow ?? {}),
         });
     }
