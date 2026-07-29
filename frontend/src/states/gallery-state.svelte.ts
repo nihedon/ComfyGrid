@@ -296,7 +296,12 @@ class GalleryState {
     }
 
     clearAllJobs(): void {
-        const toDelete = [...this.#jobs.keys()];
+        const toDelete = [...this.#jobs.values()]
+            .filter((r) => {
+                const view = this.#makeGalleryJob(r);
+                return view?.completed;
+            })
+            .map((r) => r.jobId);
         toDelete.forEach((id) => this.#revokeAndDelete(id));
     }
 
