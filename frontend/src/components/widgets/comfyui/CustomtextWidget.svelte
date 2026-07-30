@@ -111,16 +111,6 @@
   function handleInput() {
     if (isTranslate) {
       registerOrUnregisterPending();
-      const timing = appState.optionState.get('ComfyGrid.ollama.translate_timing') ?? 'on_blur';
-      if (timing === 'after_input') {
-        if (inputTimer) clearTimeout(inputTimer);
-        inputTimer = setTimeout(() => {
-          const text = widget.rawValue ?? '';
-          if (text !== lastTranslatedSourceText) {
-            triggerTranslation(text);
-          }
-        }, 1000);
-      }
     } else {
       widget.updateComfyUiValue();
     }
