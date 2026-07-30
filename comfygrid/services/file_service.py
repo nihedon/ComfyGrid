@@ -225,7 +225,8 @@ def get_model_thumbnail(comfyui_path: str, path: str) -> tuple[bytes | None, str
         return None, "File not found"
 
     try:
-        data = np.fromfile(thumbnail_filepath, dtype=np.uint8)
+        file_bytes = thumbnail_filepath.read_bytes()
+        data = np.frombuffer(file_bytes, dtype=np.uint8)
         img = cv2.imdecode(data, cv2.IMREAD_UNCHANGED)
     except Exception as e:
         logger.error("Failed to read image: %s: %s", thumbnail_filepath, e)
