@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { untrack } from 'svelte';
   import { sortBy } from 'es-toolkit/array';
   import { comfyGridApiClient } from '@/api/api-client';
   import { t } from '@/i18n/i18n';
@@ -33,6 +34,13 @@
 
   const modelThumbWidth = $derived(optionState.get('ComfyGrid.ui.model_thumbnail_width'));
 
+  const folderStorageKey = $derived.by(() => {
+    const sortedSubdirs = [...(subdirs ?? [])].sort().join('.');
+    return sortedSubdirs
+      ? `ComfyGrid.ui.model_selected_folder.${dir}.${sortedSubdirs}`
+      : `ComfyGrid.ui.model_selected_folder.${dir}`;
+  });
+
   const modelList = $derived.by(() => {
     let values: Model[] = [];
     if (dir === 'models') {
@@ -50,7 +58,7 @@
   });
 
   let filterText = $state('');
-  let selectedFolder = $state('');
+  let selectedFolder = $state<string>(untrack(() => optionState.get(folderStorageKey) ?? ''));
   let showNsfw = $state(optionState.get('ComfyGrid.ui.show_nsfw'));
   let favoriteOnly = $state(false);
   let modelTreeView = $state(optionState.get('ComfyGrid.ui.model_tree_view'));
@@ -180,6 +188,33 @@
     optionState.set('ComfyGrid.ui.model_tree_view', modelTreeView);
   });
 
+  function expandParentFolders(folder: string) {
+    if (!folder) return;
+    const parts = folder.split('/');
+    let currentPath = '';
+    for (let i = 0; i < parts.length - 1; i++) {
+      currentPath = currentPath ? `${currentPath}/${parts[i]}` : parts[i];
+      expandedFolders.add(currentPath);
+    }
+    expandedFolders = new Set(expandedFolders);
+  }
+
+  function selectFolder(folder: string) {
+    selectedFolder = folder;
+    optionState.set(folderStorageKey, folder);
+    saveOptsWithCallback();
+    expandParentFolders(folder);
+  }
+
+  $effect(() => {
+    const key = folderStorageKey;
+    const storedFolder = optionState.get(key) ?? '';
+    untrack(() => {
+      selectedFolder = storedFolder;
+      expandParentFolders(storedFolder);
+    });
+  });
+
   $effect(() => {
     // Jump to the page containing the selected model when the list changes
     if (!focusSelectedModel || !modalState.selectedModelPath) return;
@@ -292,7 +327,12 @@
       </li>
       {#if !modelTreeView}
         <li class="nav-item" style="min-width: 200px;">
-          <select class="form-select" name="folder" bind:value={selectedFolder}>
+          <select
+            class="form-select"
+            name="folder"
+            value={selectedFolder}
+            onchange={(e) => selectFolder((e.target as HTMLSelectElement).value)}
+          >
             <option value="">All Folders</option>
             {#each folderList as folder (folder)}
               <option value={folder}>{folder}</option>
@@ -383,7 +423,7 @@
               class:fw-bold={selectedFolder === node.path}
               onclick={(e) => {
                 e.preventDefault();
-                selectedFolder = node.path;
+                selectFolder(node.path);
               }}
               title={node.path || 'All Folders'}
             >
