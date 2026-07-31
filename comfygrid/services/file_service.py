@@ -5,7 +5,7 @@ import os
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
-from urllib.parse import urlsplit, urlunsplit
+from urllib.parse import quote, unquote, urlsplit, urlunsplit
 
 import cv2
 import numpy as np
@@ -217,12 +217,25 @@ def resolve_output_path(output_directory: str, file_path: str) -> Path | None:
 def get_model_thumbnail(comfyui_path: str, path: str) -> tuple[bytes | None, str | None]:
     thumbnail_filepath = Path(comfyui_path, "models", path)
 
-    cached = load_thumbnail(str(thumbnail_filepath))
-    if cached is not None:
-        return cached, None
+    if not thumbnail_filepath.exists():
+        unquoted = unquote(path)
+        alt1 = Path(comfyui_path, "models", unquoted)
+        if alt1.exists():
+            thumbnail_filepath = alt1
+        else:
+            quoted = quote(path, safe="/\\")
+            alt2 = Path(comfyui_path, "models", quoted)
+            if alt2.exists():
+                thumbnail_filepath = alt2
 
     if not thumbnail_filepath.exists():
         return None, "File not found"
+
+    cache_key = str(thumbnail_filepath.resolve())
+
+    cached = load_thumbnail(cache_key)
+    if cached is not None:
+        return cached, None
 
     try:
         file_bytes = thumbnail_filepath.read_bytes()
@@ -250,7 +263,7 @@ def get_model_thumbnail(comfyui_path: str, path: str) -> tuple[bytes | None, str
     pil_img.save(output, format="WEBP", quality=70, method=4)
     buffer = output.getvalue()
 
-    cache_thumbnail(str(thumbnail_filepath), buffer)
+    cache_thumbnail(cache_key, buffer)
     return buffer, None
 
 
