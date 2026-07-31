@@ -1,6 +1,5 @@
 import json
 import logging
-import shutil
 import urllib.request
 
 from comfygrid.domain import state

@@ -85,7 +85,7 @@
     "widget.select.prompt.title": "Prompt",
     "widget.select.positive_prompt.title": "Positive Prompt",
     "widget.select.negative_prompt.title": "Negative Prompt",
-    "widget.select.translate.title": "Translate",
+    "widget.select.translate.title": "Ollama",
     "widget.translate.indicator": "Translating...",
     "widget.translate.failed": "Failed",
     "alert_no_positive_prompt_selected": "No positive prompt selected.",

@@ -85,7 +85,7 @@
     "widget.select.prompt.title": "プロンプト",
     "widget.select.positive_prompt.title": "ポジティブプロンプト",
     "widget.select.negative_prompt.title": "ネガティブプロンプト",
-    "widget.select.translate.title": "翻訳",
+    "widget.select.translate.title": "Ollama",
     "widget.translate.indicator": "翻訳中...",
     "widget.translate.failed": "翻訳失敗",
     "alert_no_positive_prompt_selected": "ポジティブプロンプトが選択されていません。",
