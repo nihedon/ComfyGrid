@@ -308,12 +308,14 @@ export class ComfyGridNode<P = undefined> {
 
     updateWidgets(app: ComfyApp) {
         const configs = ComfyGridNode.#buildWidgetConfigList(this.#comfyNode);
-        // eslint-disable-next-line svelte/prefer-svelte-reactivity
-        const existingMap = new Map(this.#widgets.map((w) => [w.comfyWidget, w]));
+        const unusedWidgets = [...this.#widgets];
         const newWidgets: ComfyGridWidget[] = [];
         for (const config of configs) {
-            const existing = existingMap.get(config.widget);
-            if (existing) {
+            const targetType = config.overrides?.type ?? config.widget.type;
+            const existingIdx = unusedWidgets.findIndex((w) => w.comfyWidget === config.widget && w.type === targetType);
+            if (existingIdx !== -1) {
+                const existing = unusedWidgets[existingIdx];
+                unusedWidgets.splice(existingIdx, 1);
                 existing.update(app, config.idx, config.image, config.overrides);
                 newWidgets.push(existing);
             } else {
