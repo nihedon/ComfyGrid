@@ -32,10 +32,7 @@
   const storageState = appState.storageState;
   const popoverState = appState.popoverState;
 
-  const showNsfw = $derived(
-    appState.optionState.opts.get('show_nsfw') ??
-      appState.optionState.forms.get('show_nsfw')?.default,
-  );
+  const showNsfw = $derived(appState.optionState.get('ComfyGrid.ui.show_nsfw'));
 
   const select = $derived(widget.options?.values ?? []);
 

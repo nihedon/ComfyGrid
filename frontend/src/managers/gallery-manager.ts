@@ -95,7 +95,10 @@ class GalleryManager {
             const blob = await res.blob();
             const file = new File([blob], filename, { type: blob.type });
 
+            const metadata = appState.galleryState.currentGalleryJob?.metadata;
+
             appState.uiState.fileToOpenInImageInfo = file;
+            appState.uiState.metadataToOpenInImageInfo = metadata ?? null;
             appState.uiState.activePageId = 'image-info';
         } catch (e) {
             logger.error('Failed to send image to info', e);

@@ -34,8 +34,7 @@
   });
 
   const galleryImageMaxSize = $derived(
-    (optionState.opts.get('gallery_image_max_size') ??
-      optionState.forms.get('gallery_image_max_size')?.default) as number,
+    optionState.get('ComfyGrid.ui.gallery_image_max_size') as number,
   );
 
   function getMetadata(): Record<string, string> {

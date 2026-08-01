@@ -32,7 +32,7 @@ globalThis.forms = {};
 globalThis.extForms = {};
 
 const onChange = (e: MediaQueryListEvent) => {
-    const currentTheme = appState.optionState.opts.get('color_theme');
+    const currentTheme = appState.optionState.opts.get('ui.color_theme');
     if (currentTheme === 'auto') {
         if (e.matches) {
             document.documentElement.dataset.bsTheme = 'dark';

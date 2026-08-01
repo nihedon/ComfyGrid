@@ -15,6 +15,9 @@ export type LayoutType = {
     promptWidgetIds: string[];
     positivePromptWidgetId: string | null;
     negativePromptWidgetId: string | null;
+    translateWidgetIds?: string[];
+    translateModels?: Record<string, string>;
+    translateSystems?: Record<string, string>;
     noControlNodes: boolean;
     noCollapsedNodes: boolean;
     sortOrder: 'default' | 'name';

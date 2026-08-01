@@ -8,9 +8,20 @@ OPTIONS_PATH = Path("config", "options.toml")
 SETTINGS_PATH = Path("config", "settings.toml")
 
 
+def flatten_dict(d: dict, parent_key: str = '', sep: str = '.') -> dict:
+    items = []
+    for k, v in d.items():
+        new_key = f"{parent_key}{sep}{k}" if parent_key else k
+        if isinstance(v, dict) and "type" not in v and not (len(v) == 2 and "name" in v and "forms" in v):
+            items.extend(flatten_dict(v, new_key, sep=sep).items())
+        else:
+            items.append((new_key, v))
+    return dict(items)
+
+
 def get_options_payload() -> dict:
-    options = toml.load(OPTIONS_PATH)
-    settings = toml.load(SETTINGS_PATH) if SETTINGS_PATH.exists() else {}
+    options = flatten_dict(toml.load(OPTIONS_PATH))
+    settings = flatten_dict(toml.load(SETTINGS_PATH)) if SETTINGS_PATH.exists() else {}
     state.opts.data.update(settings)
 
     return {

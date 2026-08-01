@@ -37,10 +37,7 @@
   const popoverState = appState.popoverState;
   const workspaceState = appState.workspaceState;
 
-  const showNsfw = $derived(
-    appState.optionState.opts.get('show_nsfw') ??
-      appState.optionState.forms.get('show_nsfw')?.default,
-  );
+  const showNsfw = $derived(appState.optionState.get('ComfyGrid.ui.show_nsfw'));
 
   const isValid = $derived.by(() => {
     if (isValidOverride !== undefined) return isValidOverride;

@@ -1,9 +1,9 @@
 import { ComfyUiApiHook } from '@/bridge/comfyui-api-hook';
 import { nodeQueueManager } from '@/bridge/node-queue-manager';
-import type { ComfyGraph } from '@/types/comfy-model';
+import { translationManager } from '@/services/translation-service';
+import type { ComfyGraph, ComfyNode } from '@/types/comfy-model';
 import logger from '@/utils/logger';
 import { appState } from './app-state.svelte';
-import { ComfyGridNode } from './model-state.svelte';
 
 /**
  *
@@ -37,10 +37,10 @@ export class ComfyUiBridge {
     async getWorkflow(): Promise<{
         graphId: string;
         name: string;
-        nodes: ComfyGridNode[];
+        nodes: ComfyNode[];
     }> {
         const app = appState.comfyUiState.app;
-        const nodes: ComfyGridNode[] = [];
+        const nodes: ComfyNode[] = app.rootGraph.nodes;
 
         await waitOnDrawBackgroundAll(app.rootGraph);
 
@@ -49,14 +49,6 @@ export class ComfyUiBridge {
             ComfyUiApiHook.hookForNodeWidgetChanged(topNode);
             ComfyUiApiHook.hookForWidgetCallback(topNode);
             ComfyUiApiHook.hookForNodeSetDirtyCanvas(topNode);
-        }
-
-        for (const comfyNode of app.rootGraph.nodes) {
-            const node = new ComfyGridNode(comfyNode, app);
-            nodes.push(node);
-            for (const subNode of ComfyGridNode.subgraphNodes(app, node)) {
-                nodes.push(subNode);
-            }
         }
 
         const workflowLabel = document.querySelector('.workflow-tabs > .p-togglebutton-checked .workflow-label');
@@ -74,10 +66,12 @@ export class ComfyUiBridge {
      * @param batchCount - Number of batches to queue
      */
     async queuePrompt(batchCount: number): Promise<void> {
+        await translationManager.translateAllPending();
         this.#app.queuePrompt(0, batchCount);
     }
 
     async nodeQueue(payload: { nodeId: string }): Promise<void> {
+        await translationManager.translateAllPending();
         const { nodeId } = payload;
         await nodeQueueManager.queueOutputNodes(this.#app, nodeId);
     }

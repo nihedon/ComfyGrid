@@ -70,16 +70,12 @@ export class ComfyGridGroup {
             if (diff !== 0) return diff;
             return a.title.localeCompare(b.title);
         } else {
-            return ComfyGridGroup.#compareGroupsByPosition(a, b);
+            return comparePositions(a, b);
         }
     }
 
-    static #compareGroupsByPosition(a: ComfyGridGroup, b: ComfyGridGroup): number {
-        return comparePositions(a, b);
-    }
-
     readonly isTabify = $derived.by(() => {
-        const groupTabify = appState.optionState.opts.get('group_tabify') || 'all_top_groups';
+        const groupTabify = appState.optionState.get('group_tabify') || 'all_top_groups';
         if (groupTabify === 'all_top_groups') {
             return this.#id;
         }
@@ -430,11 +426,7 @@ export class ComfyGridNode<P = undefined> {
     }
 
     static sortNodesByPosition(nodes: ComfyGridNode[]): ComfyGridNode[] {
-        return [...nodes].sort(ComfyGridNode.#compareNodesByPosition);
-    }
-
-    static #compareNodesByPosition(a: ComfyGridNode, b: ComfyGridNode): number {
-        return comparePositions(a, b);
+        return [...nodes].sort(comparePositions);
     }
 
     static *subgraphNodes(app: ComfyApp, parent: ComfyGridNode): Generator<ComfyGridNode> {
@@ -474,6 +466,7 @@ export class ComfyGridWidget<V = string, O = undefined> {
     #tooltip: string | null = $state();
     #type: string = $state();
     #value: V = $state();
+    #rawValue: string = $state();
     #image: ImageInfo = $state({ filename: '', subfolder: '', type: '' });
     #element: HTMLElement = $state();
     #readonly: boolean = $state();
@@ -481,6 +474,8 @@ export class ComfyGridWidget<V = string, O = undefined> {
     #options: O = $state();
     #className: string = $state();
     #textarea: HTMLTextAreaElement | null = null;
+    #isTranslating: boolean = $state(false);
+    #translationFailed: boolean = $state(false);
     #callback: (value?: unknown) => void;
 
     constructor(
@@ -527,6 +522,9 @@ export class ComfyGridWidget<V = string, O = undefined> {
     get value() {
         return this.#value;
     }
+    get rawValue() {
+        return this.#rawValue;
+    }
     get image() {
         return this.#image;
     }
@@ -547,6 +545,12 @@ export class ComfyGridWidget<V = string, O = undefined> {
     }
     get textarea() {
         return this.#textarea;
+    }
+    get isTranslating() {
+        return this.#isTranslating;
+    }
+    get translationFailed() {
+        return this.#translationFailed;
     }
     get callback() {
         return this.#callback;
@@ -573,6 +577,9 @@ export class ComfyGridWidget<V = string, O = undefined> {
     set value(value: V) {
         this.#value = value;
     }
+    set rawValue(rawValue: string | undefined) {
+        this.#rawValue = rawValue;
+    }
     set image(image: ImageInfo) {
         this.#image = { filename: '', subfolder: '', type: '', ...image };
     }
@@ -593,6 +600,12 @@ export class ComfyGridWidget<V = string, O = undefined> {
     }
     set textarea(textarea: HTMLTextAreaElement) {
         this.#textarea = textarea;
+    }
+    set isTranslating(isTranslating: boolean) {
+        this.#isTranslating = isTranslating;
+    }
+    set translationFailed(translationFailed: boolean) {
+        this.#translationFailed = translationFailed;
     }
     set callback(callback: (value?: unknown) => void) {
         this.#callback = callback;
@@ -615,6 +628,7 @@ export class ComfyGridWidget<V = string, O = undefined> {
         this.#tooltip = this.#comfyNode.constructor.nodeData?.inputs?.[this.#comfyWidget.name]?.tooltip ?? null;
         this.#type = overrides?.type ?? this.#comfyWidget.type;
         this.#value = (typeof this.#comfyWidget.value === 'object' ? safeParse(this.#comfyWidget.value) : this.#comfyWidget.value) as V;
+        this.#rawValue = this.#comfyNode.properties.rawValues?.[this.#index] ?? this.#value;
         this.#image = image ? { filename: '', subfolder: '', type: '', ...image } : { filename: '', subfolder: '', type: '' };
         this.#element = this.#comfyWidget.inputEl || this.#comfyWidget.element || null;
         this.#readonly = this.#comfyWidget.inputEl?.readOnly || this.#comfyWidget.element?.readOnly || false;
@@ -662,6 +676,21 @@ export class ComfyGridWidget<V = string, O = undefined> {
         } else {
             this.#comfyWidget.value = value;
         }
+    }
+
+    updateComfyUiRawValue(payload?: { rawValue?: V }) {
+        const rawValue = payload?.rawValue;
+
+        if (rawValue === undefined) {
+            if (this.#comfyNode.properties.rawValues) {
+                delete this.#comfyNode.properties.rawValues[this.#index];
+            }
+            return;
+        }
+        if (!this.#comfyNode.properties.rawValues) {
+            this.#comfyNode.properties.rawValues = {};
+        }
+        this.#comfyNode.properties.rawValues[this.#index] = rawValue;
     }
 
     updateComfyUiSelect(payload?: { value?: V; addOptions?: string[] }) {

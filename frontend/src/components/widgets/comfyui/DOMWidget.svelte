@@ -90,13 +90,22 @@
 
   function unmountElement() {
     if (!widget) return;
-    if (originalParent) {
-      originalParent.insertBefore(widget.element, originalNextSibling);
-    } else {
-      const iframeDoc = appState.comfyUiState.window?.document;
-      const domWidget = iframeDoc?.querySelector('.dom-widget');
-      domWidget?.appendChild(widget.element);
+    if (originalParent && originalParent.isConnected) {
+      try {
+        if (originalNextSibling && originalNextSibling.parentNode === originalParent) {
+          originalParent.insertBefore(widget.element, originalNextSibling);
+        } else {
+          originalParent.appendChild(widget.element);
+        }
+        return;
+      } catch (error) {
+        console.warn('Failed to restore widget.element to originalParent, falling back:', error);
+      }
     }
+
+    const iframeDoc = appState.comfyUiState.window?.document;
+    const domWidget = iframeDoc?.querySelector('.dom-widget');
+    domWidget?.appendChild(widget.element);
   }
 
   let shadowRoot: ShadowRoot | null = null;

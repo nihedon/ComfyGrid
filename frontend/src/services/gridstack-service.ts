@@ -32,7 +32,7 @@ export function saveLayoutObject(layout: Readonly<Layout>) {
     saveLayout(layout.export());
 }
 
-function saveLayout(layout: LayoutType) {
+export function saveLayout(layout: LayoutType) {
     localStorage.setItem(`comfygrid-layout-${layout.graphId}`, JSON.stringify(layout));
     logger.log('Current floatingPositions saved:', layout);
 }

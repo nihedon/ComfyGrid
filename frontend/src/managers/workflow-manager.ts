@@ -1,79 +1,121 @@
 import { tick } from 'svelte';
 import { callLayoutChangedCallbacks } from '@/services/callback-service';
 import { notifyNodeChanged } from '@/services/custom-node-service.svelte';
-import { applyFloatingPositions, loadLayout } from '@/services/gridstack-service';
+import { applyFloatingPositions, loadLayout, saveLayout } from '@/services/gridstack-service';
 import { appState } from '@/states/app-state.svelte';
 import { ComfyGridGroup, ComfyGridNode } from '@/states/model-state.svelte';
 import type { BoardId } from '@/types/board';
+import type { ComfyGroup, ComfyNode } from '@/types/comfy-model';
 import type { FloatingPosition, LayoutType } from '@/types/layout';
 
+function isGroupInGroup(child: ComfyGroup, parent: ComfyGroup): boolean {
+    if (child.id === parent.id) return false;
+    const [cx, cy, cw, ch] = child.boundingRect;
+    const [px, py, pw, ph] = parent.boundingRect;
+    const childArea = cw * ch;
+    if (childArea <= 0) return false;
+    const overlapWidth = Math.max(0, Math.min(cx + cw, px + pw) - Math.max(cx, px));
+    const overlapHeight = Math.max(0, Math.min(cy + ch, py + ph) - Math.max(cy, py));
+    return overlapWidth * overlapHeight >= childArea / 2;
+}
+
+function findParentGroup(child: ComfyGroup, allGroups: ComfyGroup[]): ComfyGroup | undefined {
+    const candidates = allGroups
+        .filter((parent) => parent.id !== child.id && isGroupInGroup(child, parent))
+        .sort((a, b) => {
+            const [, , aw, ah] = a.boundingRect;
+            const [, , bw, bh] = b.boundingRect;
+            return aw * ah - bw * bh;
+        });
+    return candidates[0];
+}
+
 class WorkflowManager {
-    async handleWorkflow(payload: { graphId: string; name: string; nodes: ComfyGridNode[] }) {
-        const { graphId, nodes, name } = payload;
+    async loadCurrentWorkflow(layout?: LayoutType): Promise<void> {
+        const payload = await appState.bridge?.getWorkflow();
+        if (payload) {
+            await this.handleWorkflow({ ...payload, layout });
+        }
+    }
 
-        const sortedNodes = ComfyGridNode.sortNodesByPosition(nodes);
+    async handleWorkflow(payload: { graphId: string; name: string; nodes: ComfyNode[]; layout?: LayoutType }) {
+        const { graphId, nodes: comfyNodes, name, layout: customLayout } = payload;
 
-        const loadedLayout = loadLayout(graphId);
-        const { floatingPositions: orgFloatingPositions, floatingNodes: orgFloatingNodes, floatingWidgets: orgFloatingWidgets } = loadedLayout;
+        const app = appState.comfyUiState.app;
+        let nodes = comfyNodes.map((n) => new ComfyGridNode(n, app)).filter((n) => !this.#isIgnoreNode(n));
+        nodes = ComfyGridNode.sortNodesByPosition(nodes);
 
         const expandedMap = this.#collectExpandedState(appState.workspaceState.groups);
 
+        const comfyGroupsMap = new Map<string, ComfyGroup>();
+        for (const node of nodes) {
+            for (const g of node.comfyGroups) {
+                if (g.id != null) {
+                    comfyGroupsMap.set(String(g.id), g);
+                }
+            }
+        }
+        const allComfyGroups = Array.from(comfyGroupsMap.values());
+
+        const gridGroupsMap = new Map<string, ComfyGridGroup>();
+        for (const g of allComfyGroups) {
+            const groupId = String(g.id);
+            gridGroupsMap.set(
+                groupId,
+                new ComfyGridGroup(g, {
+                    expanded: !!expandedMap.get(groupId),
+                }),
+            );
+        }
+
+        const rootGroups: ComfyGridGroup[] = [];
+        for (const g of allComfyGroups) {
+            const gridGroup = gridGroupsMap.get(String(g.id))!;
+            const parentComfyGroup = findParentGroup(g, allComfyGroups);
+            if (parentComfyGroup) {
+                const parentGridGroup = gridGroupsMap.get(String(parentComfyGroup.id));
+                if (parentGridGroup) {
+                    parentGridGroup.addChild(gridGroup);
+                } else {
+                    rootGroups.push(gridGroup);
+                }
+            } else {
+                rootGroups.push(gridGroup);
+            }
+        }
+
+        for (const node of nodes) {
+            if (node.comfyGroups.length > 0) {
+                gridGroupsMap.get(String(node.comfyGroups.at(-1).id))?.addNode(node);
+                node.groups = node.comfyGroups.map((g) => gridGroupsMap.get(String(g.id))).filter(Boolean);
+            } else {
+                let ungrouped = gridGroupsMap.get('__ungrouped__');
+                if (!ungrouped) {
+                    ungrouped = new ComfyGridGroup(null, {
+                        expanded: expandedMap.get(undefined) ?? false,
+                    });
+                    gridGroupsMap.set('__ungrouped__', ungrouped);
+                    rootGroups.unshift(ungrouped);
+                }
+                ungrouped.addNode(node);
+            }
+        }
+
+        const loadedLayout = customLayout ?? loadLayout(graphId);
+        if (customLayout) {
+            saveLayout(customLayout);
+        }
+        const { floatingPositions: orgFloatingPositions, floatingNodes: orgFloatingNodes, floatingWidgets: orgFloatingWidgets } = loadedLayout;
+
         const floatingNodes: Record<string, BoardId> = {};
         const floatingWidgets: Record<string, BoardId> = {};
-        const rootGroups: ComfyGridGroup[] = [];
-        const groupMap = new Map<string, ComfyGridGroup>();
-
-        for (const node of sortedNodes) {
-            if (this.#isIgnoreNode(node)) {
-                continue;
-            }
-
+        for (const node of nodes) {
             floatingNodes[node.id] = orgFloatingNodes?.[node.id] ?? '';
             node.widgets
                 .filter((w) => w.type === 'customtext')
                 .forEach((w) => {
                     floatingWidgets[w.id] = orgFloatingWidgets?.[w.id] ?? '';
                 });
-
-            if (!node.groups || node.groups.length === 0) {
-                let ungrouped = groupMap.get('__ungrouped__');
-                if (!ungrouped) {
-                    ungrouped = new ComfyGridGroup(null, {
-                        expanded: expandedMap.get(undefined) ?? false,
-                    });
-                    groupMap.set('__ungrouped__', ungrouped);
-                    rootGroups.unshift(ungrouped);
-                }
-                ungrouped.addNode(node);
-                continue;
-            }
-
-            let parentChildren = rootGroups;
-            let currentGroup: ComfyGridGroup | undefined;
-            const nodeGroups: ComfyGridGroup[] = [];
-
-            for (let i = 0; i < node.comfyGroups.length; i++) {
-                const g = node.comfyGroups[i];
-                currentGroup = groupMap.get(g.id);
-
-                if (!currentGroup) {
-                    currentGroup = new ComfyGridGroup(g, {
-                        expanded: expandedMap.get(g.id) ?? false,
-                    });
-                    groupMap.set(g.id, currentGroup);
-                    parentChildren.push(currentGroup);
-                }
-
-                nodeGroups.push(currentGroup);
-
-                if (i === node.comfyGroups.length - 1) {
-                    currentGroup.addNode(node);
-                }
-
-                parentChildren = currentGroup.children as ComfyGridGroup[];
-            }
-
-            node.groups = nodeGroups;
         }
 
         const layout: LayoutType = {
@@ -85,13 +127,13 @@ class WorkflowManager {
         };
 
         appState.workspaceState.setGroups(rootGroups);
-        appState.workspaceState.setNodes(sortedNodes);
+        appState.workspaceState.setNodes(nodes);
         appState.workspaceState.layout.import(layout);
 
         appState.name = name;
 
         await tick();
-        applyFloatingPositions(undefined, this.#rearrangeFloatingPositions(orgFloatingPositions, sortedNodes));
+        applyFloatingPositions(undefined, this.#rearrangeFloatingPositions(orgFloatingPositions, nodes));
         await tick();
         callLayoutChangedCallbacks();
     }

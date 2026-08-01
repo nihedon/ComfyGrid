@@ -1,7 +1,9 @@
 <script lang="ts">
+  import { untrack } from 'svelte';
   import { sortBy } from 'es-toolkit/array';
   import { comfyGridApiClient } from '@/api/api-client';
   import { t } from '@/i18n/i18n';
+  import { workflowManager } from '@/managers/workflow-manager';
   import { refreshModels } from '@/services/models-service';
   import { saveOptsWithCallback } from '@/services/options-service';
   import { appState } from '@/states/app-state.svelte';
@@ -30,10 +32,14 @@
   const optionState = appState.optionState;
   const storageState = appState.storageState;
 
-  const modelThumbWidth = $derived(
-    optionState.opts.get('model_thumbnail_width') ??
-      optionState.forms.get('model_thumbnail_width')?.default,
-  );
+  const modelThumbWidth = $derived(optionState.get('ComfyGrid.ui.model_thumbnail_width'));
+
+  const folderStorageKey = $derived.by(() => {
+    const sortedSubdirs = [...(subdirs ?? [])].sort().join('.');
+    return sortedSubdirs
+      ? `ComfyGrid.ui.model_selected_folder.${dir}.${sortedSubdirs}`
+      : `ComfyGrid.ui.model_selected_folder.${dir}`;
+  });
 
   const modelList = $derived.by(() => {
     let values: Model[] = [];
@@ -52,17 +58,13 @@
   });
 
   let filterText = $state('');
-  let selectedFolder = $state('');
-  let showNsfw = $state(
-    optionState.opts.get('show_nsfw') ?? optionState.forms.get('show_nsfw')?.default,
-  );
+  let selectedFolder = $state<string>(untrack(() => optionState.get(folderStorageKey) ?? ''));
+  let showNsfw = $state(optionState.get('ComfyGrid.ui.show_nsfw'));
   let favoriteOnly = $state(false);
-  let modelTreeView = $state(
-    optionState.opts.get('model_tree_view') ?? optionState.forms.get('model_tree_view')?.default,
-  );
+  let modelTreeView = $state(optionState.get('ComfyGrid.ui.model_tree_view'));
 
-  const sortAsc = $derived<boolean>(optionState.opts.get(`${dir}_sort_asc`) ?? true);
-  const sortMethod = $derived<SortType>(optionState.opts.get(`${dir}_sort`) ?? 'path');
+  const sortAsc = $derived<boolean>(optionState.get(`ComfyGrid.ui.${dir}_sort_asc`) ?? true);
+  const sortMethod = $derived<SortType>(optionState.get(`ComfyGrid.ui.${dir}_sort`) ?? 'path');
 
   const folderList = $derived.by(() => {
     const folders: string[] = [];
@@ -179,11 +181,38 @@
   });
 
   $effect(() => {
-    optionState.setOptionValue('show_nsfw', showNsfw);
+    optionState.set('ComfyGrid.ui.show_nsfw', showNsfw);
   });
 
   $effect(() => {
-    optionState.setOptionValue('model_tree_view', modelTreeView);
+    optionState.set('ComfyGrid.ui.model_tree_view', modelTreeView);
+  });
+
+  function expandParentFolders(folder: string) {
+    if (!folder) return;
+    const parts = folder.split('/');
+    let currentPath = '';
+    for (let i = 0; i < parts.length - 1; i++) {
+      currentPath = currentPath ? `${currentPath}/${parts[i]}` : parts[i];
+      expandedFolders.add(currentPath);
+    }
+    expandedFolders = new Set(expandedFolders);
+  }
+
+  function selectFolder(folder: string) {
+    selectedFolder = folder;
+    optionState.set(folderStorageKey, folder);
+    saveOptsWithCallback();
+    expandParentFolders(folder);
+  }
+
+  $effect(() => {
+    const key = folderStorageKey;
+    const storedFolder = optionState.get(key) ?? '';
+    untrack(() => {
+      selectedFolder = storedFolder;
+      expandParentFolders(storedFolder);
+    });
   });
 
   $effect(() => {
@@ -201,12 +230,12 @@
   );
 
   function toggleSortOrder() {
-    optionState.setOptionValue(`${dir}_sort_asc`, !sortAsc);
+    optionState.set(`ComfyGrid.ui.${dir}_sort_asc`, !sortAsc);
     saveOptsWithCallback();
   }
 
   function changeSortType(value: SortType) {
-    optionState.setOptionValue(`${dir}_sort`, value);
+    optionState.set(`ComfyGrid.ui.${dir}_sort`, value);
     saveOptsWithCallback();
   }
 
@@ -214,13 +243,17 @@
 
   async function reloadModels() {
     isReloading = true;
-    try {
-      const app = appState.comfyUiState.app;
-      await app?.refreshComboInNodes();
+    const app = appState.comfyUiState.app;
+    appState.toastState.addToast({ type: 'info', message: $t('toast.update_requested') });
+    app?.refreshComboInNodes().then(async () => {
+      await workflowManager.loadCurrentWorkflow();
       await refreshModels(dir);
-    } finally {
+      appState.toastState.addToast({
+        type: 'success',
+        message: $t('toast.update_request_completed'),
+      });
       isReloading = false;
-    }
+    });
   }
 
   function apply(model: Model) {
@@ -294,7 +327,12 @@
       </li>
       {#if !modelTreeView}
         <li class="nav-item" style="min-width: 200px;">
-          <select class="form-select" name="folder" bind:value={selectedFolder}>
+          <select
+            class="form-select"
+            name="folder"
+            value={selectedFolder}
+            onchange={(e) => selectFolder((e.target as HTMLSelectElement).value)}
+          >
             <option value="">All Folders</option>
             {#each folderList as folder (folder)}
               <option value={folder}>{folder}</option>
@@ -385,7 +423,7 @@
               class:fw-bold={selectedFolder === node.path}
               onclick={(e) => {
                 e.preventDefault();
-                selectedFolder = node.path;
+                selectFolder(node.path);
               }}
               title={node.path || 'All Folders'}
             >

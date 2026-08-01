@@ -341,6 +341,7 @@ class GalleryState {
     #revokeAndDelete(jobId: string): void {
         const record = this.#jobs.get(jobId);
         if (!record) return;
+        comfyGridApiClient.patchJobViewed(jobId);
         for (const node of record.nodes) {
             if (!node.assets || node.assets.isVideo) continue;
             if (node.assets.mediumSingle) URL.revokeObjectURL(node.assets.mediumSingle);

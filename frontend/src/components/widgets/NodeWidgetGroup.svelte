@@ -68,10 +68,7 @@
     e.stopPropagation();
   }
 
-  const nodeColorOpts = $derived(
-    appState.optionState.opts.get('node_color') ??
-      appState.optionState.forms.get('node_color')?.default,
-  );
+  const nodeColorOpts = $derived(appState.optionState.get('ComfyGrid.ui.node_color'));
 
   function focusOnMount(e: HTMLInputElement) {
     e.focus();

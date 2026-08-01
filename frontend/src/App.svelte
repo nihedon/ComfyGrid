@@ -8,6 +8,7 @@
   import DescriptionModal from '@/components/modals/DescriptionModal.svelte';
   import Dialog from '@/components/modals/Dialog.svelte';
   import ModelsModal from '@/components/modals/ModelsModal.svelte';
+  import OllamaSettingModal from '@/components/modals/OllamaSettingModal.svelte';
   import PaintModal from '@/components/modals/PaintModal.svelte';
   import { loadTranslations, setLanguage } from '@/i18n/i18n';
   import { BOOTSWATCH_THEME_OPT_KEY, applyBootswatchTheme } from '@/services/bootswatch-service';
@@ -99,33 +100,31 @@
 
       // !!! Waiting for ComfyUI's data structure to be organized as the execution is too early. !!!
       setTimeout(() => {
-        appState.bridge?.getWorkflow().then((res) => {
-          workflowManager.handleWorkflow(res);
-        });
+        workflowManager.loadCurrentWorkflow();
       }, 1000);
     }
   });
 
   // Initial language load: triggered once on startup to load available translations
   $effect(() => {
-    if (!optionState.forms.has('language')) {
+    if (!optionState.forms.has('ComfyGrid.ui.language')) {
       return;
     }
-    const choices = (optionState.forms.get('language') as DropdownFormInfo).choices;
+    const choices = (optionState.forms.get('ComfyGrid.ui.language') as DropdownFormInfo).choices;
     loadTranslations(choices.filter((c: string) => c !== 'auto')).then(() => {
-      setLanguage(optionState.opts.get('language'));
+      setLanguage(optionState.opts.get('ComfyGrid.ui.language'));
     });
   });
 
   // Language change: triggered when the language setting of options changes
   $effect(() => {
-    const selectedLang = optionState.opts.get('language');
+    const selectedLang = optionState.opts.get('ComfyGrid.ui.language');
     setLanguage(selectedLang);
   });
 
   // Theme change: triggered when the color theme setting of options changes
   $effect(() => {
-    const theme = optionState.opts.get('color_theme');
+    const theme = optionState.opts.get('ComfyGrid.ui.color_theme');
     if (!theme) {
       return;
     }
@@ -228,6 +227,7 @@
   <ToastContainer />
   <Dialog />
   <SharedThumbnailPopover />
+  <OllamaSettingModal />
 
   {#snippet failed(error, reset)}
     {@const err = error as Error}

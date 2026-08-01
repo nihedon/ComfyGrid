@@ -174,7 +174,6 @@
       editingWorkspace.python_path = data.json.path;
     }
   }
-
 </script>
 
 <form
@@ -202,9 +201,7 @@
               <i class="bi bi-stars me-1 text-primary"></i>New Update Available:
               <strong>{updateInfo.latest_version}</strong>
             </h6>
-            <p class="mb-0 small opacity-75">
-              A newer version of ComfyGrid is ready to download.
-            </p>
+            <p class="mb-0 small opacity-75">A newer version of ComfyGrid is ready to download.</p>
           </div>
         {/if}
 

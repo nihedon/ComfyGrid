@@ -24,7 +24,7 @@ const loadedOnce: Record<ModelTypes, boolean> = {
 
 const storageState = appState.storageState;
 
-async function fetchModels(key: ModelTypes): Promise<void> {
+async function fetchModels(key: ModelTypes, forceRefresh: boolean = false): Promise<void> {
     if (loading[key]) {
         return;
     }
@@ -32,7 +32,7 @@ async function fetchModels(key: ModelTypes): Promise<void> {
 
     try {
         const config = modelConfigs[key];
-        const res = await comfyGridApiClient.getList(config.dir, config.extensions);
+        const res = await comfyGridApiClient.getList(config.dir, config.extensions, forceRefresh);
         if (!res.ok) throw new Error(`${key} ${res.status}`);
         const models = res.json;
         storageState.clearFor(key);
@@ -58,5 +58,5 @@ async function ensureModels(key: ModelTypes): Promise<void> {
 }
 
 export async function refreshModels(key: ModelTypes): Promise<void> {
-    await fetchModels(key);
+    await fetchModels(key, true);
 }

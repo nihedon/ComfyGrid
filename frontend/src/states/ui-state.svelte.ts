@@ -5,6 +5,7 @@ class UIState {
     #isDragging: boolean = $state(false);
     #needRefresh: boolean = $state(false);
     #fileToOpenInImageInfo: File | null = $state(null);
+    #metadataToOpenInImageInfo: Record<string, string> | null = $state(null);
 
     get activePageId(): PageId {
         return this.#activePageId;
@@ -32,6 +33,13 @@ class UIState {
     }
     set fileToOpenInImageInfo(file: File | null) {
         this.#fileToOpenInImageInfo = file;
+    }
+
+    get metadataToOpenInImageInfo(): Record<string, string> | null {
+        return this.#metadataToOpenInImageInfo;
+    }
+    set metadataToOpenInImageInfo(metadata: Record<string, string> | null) {
+        this.#metadataToOpenInImageInfo = metadata;
     }
 }
 

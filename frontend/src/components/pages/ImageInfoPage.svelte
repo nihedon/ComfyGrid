@@ -11,8 +11,9 @@
 
   $effect(() => {
     if (uiState.fileToOpenInImageInfo) {
-      openFile(uiState.fileToOpenInImageInfo);
+      openFile(uiState.fileToOpenInImageInfo, uiState.metadataToOpenInImageInfo);
       uiState.fileToOpenInImageInfo = null; // Reset after reading
+      uiState.metadataToOpenInImageInfo = null;
     }
   });
 
@@ -30,7 +31,7 @@
     openFile(file);
   }
 
-  async function openFile(file: File) {
+  async function openFile(file: File, extraMetadata?: Record<string, string> | null) {
     currentFileName = file.name.toLowerCase();
     currentWorkflowJson = null;
 
@@ -38,18 +39,12 @@
     formData.append('file', file);
 
     const res = await comfyGridApiClient.postImageInfo(file);
+    let json: { [key: string]: unknown } = {};
+
     if (res.ok) {
-      if (res.json.workflow) {
-        try {
-          currentWorkflowJson = JSON.parse(res.json.workflow);
-        } catch (e) {
-          logger.error('Failed to parse workflow JSON from image', e);
-        }
-      }
-      if (res.json['metadata']) {
-        const metadata = res.json['metadata'];
+      if (res.json.metadata) {
         // Not a ComfyUI format
-        let [positivePrompt, tmp] = metadata.split('\nNegative prompt:');
+        let [positivePrompt, tmp] = res.json.metadata.split('\nNegative prompt:');
         let [negativePrompt, options] = tmp?.split('\nSteps:') || ['', ''];
         if (options) {
           options = 'Steps:' + options;
@@ -61,11 +56,60 @@
         } else {
           metadataJson = { positive: positivePrompt?.trim(), negative: negativePrompt?.trim() };
         }
-      } else if (res.json['prompt']) {
-        // ComfyUI format
-        metadataJson = JSON.parse(res.json['prompt']);
+      } else {
+        if (res.json.prompt) {
+          try {
+            json.prompt = JSON.parse(res.json.prompt);
+          } catch (e) {
+            logger.error('Failed to parse prompt JSON', e);
+          }
+        }
+        if (res.json.workflow) {
+          try {
+            currentWorkflowJson = JSON.parse(res.json.workflow);
+            json.workflow = currentWorkflowJson;
+          } catch (e) {
+            logger.error('Failed to parse workflow JSON', e);
+          }
+        }
+        if (res.json.comfygrid) {
+          try {
+            json.comfygrid = JSON.parse(res.json.comfygrid);
+          } catch (e) {
+            logger.error('Failed to parse comfygrid JSON', e);
+          }
+        }
+        metadataJson = json;
       }
-    } else {
+    }
+
+    if (extraMetadata) {
+      if (extraMetadata.prompt) {
+        try {
+          json.prompt = JSON.parse(extraMetadata.prompt);
+        } catch (e) {
+          logger.error('Failed to parse extra prompt metadata', e);
+        }
+      }
+      if (extraMetadata.workflow) {
+        try {
+          currentWorkflowJson = JSON.parse(extraMetadata.workflow);
+          json.workflow = currentWorkflowJson;
+        } catch (e) {
+          logger.error('Failed to parse extra workflow metadata', e);
+        }
+      }
+      if (extraMetadata.comfygrid) {
+        try {
+          json.comfygrid = JSON.parse(extraMetadata.comfygrid);
+        } catch (e) {
+          logger.error('Failed to parse extra comfygrid metadata', e);
+        }
+      }
+      metadataJson = json;
+    }
+
+    if (!res.ok && !extraMetadata) {
       metadataJson = { error: 'No recognizable prompt metadata found.' };
     }
 
@@ -142,17 +186,27 @@
       return;
     }
 
+    const comfygridData = (metadataJson as Record<string, unknown>).comfygrid;
+    const layout = comfygridData
+      ? typeof comfygridData === 'string'
+        ? JSON.parse(comfygridData)
+        : comfygridData
+      : undefined;
+
     const ret = await appState.bridge?.loadWorkflow({
       filename: currentFileName,
       json: currentWorkflowJson,
     });
 
     if (ret?.success) {
-      logger.log('Workflow applied successfully');
       toastState.addToast({ type: 'success', message: $t('toast.workflow_applied') });
-      appState.bridge?.getWorkflow()?.then((res) => {
-        workflowManager.handleWorkflow(res);
-      });
+      await workflowManager.loadCurrentWorkflow(layout);
+
+      if (layout) {
+        toastState.addToast({ type: 'success', message: $t('toast.layout_applied') });
+      } else {
+        toastState.addToast({ type: 'info', message: $t('toast.no_layout_found') });
+      }
       uiState.activePageId = 'grid';
     } else {
       logger.error('Failed to apply workflow:', ret?.error);
