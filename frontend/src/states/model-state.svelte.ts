@@ -466,7 +466,7 @@ export class ComfyGridWidget<V = string, O = undefined> {
     #tooltip: string | null = $state();
     #type: string = $state();
     #value: V = $state();
-    #rawValue: string | undefined = $state();
+    #rawValue: string = $state();
     #image: ImageInfo = $state({ filename: '', subfolder: '', type: '' });
     #element: HTMLElement = $state();
     #readonly: boolean = $state();
@@ -628,6 +628,7 @@ export class ComfyGridWidget<V = string, O = undefined> {
         this.#tooltip = this.#comfyNode.constructor.nodeData?.inputs?.[this.#comfyWidget.name]?.tooltip ?? null;
         this.#type = overrides?.type ?? this.#comfyWidget.type;
         this.#value = (typeof this.#comfyWidget.value === 'object' ? safeParse(this.#comfyWidget.value) : this.#comfyWidget.value) as V;
+        this.#rawValue = this.#comfyNode.properties.rawValues?.[this.#index] ?? this.#value;
         this.#image = image ? { filename: '', subfolder: '', type: '', ...image } : { filename: '', subfolder: '', type: '' };
         this.#element = this.#comfyWidget.inputEl || this.#comfyWidget.element || null;
         this.#readonly = this.#comfyWidget.inputEl?.readOnly || this.#comfyWidget.element?.readOnly || false;
@@ -675,6 +676,21 @@ export class ComfyGridWidget<V = string, O = undefined> {
         } else {
             this.#comfyWidget.value = value;
         }
+    }
+
+    updateComfyUiRawValue(payload?: { rawValue?: V }) {
+        const rawValue = payload?.rawValue;
+
+        if (rawValue === undefined) {
+            if (this.#comfyNode.properties.rawValues) {
+                delete this.#comfyNode.properties.rawValues[this.#index];
+            }
+            return;
+        }
+        if (!this.#comfyNode.properties.rawValues) {
+            this.#comfyNode.properties.rawValues = {};
+        }
+        this.#comfyNode.properties.rawValues[this.#index] = rawValue;
     }
 
     updateComfyUiSelect(payload?: { value?: V; addOptions?: string[] }) {

@@ -186,15 +186,6 @@ export class Layout {
             allBoardLayouts[key] = { ...allBoardLayouts[key], ...idKeyLayout };
         }
 
-        const rawValues: Record<string, string> = {};
-        for (const node of appState.workspaceState.nodes.values()) {
-            for (const widget of node.widgets) {
-                if (widget.rawValue) {
-                    rawValues[widget.id] = widget.rawValue;
-                }
-            }
-        }
-
         return {
             graphId: this.#graphId,
             floatingPositions: allBoardLayouts,
@@ -204,7 +195,6 @@ export class Layout {
             positivePromptWidgetId: this.#positivePromptWidgetId,
             negativePromptWidgetId: this.#negativePromptWidgetId,
             translateWidgetIds: [...this.#translateWidgetIds],
-            rawValues,
             translateModels: Object.fromEntries(Array.from(this.#translateModels.entries()).filter(([, v]) => Boolean(v))),
             translateSystems: Object.fromEntries(Array.from(this.#translateSystems.entries()).filter(([, v]) => Boolean(v))),
             noControlNodes: this.#noControlNodes,
@@ -236,15 +226,6 @@ export class Layout {
         this.#translateWidgetIds.clear();
         (layout.translateWidgetIds ?? []).forEach((widgetId) => {
             this.#translateWidgetIds.add(widgetId);
-        });
-        Object.entries(layout.rawValues ?? {}).forEach(([key, value]) => {
-            for (const node of appState.workspaceState.nodes.values()) {
-                const widget = node.widgets.find((w) => w.id === key);
-                if (widget) {
-                    widget.rawValue = value;
-                    break;
-                }
-            }
         });
         this.#translateModels.clear();
         Object.entries(layout.translateModels ?? {}).forEach(([key, value]) => {

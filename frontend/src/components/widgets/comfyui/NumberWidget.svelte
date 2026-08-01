@@ -14,8 +14,6 @@
 
   let { widget }: { widget: NumberWidget } = $props();
 
-  const displayValue = $derived(widget.value);
-
   const minAndMaxAttr = $derived.by(() => {
     let minAndMaxAttr: { min?: number; max?: number } = {};
     if (widget?.options?.min >= -Number.MAX_SAFE_INTEGER) {
@@ -35,26 +33,26 @@
   });
 
   function handleInput(e: Event) {
-    let rawValue = parseFloat((e.target as HTMLInputElement).value);
-    if (isNaN(rawValue)) {
+    let floatValue = parseFloat((e.target as HTMLInputElement).value);
+    if (isNaN(floatValue)) {
       return;
     }
-    if (rawValue < widget.options.min) {
+    if (floatValue < widget.options.min) {
       widget.value = widget.options.min;
       return;
     }
     const step = widget?.options?.step2 ?? widget?.options?.step ?? 1;
     if (widget.options.min != 0 && widget.options.min % step !== 0) {
-      if (rawValue < widget.options.min) {
+      if (floatValue < widget.options.min) {
         widget.value = widget.options.min;
         return;
       } else {
-        let correctedValue = Math.round(rawValue / step) * step;
+        let correctedValue = Math.round(floatValue / step) * step;
         widget.value = parseFloat(correctedValue.toFixed(6));
         return;
       }
     }
-    widget.value = rawValue;
+    widget.value = floatValue;
   }
 
   function handleChange() {
@@ -71,7 +69,7 @@
       id={widget.id}
       class="form-control"
       type="number"
-      value={displayValue}
+      value={widget.value}
       {...minAndMaxAttr}
       step={widget?.options?.step2 ?? widget?.options?.step ?? undefined}
       onchange={handleChange}

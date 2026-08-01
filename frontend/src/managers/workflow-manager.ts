@@ -107,16 +107,6 @@ class WorkflowManager {
         }
         const { floatingPositions: orgFloatingPositions, floatingNodes: orgFloatingNodes, floatingWidgets: orgFloatingWidgets } = loadedLayout;
 
-        if (loadedLayout.rawValues) {
-            for (const node of nodes) {
-                for (const widget of node.widgets) {
-                    if (loadedLayout.rawValues[widget.id] != null) {
-                        widget.rawValue = loadedLayout.rawValues[widget.id];
-                    }
-                }
-            }
-        }
-
         const floatingNodes: Record<string, BoardId> = {};
         const floatingWidgets: Record<string, BoardId> = {};
         for (const node of nodes) {

@@ -77,8 +77,7 @@
 
       if (res.ok && res.json?.translated_text) {
         widget.value = res.json.translated_text;
-      } else {
-        widget.value = text;
+        widget.updateComfyUiRawValue({ rawValue: text });
       }
       widget.translationFailed = !res.ok;
       if (res.ok) {
@@ -86,7 +85,6 @@
       }
     } catch {
       if (currentReqId === translationRequestId) {
-        widget.value = text;
         widget.translationFailed = true;
       }
     } finally {
