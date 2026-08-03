@@ -124,7 +124,7 @@
               {#each workspaceState.groups as group (group.id)}
                 {#if group.isTabify}
                   <TabContainer tabId={group.id} {activeTabId}>
-                    <WidgetsSection container={tabContainer} groupId={group.id} />
+                    <WidgetsSection container={tabContainer} {group} />
                   </TabContainer>
                 {/if}
               {/each}

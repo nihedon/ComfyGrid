@@ -4,24 +4,20 @@
   import NodeWidgetGroup from '../widgets/NodeWidgetGroup.svelte';
   import GridStackBoard from './GridStackBoard.svelte';
 
-  let { container, groupId }: { container: HTMLElement; groupId?: string } = $props();
+  let { container, group }: { container: HTMLElement; group?: ComfyGridGroup } = $props();
 
   const workspaceState = appState.workspaceState;
 
   let columnCount = $state(1);
 
-  const filteredGroups = $derived.by(() => {
-    if (groupId) {
-      return [workspaceState.groups.find((g) => g.id === groupId)!];
-    } else {
-      return workspaceState.groups.filter((g) => !g.isTabify);
-    }
-  });
-
   const sortedGroups = $derived.by(() => {
-    return filteredGroups
-      .filter((g) => g.hasVisibleNodes)
-      .toSorted(ComfyGridGroup.sortGroupsByPriority);
+    if (group) {
+      return [group];
+    } else {
+      return workspaceState.groups
+        .filter((g) => !g.isTabify && g.hasVisibleNodes)
+        .toSorted(ComfyGridGroup.sortGroupsByPriority);
+    }
   });
 
   $effect(() => {
@@ -29,9 +25,9 @@
 
     const updateColumnCount = () => {
       const width = container.clientWidth;
-      if (width >= 1400) {
+      if (width >= 1100) {
         columnCount = 3;
-      } else if (width >= 900) {
+      } else if (width >= 700) {
         columnCount = 2;
       } else {
         columnCount = 1;
@@ -50,19 +46,15 @@
 </script>
 
 <div class="mb-1">
-  <GridStackBoard boardId="Tab" {groupId}></GridStackBoard>
+  <GridStackBoard boardId="Tab" groupId={group?.id}></GridStackBoard>
 </div>
 <div class="vstack gap-2">
-  {#each sortedGroups as group (group.id)}
-    {@const groupIndex = workspaceState.groups.indexOf(group)}
+  {#each sortedGroups as g (g.id)}
     {#snippet widgetGroup()}
-      <NodeWidgetGroup
-        bind:group={workspaceState.groups[groupIndex]}
-        {columnCount}
-        fixedExpanded={!group.id || groupId !== undefined}
+      <NodeWidgetGroup group={g} {columnCount} alwaysExpanded={!g.id || group !== undefined}
       ></NodeWidgetGroup>
     {/snippet}
-    {#if groupId === undefined}
+    {#if !group}
       <div class="accordion">
         {@render widgetGroup()}
       </div>
