@@ -60,8 +60,7 @@
   }
 
   function handleStateChange(e: Event, mode: ComfyNodeMode) {
-    const targetNodes = nodes.filter((node) => mode === 0 || !node.collapsed);
-    targetNodes.forEach((node) => {
+    nodes.forEach((node) => {
       node.mode = mode;
       node.setComfyUiProperty('mode', node.mode);
     });
