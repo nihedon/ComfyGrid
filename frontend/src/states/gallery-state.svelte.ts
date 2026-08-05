@@ -9,8 +9,6 @@ import { appState } from './app-state.svelte';
 export type GeneratedAssets = {
     originalSingle?: string;
     originalCompare?: string[];
-    mediumSingle?: string; // blob URL, runtime only
-    mediumCompare?: string[]; // blob URLs, runtime only
     videoSingle?: string;
     isVideo?: boolean;
     thumbnail: string;
@@ -306,31 +304,6 @@ class GalleryState {
     }
 
     // -----------------------------------------------------------------------
-    // Lazy medium URL restoration
-    // -----------------------------------------------------------------------
-
-    async ensureMediumUrls(jobId: string, nodeId: string, batchJobIndex: number): Promise<void> {
-        const node = this.#findNode(jobId, nodeId, batchJobIndex);
-        if (!node?.assets) return;
-        if (node.assets.mediumSingle || node.assets.mediumCompare || node.assets.isVideo) return;
-
-        if (node.assets.originalSingle) {
-            const res = await comfyGridApiClient.getResize(node.assets.originalSingle, 1024);
-            if (res.ok) {
-                node.assets.mediumSingle = URL.createObjectURL(res.blob);
-            }
-        } else if (node.assets.originalCompare) {
-            const blobs = await Promise.all(
-                node.assets.originalCompare.map(async (url) => {
-                    const res = await comfyGridApiClient.getResize(url, 1024);
-                    if (res.ok) return res.blob;
-                }),
-            );
-            node.assets.mediumCompare = blobs.map((b) => URL.createObjectURL(b));
-        }
-    }
-
-    // -----------------------------------------------------------------------
     // Private helpers
     // -----------------------------------------------------------------------
 
@@ -342,11 +315,6 @@ class GalleryState {
         const record = this.#jobs.get(jobId);
         if (!record) return;
         comfyGridApiClient.patchJobViewed(jobId);
-        for (const node of record.nodes) {
-            if (!node.assets || node.assets.isVideo) continue;
-            if (node.assets.mediumSingle) URL.revokeObjectURL(node.assets.mediumSingle);
-            node.assets.mediumCompare?.forEach((u) => URL.revokeObjectURL(u));
-        }
         this.#jobs.delete(jobId);
     }
 }

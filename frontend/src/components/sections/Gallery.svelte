@@ -106,20 +106,7 @@
     container?.focus();
   });
 
-  // Trigger lazy medium URL restoration when the displayed node changes
-  $effect(() => {
-    const node = galleryState.currentGalleryNode;
-    if (
-      node?.jobId &&
-      node.nodeId != null &&
-      node.assets &&
-      !node.assets.mediumSingle &&
-      !node.assets.mediumCompare &&
-      !node.assets.isVideo
-    ) {
-      galleryState.ensureMediumUrls(node.jobId, node.nodeId, node.batchJobIndex);
-    }
-  });
+
 
   function handleKeydown(e: KeyboardEvent) {
     if (fullscreen && (e.key === 'Escape' || e.key === 'Esc')) {
@@ -276,7 +263,7 @@
     use:portal={fullscreen}
   >
     <!-- Compare toggle (if current image has multiple originals from comparison node) -->
-    {#if galleryState.currentGalleryNode?.assets?.mediumCompare}
+    {#if galleryState.currentGalleryNode?.assets?.originalCompare}
       <div class="btn-group w-100 pb-1 compare-buttons" role="group">
         <button
           type="button"
@@ -331,16 +318,8 @@
                   muted
                 ></video>
               {:else}
-                {@const isCompare =
-                  (genAssets.mediumCompare && genAssets.mediumCompare.length > 1) ||
-                  (genAssets.originalCompare && genAssets.originalCompare.length > 1)}
-                {@const src = fullscreen
-                  ? isCompare
-                    ? genAssets.originalCompare
-                    : [genAssets.originalSingle]
-                  : isCompare
-                    ? (genAssets.mediumCompare ?? genAssets.originalCompare)
-                    : [genAssets.mediumSingle ?? genAssets.originalSingle]}
+                {@const isCompare = genAssets.originalCompare && genAssets.originalCompare.length > 1}
+                {@const src = isCompare ? genAssets.originalCompare : [genAssets.originalSingle]}
                 {#if isCompare && src && src.length > 1}
                   <div class="generated object-fit-contain">
                     <ImageCompare

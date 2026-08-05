@@ -208,9 +208,7 @@ class ComfyGridApiClient {
         });
     }
 
-    async getResize(url: string, size: number): Promise<ApiResultBlob> {
-        return await fetchApiBlob(`/comfygrid/api/resize?url=${encodeURIComponent(url)}&size=${size}`);
-    }
+
 
     async getVideoThumbnail(url: string, size: number = 120): Promise<ApiResultBlob> {
         return await fetchApiBlob(`/comfygrid/api/video_thumbnail?url=${encodeURIComponent(url)}&size=${size}`);

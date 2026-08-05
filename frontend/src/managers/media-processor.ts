@@ -96,35 +96,13 @@ class MediaProcessor {
         return this.#makeImageAssets(images);
     }
 
-    async #resizeImage(url: string, size: number): Promise<Blob | string> {
-        try {
-            const r = await comfyGridApiClient.getResize(url, size);
-            if (r.ok) return r.blob;
-        } catch (e: unknown) {
-            logger.error('Failed to resize image:', e);
-        }
-        return url;
-    }
-
     async #makeImageAssets(images: string[]): Promise<GeneratedAssets> {
-        const [mediums, thumb] = await Promise.all([Promise.all(images.map((url) => this.#resizeImage(url, 1024))), this.#resizeImage(images[0], 120)]);
-        const mediumUrls = mediums.map((medium) => (typeof medium === 'string' ? medium : URL.createObjectURL(medium)));
-
-        let thumbnail: string;
-        if (typeof thumb === 'string') {
-            thumbnail = thumb;
-        } else {
-            thumbnail = await new Promise<string>((resolve) => {
-                const reader = new FileReader();
-                reader.onloadend = () => resolve(reader.result as string);
-                reader.readAsDataURL(thumb);
-            });
-        }
+        const thumbnail = images[0];
 
         if (images.length === 1) {
-            return { originalSingle: images[0], mediumSingle: mediumUrls[0], thumbnail };
+            return { originalSingle: images[0], thumbnail };
         }
-        return { originalCompare: images, mediumCompare: mediumUrls, thumbnail };
+        return { originalCompare: images, thumbnail };
     }
 
     async #makeVideoAssets(images: string[]): Promise<GeneratedAssets> {
