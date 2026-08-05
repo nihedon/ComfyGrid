@@ -201,20 +201,26 @@
   $effect(() => {
     // eslint-disable-next-line @typescript-eslint/no-unused-expressions
     galleryState.currentJobIndex;
-    setTimeout(scrollToActiveJobThumbnail, 50);
+    const timerId = setTimeout(scrollToActiveJobThumbnail, 50);
+    return () => clearTimeout(timerId);
   });
 
   $effect(() => {
     // eslint-disable-next-line @typescript-eslint/no-unused-expressions
     galleryState.selectedNodeIndex;
-    setTimeout(scrollToActiveNodeThumbnail, 50);
+    const timerId = setTimeout(scrollToActiveNodeThumbnail, 50);
+    return () => clearTimeout(timerId);
   });
 
   $effect(() => {
     // eslint-disable-next-line @typescript-eslint/no-unused-expressions
     fullscreen;
-    setTimeout(scrollToActiveNodeThumbnail, 50);
-    setTimeout(scrollToActiveJobThumbnail, 50);
+    const timerId1 = setTimeout(scrollToActiveNodeThumbnail, 50);
+    const timerId2 = setTimeout(scrollToActiveJobThumbnail, 50);
+    return () => {
+      clearTimeout(timerId1);
+      clearTimeout(timerId2);
+    };
   });
 
   function portal(node: HTMLElement, enabled: boolean) {
@@ -325,14 +331,16 @@
                   muted
                 ></video>
               {:else}
-                {@const isCompare = genAssets.mediumCompare && genAssets.mediumCompare.length > 1}
+                {@const isCompare =
+                  (genAssets.mediumCompare && genAssets.mediumCompare.length > 1) ||
+                  (genAssets.originalCompare && genAssets.originalCompare.length > 1)}
                 {@const src = fullscreen
                   ? isCompare
                     ? genAssets.originalCompare
                     : [genAssets.originalSingle]
                   : isCompare
-                    ? genAssets.mediumCompare
-                    : [genAssets.mediumSingle]}
+                    ? (genAssets.mediumCompare ?? genAssets.originalCompare)
+                    : [genAssets.mediumSingle ?? genAssets.originalSingle]}
                 {#if isCompare && src && src.length > 1}
                   <div class="generated object-fit-contain">
                     <ImageCompare

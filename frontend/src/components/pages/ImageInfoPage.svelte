@@ -1,6 +1,7 @@
 <script lang="ts">
-  import { JSONEditor } from 'svelte-jsoneditor';
+  import { onDestroy } from 'svelte';
   import { comfyGridApiClient } from '@/api/api-client';
+  import JsonViewer from '@/components/common/JsonViewer.svelte';
   import { t } from '@/i18n/i18n';
   import { workflowManager } from '@/managers/workflow-manager';
   import { appState } from '@/states/app-state.svelte';
@@ -17,11 +18,16 @@
     }
   });
 
+  onDestroy(() => {
+    if (imageSrc) {
+      URL.revokeObjectURL(imageSrc);
+    }
+  });
+
   let imageFileInput = $state<HTMLInputElement>()!;
 
   let metadataJson = $state({});
   let imageSrc: string | null = $state(null);
-  let jsonEditor: JSONEditor;
   let currentFileName = $state<string | null>(null);
   let currentWorkflowJson = $state<{ [key: string]: unknown } | null>(null);
 
@@ -113,8 +119,10 @@
       metadataJson = { error: 'No recognizable prompt metadata found.' };
     }
 
+    if (imageSrc) {
+      URL.revokeObjectURL(imageSrc);
+    }
     imageSrc = URL.createObjectURL(file);
-    jsonEditor.set({ text: undefined, json: unescape(metadataJson) });
   }
 
   function parseCustomString(input: string) {
@@ -141,15 +149,14 @@
     return result;
   }
 
-  function unescape(obj: object): object | string | null {
-    if (obj === null) return null;
-    if (typeof obj === 'undefined') return null;
+  function unescape(obj: unknown): unknown {
+    if (obj === null || typeof obj === 'undefined') return null;
     if (Array.isArray(obj)) {
       return obj.map((item) => unescape(item));
     }
     if (typeof obj === 'object') {
       const datas: Record<string, unknown> = {};
-      Object.entries(obj).reduce((acc, [k, v]) => {
+      Object.entries(obj as Record<string, unknown>).reduce((acc, [k, v]) => {
         acc[k] = unescape(v);
         return acc;
       }, datas);
@@ -158,18 +165,11 @@
     if (typeof obj === 'string') {
       return String(obj).replaceAll('\\\\', '\\').replaceAll('\\n', '\n').replaceAll('\\t', '\t');
     }
-    return obj as object;
+    return obj;
   }
 
   function handleDragOver(event: DragEvent) {
     event.preventDefault();
-  }
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  function handleRenderMenu(items: any[]) {
-    return items.filter((item) => {
-      return item?.text !== 'table';
-    });
   }
 
   function handleImageSelected(event: Event) {
@@ -264,14 +264,8 @@
         </div>
       {/if}
     </div>
-    <div id="json-editor" class="flex-grow-1 h-100">
-      <JSONEditor bind:this={jsonEditor} readOnly={true} onRenderMenu={handleRenderMenu} />
+    <div class="flex-grow-1 h-100 p-2 overflow-hidden">
+      <JsonViewer value={unescape(metadataJson)} />
     </div>
   </div>
 </div>
-
-<style>
-  #json-editor {
-    --jse-theme-color: #aebbc5;
-  }
-</style>

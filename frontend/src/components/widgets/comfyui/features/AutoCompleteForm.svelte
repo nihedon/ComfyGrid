@@ -70,7 +70,7 @@
     }
   }
 
-  onMount(async () => {
+  onMount(() => {
     const inputEl = jQuery(inputDomEl!);
     inputEl.autoComplete({
       resolver: 'custom',
@@ -124,13 +124,11 @@
     window.addEventListener('scroll', handleScrollOrResize, true);
     window.addEventListener('resize', handleScrollOrResize);
 
-    return {
-      destroy() {
-        inputEl.autoComplete('destroy');
-        ddEl?.remove();
-        window.removeEventListener('scroll', handleScrollOrResize, true);
-        window.removeEventListener('resize', handleScrollOrResize);
-      },
+    return () => {
+      inputEl.autoComplete('destroy');
+      ddEl?.remove();
+      window.removeEventListener('scroll', handleScrollOrResize, true);
+      window.removeEventListener('resize', handleScrollOrResize);
     };
   });
 

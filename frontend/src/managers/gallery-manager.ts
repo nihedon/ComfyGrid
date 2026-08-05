@@ -22,13 +22,20 @@ class GalleryManager {
         const { url, node } = this.#currentNodeUrl();
         if (!node || !url) return;
 
-        metadata.batchJobIndex = String(node.batchJobIndex);
-        const ret = await comfyGridApiClient.postSaveImage(url, metadata);
-        if (!ret.ok) {
-            logger.error('Failed to save image', ret.text);
-            return;
-        }
+        // Optimistically mark saved immediately for instant UI feedback
         appState.galleryState.markSaved(node.jobId, node.nodeId, node.batchJobIndex);
+
+        metadata.batchJobIndex = String(node.batchJobIndex);
+        try {
+            const ret = await comfyGridApiClient.postSaveImage(url, metadata);
+            if (!ret.ok) {
+                logger.error('Failed to save image', ret.text);
+                appState.toastState.addToast({ type: 'error', message: 'Failed to save image' });
+            }
+        } catch (e) {
+            logger.error('Failed to save image', e);
+            appState.toastState.addToast({ type: 'error', message: 'Failed to save image' });
+        }
     }
 
     async downloadImage(metadata: Record<string, string>) {
