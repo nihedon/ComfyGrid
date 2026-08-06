@@ -7,6 +7,7 @@ import { ComfyGridGroup, ComfyGridNode } from '@/states/model-state.svelte';
 import type { BoardId } from '@/types/board';
 import type { ComfyGroup, ComfyNode } from '@/types/comfy-model';
 import type { FloatingPosition, LayoutType } from '@/types/layout';
+import logger from '@/utils/logger';
 
 function isGroupInGroup(child: ComfyGroup, parent: ComfyGroup): boolean {
     if (child.id === parent.id) return false;
@@ -42,6 +43,15 @@ class WorkflowManager {
         const { graphId, nodes: comfyNodes, name, layout: customLayout } = payload;
 
         const app = appState.comfyUiState.app;
+        if (app?.rootGraph) {
+            app.rootGraph.extra = app.rootGraph.extra || {};
+            app.rootGraph.extra.comfygrid = app.rootGraph.extra.comfygrid || {};
+            if (!app.rootGraph.extra.comfygrid.layout_id) {
+                app.rootGraph.extra.comfygrid.layout_id = `test_layout_${Date.now()}`;
+            }
+            logger.log('Injected extra.comfygrid:', app.rootGraph.extra.comfygrid);
+        }
+
         let nodes = comfyNodes.map((n) => new ComfyGridNode(n, app)).filter((n) => !this.#isIgnoreNode(n));
         nodes = ComfyGridNode.sortNodesByPosition(nodes);
 

@@ -32,6 +32,8 @@ export interface ComfyApi {
 
 export interface ComfyGraph extends LGraph {
     id: string;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    extra?: Record<string, any>;
     nodes: ComfyNode[];
     groups: ComfyGroup[];
     getNodeById: (id: string | number) => ComfyNode | undefined;

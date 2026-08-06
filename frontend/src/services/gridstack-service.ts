@@ -33,8 +33,13 @@ export function saveLayoutObject(layout: Readonly<Layout>) {
 }
 
 export function saveLayout(layout: LayoutType) {
-    localStorage.setItem(`comfygrid-layout-${layout.graphId}`, JSON.stringify(layout));
-    logger.log('Current floatingPositions saved:', layout);
+    const app = appState.comfyUiState.app;
+    if (app?.rootGraph) {
+        app.rootGraph.extra = app.rootGraph.extra || {};
+        app.rootGraph.extra.comfygrid = app.rootGraph.extra.comfygrid || {};
+        app.rootGraph.extra.comfygrid.layout = layout;
+    }
+    logger.log('Current layout saved to extra.comfygrid.layout:', layout);
 }
 
 function makeEptyLayout(graph_id: string): LayoutType {
@@ -53,6 +58,12 @@ function makeEptyLayout(graph_id: string): LayoutType {
 }
 
 export function loadLayout(graphId: string): LayoutType {
+    const app = appState.comfyUiState.app;
+    const graphLayout = app?.rootGraph?.extra?.comfygrid?.layout as LayoutType | undefined;
+    if (graphLayout && typeof graphLayout === 'object') {
+        return graphLayout;
+    }
+
     if (graphId === '') {
         return makeEptyLayout(graphId);
     }
@@ -60,7 +71,13 @@ export function loadLayout(graphId: string): LayoutType {
     const strLayout = localStorage.getItem(`comfygrid-layout-${graphId}`);
     if (strLayout) {
         try {
-            return JSON.parse(strLayout) as LayoutType;
+            const parsed = JSON.parse(strLayout) as LayoutType;
+            if (app?.rootGraph) {
+                app.rootGraph.extra = app.rootGraph.extra || {};
+                app.rootGraph.extra.comfygrid = app.rootGraph.extra.comfygrid || {};
+                app.rootGraph.extra.comfygrid.layout = parsed;
+            }
+            return parsed;
         } catch (err) {
             logger.error('Failed to load gridStackWidget:', err);
             localStorage.removeItem(`comfygrid-layout-${graphId}`);
