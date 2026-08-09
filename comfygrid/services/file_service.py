@@ -119,9 +119,16 @@ def _make_model_info(root: str, filename: str, dir_name: str, sub_dir: str, mode
     if dir_name != "models":
         return model_info
 
-    preview = name_without_ext + ".preview.png"
-    if Path(root, preview).exists():
-        model_info["preview"] = Path(rel_dir, preview).as_posix()
+    preview_extensions = [".png", ".jpg", ".webp", ".mp4", ".webm"]
+
+    for ext in preview_extensions:
+        for suffix in [".preview", ""]:
+            candidate = name_without_ext + suffix + ext
+            if Path(root, candidate).exists():
+                model_info["preview"] = Path(rel_dir, candidate).as_posix()
+                break
+        if "preview" in model_info:
+            break
 
     description_path = Path(root, name_without_ext + ".description.txt")
     model_info["description"] = None
@@ -214,7 +221,10 @@ def resolve_output_path(output_directory: str, file_path: str) -> Path | None:
     return temp_path if temp_path.is_file() else None
 
 
-def get_model_thumbnail(comfyui_path: str, path: str) -> tuple[bytes | None, str | None]:
+VIDEO_EXTENSIONS = {".mp4", ".webm", ".m4v", ".ogv", ".mov"}
+
+
+def get_model_thumbnail(comfyui_path: str, path: str) -> tuple[bytes | None, str | None, str]:
     thumbnail_filepath = Path(comfyui_path, "models", path)
 
     if not thumbnail_filepath.exists():
@@ -229,13 +239,23 @@ def get_model_thumbnail(comfyui_path: str, path: str) -> tuple[bytes | None, str
                 thumbnail_filepath = alt2
 
     if not thumbnail_filepath.exists():
-        return None, "File not found"
+        return None, "File not found", "image/webp"
+
+    ext = thumbnail_filepath.suffix.lower()
+    if ext in VIDEO_EXTENSIONS:
+        try:
+            file_bytes = thumbnail_filepath.read_bytes()
+            media_type = f"video/{ext[1:]}" if ext != ".ogv" else "video/ogg"
+            return file_bytes, None, media_type
+        except Exception as e:
+            logger.error("Failed to read video thumbnail: %s: %s", thumbnail_filepath, e)
+            return None, "Failed to read video", "video/mp4"
 
     cache_key = str(thumbnail_filepath.resolve())
 
     cached = load_thumbnail(cache_key)
     if cached is not None:
-        return cached, None
+        return cached, None, "image/webp"
 
     try:
         file_bytes = thumbnail_filepath.read_bytes()
@@ -243,11 +263,11 @@ def get_model_thumbnail(comfyui_path: str, path: str) -> tuple[bytes | None, str
         img = cv2.imdecode(data, cv2.IMREAD_UNCHANGED)
     except Exception as e:
         logger.error("Failed to read image: %s: %s", thumbnail_filepath, e)
-        return None, "Failed to read image"
+        return None, "Failed to read image", "image/webp"
 
     if img is None:
         logger.error("Failed to read image: %s", thumbnail_filepath)
-        return None, "Failed to read image"
+        return None, "Failed to read image", "image/webp"
 
     resized = resize_with_crop(img, 210, 280)
 
@@ -264,7 +284,7 @@ def get_model_thumbnail(comfyui_path: str, path: str) -> tuple[bytes | None, str
     buffer = output.getvalue()
 
     cache_thumbnail(cache_key, buffer)
-    return buffer, None
+    return buffer, None, "image/webp"
 
 
 def process_image_for_paint(image_bytes: bytes) -> dict:

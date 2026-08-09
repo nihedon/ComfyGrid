@@ -203,11 +203,11 @@ def get_output_file(file_path: str, comfy_service: ComfyUIService = Depends(get_
 
 @router.get("/thumbnail={path:path}")
 def get_thumbnail(path: str, comfy_service: ComfyUIService = Depends(get_comfy_service)):
-    result, error = file_service.get_model_thumbnail(comfy_service.comfyui_path, path)
+    result, error, media_type = file_service.get_model_thumbnail(comfy_service.comfyui_path, path)
     if error is not None:
         status_code = 404 if error == "File not found" else 500
         return JSONResponse({"error": error}, status_code=status_code)
-    return Response(content=result, media_type="image/webp")
+    return Response(content=result, media_type=media_type)
 
 
 @router.post("/apply_mask")

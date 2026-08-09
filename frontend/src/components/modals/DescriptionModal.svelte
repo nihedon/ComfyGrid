@@ -177,7 +177,8 @@
       if (tempPreviewUrl) {
         const parts = model.full_path.split(/[/\\]/);
         parts.shift();
-        model.preview = parts.join('/').replace(model.extension, '.preview.png');
+        const ext = isVideoFile(tempPreviewUrl) ? '.preview.mp4' : '.preview.png';
+        model.preview = parts.join('/').replace(model.extension, ext);
       }
       model.description = tempDescription;
       model.url = tempUrl;
@@ -200,6 +201,11 @@
     if (url) {
       tempPreviewUrl = url;
     }
+  }
+  function isVideoFile(url?: string): boolean {
+    if (!url) return false;
+    const cleanUrl = url.split('?')[0].toLowerCase();
+    return ['.mp4', '.webm', '.m4v', '.ogv', '.mov'].some((ext) => cleanUrl.endsWith(ext));
   }
 </script>
 
@@ -320,17 +326,36 @@
             <div class="d-flex flex-column gap-2" style="width: 300px; min-width: 300px;">
               <div style="height: 400px;">
                 {#if model.preview || tempPreviewUrl}
-                  <!-- svelte-ignore a11y_click_events_have_key_events -->
-                  <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-                  <img
-                    src={tempPreviewUrl ||
-                      `/comfygrid/api/thumbnail=${model.preview}?t=${model.modified}`}
-                    class="img-fluid rounded border h-100 object-fit-cover w-100"
-                    style="min-width: 300px; cursor: pointer;"
-                    alt="Preview"
-                    title="Click to set image URL"
-                    onclick={inputImageUrl}
-                  />
+                  {@const currentUrl =
+                    tempPreviewUrl ||
+                    `/comfygrid/api/thumbnail=${model.preview}?t=${model.modified}`}
+                  {@const isVideo = isVideoFile(tempPreviewUrl || model.preview)}
+                  {#if isVideo}
+                    <video
+                      src={currentUrl}
+                      class="img-fluid rounded border h-100 object-fit-cover w-100"
+                      style="min-width: 300px; cursor: pointer;"
+                      loop
+                      muted
+                      controls
+                      playsinline
+                      title="Click to set image/video URL"
+                      onclick={inputImageUrl}
+                    >
+                      <track kind="captions" />
+                    </video>
+                  {:else}
+                    <!-- svelte-ignore a11y_click_events_have_key_events -->
+                    <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+                    <img
+                      src={currentUrl}
+                      class="img-fluid rounded border h-100 object-fit-cover w-100"
+                      style="min-width: 300px; cursor: pointer;"
+                      alt="Preview"
+                      title="Click to set image URL"
+                      onclick={inputImageUrl}
+                    />
+                  {/if}
                 {:else}
                   <!-- svelte-ignore a11y_click_events_have_key_events -->
                   <!-- svelte-ignore a11y_no_static_element_interactions -->
