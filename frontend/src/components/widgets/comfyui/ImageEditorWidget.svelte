@@ -61,6 +61,14 @@
       },
     };
   }
+  let imageDimension = $state<{ width: number; height: number } | null>(null);
+
+  function handleImageLoad(e: Event) {
+    const img = e.currentTarget as HTMLImageElement;
+    if (img.naturalWidth && img.naturalHeight) {
+      imageDimension = { width: img.naturalWidth, height: img.naturalHeight };
+    }
+  }
 </script>
 
 <div
@@ -73,7 +81,7 @@
     class="d-flex flex-grow-1 h-100 position-relative justify-content-center border rounded p-1 checkerboard"
     style="background-color: #f8f9fa; min-height: 0;"
   >
-    <div class="vstack position-absolute gap-1 top-0 end-0 me-1 mt-1">
+    <div class="vstack position-absolute gap-1 top-0 end-0 me-1 mt-1 z-1">
       <!-- svelte-ignore a11y_consider_explicit_label -->
       <button
         class="btn btn-primary btn-sm"
@@ -84,6 +92,16 @@
         <i class="pi pi-pencil"></i>
       </button>
     </div>
+
+    {#if imageDimension}
+      <span
+        class="position-absolute bottom-0 start-0 m-1 px-1 py-0.5 bg-dark bg-opacity-75 text-white rounded font-monospace small user-select-none z-1"
+        style="font-size: 0.75rem;"
+      >
+        {imageDimension.width} × {imageDimension.height}
+      </span>
+    {/if}
+
     <!-- svelte-ignore a11y_click_events_have_key_events -->
     <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
     <img
@@ -93,6 +111,7 @@
       style:max-height={options.isFloating ? '' : '256px'}
       style:min-height={options.isFloating ? '' : '256px'}
       style:cursor="zoom-in"
+      onload={handleImageLoad}
       onclick={() => (isFullscreen = true)}
       ondragover={handleDragOver}
       ondragleave={handleDragLeave}
