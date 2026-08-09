@@ -38,14 +38,15 @@
   const workspaceState = appState.workspaceState;
 
   const showNsfw = $derived(appState.optionState.get('ComfyGrid.ui.show_nsfw'));
+  const strValue = $derived(typeof widget.value === 'number' ? String(widget.value) : widget.value);
 
   const isValid = $derived.by(() => {
     if (isValidOverride !== undefined) return isValidOverride;
     return (
-      new Set(select).has(widget.value) ||
-      widget.value.toLocaleLowerCase() === 'none' ||
-      widget.value.indexOf('Select ') === 0 ||
-      new Set(widget.options?.fixed_values ?? []).has(widget.value)
+      new Set(select).has(strValue) ||
+      strValue.toLocaleLowerCase() === 'none' ||
+      strValue.indexOf('Select ') === 0 ||
+      new Set(widget.options?.fixed_values ?? []).has(strValue)
     );
   });
 
