@@ -113,11 +113,13 @@ async def launch_comfyui(request: Request, body: LaunchRequest, comfy_service: C
         if not body.connect_port:
             return JSONResponse({"error": "connect_port is required for connect mode"}, status_code=400)
 
-        setup_service.save_connect_port(body.connect_port)
-        comfy_service.apply_connect_config(body.connect_port)
+        connect_host = body.connect_host or "127.0.0.1"
+        setup_service.save_connect_port(body.connect_port, connect_host)
+        comfy_service.apply_connect_config(body.connect_port, connect_host)
 
         async def background_connect():
-            await restart_caddy_if_needed(body.connect_port)
+            await asyncio.sleep(0.5)
+            await asyncio.to_thread(setup_service.start_caddy_proxy)
             asyncio.create_task(
                 asyncio.to_thread(callbacks.call_callbacks, "on_app_started", request.app)
             )

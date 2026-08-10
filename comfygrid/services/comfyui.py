@@ -52,6 +52,7 @@ class ComfyUIService:
     comfyui_path: str = ""
     python_path: str = ""
     comfyui_port: int = DEFAULT_COMFYUI_PORT
+    connect_host: str = "127.0.0.1"
     connect_port: int = DEFAULT_COMFYUI_PORT
     comfyui_args: str = ""
     output_directory: str = ""
@@ -92,6 +93,7 @@ class ComfyUIService:
         workspaces: list[dict] = config.get("workspace", [])
         last_workspace_name: str = config.get("last_workspace", "")
         saved_connect_port: int = config.get("connect_port", DEFAULT_COMFYUI_PORT)
+        saved_connect_host: str = config.get("connect_host", "127.0.0.1")
 
         active_workspace = next(
             (w for w in workspaces if w.get("name") == last_workspace_name),
@@ -103,6 +105,7 @@ class ComfyUIService:
             self.python_path = active_workspace.get("python_path", "")
             self.comfyui_port = active_workspace.get("comfyui_port", DEFAULT_COMFYUI_PORT)
             self.comfyui_args = active_workspace.get("comfyui_args", "")
+            self.connect_host = saved_connect_host
             self.connect_port = saved_connect_port
 
     def apply_launch_config(self, workspace: WorkspaceInfo):
@@ -112,8 +115,9 @@ class ComfyUIService:
         self.comfyui_port = workspace.comfyui_port
         self.comfyui_args = workspace.comfyui_args
 
-    def apply_connect_config(self, connect_port: int):
+    def apply_connect_config(self, connect_port: int, connect_host: str = "127.0.0.1"):
         self.mode = "connect"
+        self.connect_host = connect_host or "127.0.0.1"
         self.connect_port = connect_port
 
     def install_grid_extension(self):
@@ -229,7 +233,8 @@ class ComfyUIService:
             raise
 
     async def _connect_to_existing(self):
-        target_url = f"http://127.0.0.1:{self.connect_port}"
+        host = self.connect_host or "127.0.0.1"
+        target_url = f"http://{host}:{self.connect_port}"
         if not target_url:
             logging.error("[ComfyUIService] mode is 'connect' but no url configured")
             return

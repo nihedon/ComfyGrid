@@ -14,4 +14,5 @@ class WorkspaceInfo(BaseModel):
 class LaunchRequest(BaseModel):
     mode: Literal["launch", "connect"]
     workspace: WorkspaceInfo | None = None
+    connect_host: str | None = "127.0.0.1"
     connect_port: int | None = None
