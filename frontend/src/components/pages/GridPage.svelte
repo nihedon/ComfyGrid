@@ -4,8 +4,8 @@
   import { appState } from '@/states/app-state.svelte';
   import { ComfyGridGroup } from '@/states/model-state.svelte';
   import { COMFY_NODE_MODE } from '@/types/model-shared';
-  import Tab from '../common/InnerTab.svelte';
-  import TabContainer from '../common/InnerTabContainer.svelte';
+  import InnerTab from '../common/InnerTab.svelte';
+  import InnerTabContainer from '../common/InnerTabContainer.svelte';
   import Gallery from '../sections/Gallery.svelte';
   import GridStackBoard from '../sections/GridStackBoard.svelte';
   import SplitPane from '../sections/SplitPane.svelte';
@@ -107,9 +107,9 @@
               </div>
             </div>
             <ul class="nav nav-tabs sticky-top" style="background-color: var(--bs-body-bg);">
-              <Tab id="nodes" text="Nodes" bind:activeTabId />
+              <InnerTab id="nodes" text="Nodes" bind:activeTabId />
               {#each sortedGroups.filter((g) => g.isTabify) as group (group.id)}
-                <Tab
+                <InnerTab
                   id={group.id}
                   classNames={tabClass(group)}
                   text={group.title}
@@ -118,14 +118,14 @@
               {/each}
             </ul>
             <div class="py-2" bind:this={tabContainer}>
-              <TabContainer tabId="nodes" {activeTabId}>
+              <InnerTabContainer tabId="nodes" {activeTabId}>
                 <WidgetsSection container={tabContainer} />
-              </TabContainer>
+              </InnerTabContainer>
               {#each workspaceState.groups as group (group.id)}
                 {#if group.isTabify}
-                  <TabContainer tabId={group.id} {activeTabId}>
+                  <InnerTabContainer tabId={group.id} {activeTabId}>
                     <WidgetsSection container={tabContainer} {group} />
-                  </TabContainer>
+                  </InnerTabContainer>
                 {/if}
               {/each}
             </div>

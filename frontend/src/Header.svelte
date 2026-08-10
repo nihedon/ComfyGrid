@@ -1,7 +1,7 @@
 <script lang="ts">
   import Page from '@/components/pages/PageTab.svelte';
   import ActionForm from '@/components/sections/ActionPanel.svelte';
-  import MenuForm from '@/components/sections/GlobalMenu.svelte';
+  import GlobalMenu from '@/components/sections/GlobalMenu.svelte';
   import ProgressBar from '@/components/sections/ProgressBar.svelte';
   import { fileManager } from '@/managers/file-manager';
   import { appState } from '@/states/app-state.svelte';
@@ -19,7 +19,7 @@
     <ProgressBar />
     <div class="d-flex align-items-center pt-2 gap-2">
       <div class="ps-2" style="z-index: 1030;">
-        <MenuForm />
+        <GlobalMenu />
       </div>
       <ul class="nav nav-tabs navbar-expand-lg flex-row flex-grow-1">
         <Page id="grid" text="Grid" title={workspaceState.layout?.graphId} />
