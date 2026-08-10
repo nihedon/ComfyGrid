@@ -29,11 +29,26 @@ async def get_setup_status(comfy_service: ComfyUIService = Depends(get_comfy_ser
     }
 
 
+@router.post("/stop")
+async def stop_comfyui(comfy_service: ComfyUIService = Depends(get_comfy_service)):
+    if comfy_service.proc or comfy_service.started:
+        logger.info("Stopping ComfyUI instance...")
+        comfy_service.exit()
+        comfy_service.proc = None
+        comfy_service.started = False
+        comfy_service.url = None
+    return {"message": "stopped"}
+
+
 @router.post("/launch")
 async def launch_comfyui(request: Request, body: LaunchRequest, comfy_service: ComfyUIService = Depends(get_comfy_service)):
 
-    if comfy_service.started:
-        return JSONResponse({"error": "ComfyUI is already running"}, status_code=409)
+    if comfy_service.started or comfy_service.proc:
+        logger.info("Stopping previous ComfyUI instance before launching new workspace...")
+        comfy_service.exit()
+        comfy_service.proc = None
+        comfy_service.started = False
+        comfy_service.url = None
 
     current_port = os.environ.get("COMFYUI_PORT")
 

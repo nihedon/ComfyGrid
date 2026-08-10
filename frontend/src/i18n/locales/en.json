@@ -58,6 +58,7 @@
     "tab.comfyui.restart": "Restart",
     "tab.comfyui.reload": "Reload",
     "menu.reload": "Reload from ComfyUI",
+    "menu.setup": "Open Setup Screen",
     "menu.update_request": "Request Model List Update",
     "menu.import": "Import Layout",
     "menu.export.workflow": "Export ComfyUI Workflow",

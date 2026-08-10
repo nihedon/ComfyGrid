@@ -72,6 +72,10 @@ class ComfyGridApiClient {
         return await fetchApiJson('/comfygrid/api/setup/status');
     }
 
+    async postSetupStop(): Promise<ApiResultJson<{ message: string }>> {
+        return await fetchApiJson('/comfygrid/api/setup/stop', { method: 'POST' });
+    }
+
     async getVersionInfo(): Promise<ApiResultJson<Version>> {
         return await fetchApiJson('/comfygrid/api/version_info');
     }

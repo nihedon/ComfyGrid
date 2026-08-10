@@ -187,7 +187,21 @@
     uiState.isDragging = false;
   }
 
+  async function handleOpenSetup() {
+    try {
+      await comfyGridApiClient.postSetupStop();
+    } catch (e) {
+      logger.error('Failed to stop ComfyUI setup:', e);
+    }
+    comfyUiState.started = false;
+    comfyUiState.graphReady = false;
+    initialized = false;
+    initializing = true;
+    launched = false;
+  }
+
   onMount(async () => {
+    window.addEventListener('comfygrid:open_setup', handleOpenSetup);
     launched = false;
     await checkSetupStatus();
     showScreen = true;
@@ -198,6 +212,7 @@
   });
 
   onDestroy(() => {
+    window.removeEventListener('comfygrid:open_setup', handleOpenSetup);
     document.documentElement.removeEventListener('dragenter', handleDragEnter);
     document.documentElement.removeEventListener('dragover', handleDragOver);
     document.documentElement.removeEventListener('dragleave', handleDragLeave);
