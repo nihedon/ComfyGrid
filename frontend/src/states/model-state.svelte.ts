@@ -4,17 +4,10 @@ import type { ComfyApp, ComfyGroup, ComfyNode, ComfyWidget } from '@/types/comfy
 import type { ComfyNodeMode, ImageInfo, WidgetContext } from '@/types/model-shared';
 import { appState } from './app-state.svelte';
 
-function safeParse<T>(obj: T): T {
-    const seen = new WeakSet();
-    return JSON.parse(
-        JSON.stringify(obj, (_key, value) => {
-            if (typeof value === 'object' && value !== null) {
-                if (seen.has(value)) return undefined;
-                seen.add(value);
-            }
-            return value;
-        }),
-    );
+function safeClone<T>(obj: T): T {
+    if (obj == null || typeof obj !== 'object') return obj;
+    if (Array.isArray(obj)) return [...obj] as unknown as T;
+    return { ...obj };
 }
 
 function isNodeInGroup(node: ComfyNode, group: ComfyGroup): boolean {
@@ -225,7 +218,7 @@ export class ComfyGridNode<P = undefined> {
             this.#groups.push(new ComfyGridGroup(group));
         }
 
-        this.#properties = (typeof comfyNode.properties === 'object' ? safeParse(comfyNode.properties) : comfyNode.properties) as P;
+        this.#properties = (typeof comfyNode.properties === 'object' ? safeClone(comfyNode.properties) : comfyNode.properties) as P;
     }
 
     static #buildWidgetConfigList(
@@ -629,14 +622,14 @@ export class ComfyGridWidget<V = string, O = undefined> {
         this.#name = this.#comfyWidget.name;
         this.#tooltip = this.#comfyNode.constructor.nodeData?.inputs?.[this.#comfyWidget.name]?.tooltip ?? null;
         this.#type = overrides?.type ?? this.#comfyWidget.type;
-        this.#value = (typeof this.#comfyWidget.value === 'object' ? safeParse(this.#comfyWidget.value) : this.#comfyWidget.value) as V;
+        this.#value = (typeof this.#comfyWidget.value === 'object' ? safeClone(this.#comfyWidget.value) : this.#comfyWidget.value) as V;
         this.#rawValue = this.#comfyNode.properties.rawValues?.[this.#index] ?? this.#value;
         this.#image = image ? { filename: '', subfolder: '', type: '', ...image } : { filename: '', subfolder: '', type: '' };
         this.#element = this.#comfyWidget.inputEl || this.#comfyWidget.element || null;
         this.#readonly = this.#comfyWidget.inputEl?.readOnly || this.#comfyWidget.element?.readOnly || false;
         this.#input = input;
 
-        const options = safeParse(this.#comfyWidget.options) as Record<string, unknown>;
+        const options = safeClone(this.#comfyWidget.options) as Record<string, unknown>;
         if (this.#comfyWidget.type === 'combo') {
             options['values'] = [
                 ...((typeof this.#comfyWidget.options?.values === 'function' ? this.#comfyWidget.options.values() : this.#comfyWidget.options?.values) ?? []),

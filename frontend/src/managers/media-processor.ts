@@ -1,5 +1,4 @@
 import { SvelteDate } from 'svelte/reactivity';
-import { comfyGridApiClient } from '@/api/api-client';
 import { appState } from '@/states/app-state.svelte';
 import type { GeneratedAssets } from '@/states/gallery-state.svelte';
 import logger from '@/utils/logger';
@@ -106,20 +105,9 @@ class MediaProcessor {
     }
 
     async #makeVideoAssets(images: string[]): Promise<GeneratedAssets> {
-        let thumbnail = '';
-        try {
-            const res = await comfyGridApiClient.getVideoThumbnail(images[0], 120);
-            if (res.ok) {
-                thumbnail = await new Promise<string>((resolve) => {
-                    const reader = new FileReader();
-                    reader.onloadend = () => resolve(reader.result as string);
-                    reader.readAsDataURL(res.blob);
-                });
-            }
-        } catch (e) {
-            logger.error('Failed to generate video thumbnail', e);
-        }
-        return { videoSingle: images[0], isVideo: true, thumbnail };
+        const videoUrl = images[0];
+        const thumbnail = `/comfygrid/api/video_thumbnail?url=${encodeURIComponent(videoUrl)}&size=120`;
+        return { videoSingle: videoUrl, isVideo: true, thumbnail };
     }
 
     clearOtherPreviews(currentJobId: string) {

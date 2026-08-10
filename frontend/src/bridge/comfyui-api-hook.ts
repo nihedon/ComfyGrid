@@ -63,11 +63,7 @@ export class ComfyUiApiHook {
         if (orgSetDirtyCanvas) {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             anyGraph.setDirtyCanvas = function (...args: any[]) {
-                const orgRet = orgSetDirtyCanvas.apply(this, args);
-                for (const node of (this as ComfyGraph).nodes) {
-                    ComfyUiApiHook.#handleUpdateNodeDebounce(String(node.id));
-                }
-                return orgRet;
+                return orgSetDirtyCanvas.apply(this, args);
             };
         }
         anyGraph.setDirtyCanvas.__comfygrid__is_hooked__ = true;

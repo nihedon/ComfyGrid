@@ -2,10 +2,10 @@
   import { onMount } from 'svelte';
   import { GridStack } from 'gridstack';
   import {
+    applyFloatingPositions,
     gs,
     syncAndSaveLayout,
     updateAttribute,
-    updateBoardFloatingState,
   } from '@/services/gridstack-service';
   import { appState } from '@/states/app-state.svelte';
   import { ComfyGridGroup, ComfyGridNode } from '@/states/model-state.svelte';
@@ -124,10 +124,15 @@
     };
   });
 
+  let prevNodeIdsKey = '';
   $effect(() => {
-    if (nodesInBoard.length > 0) {
-      logger.log(`Nodes in board "${gridKey}" changed, syncing GridStack...`);
-      updateBoardFloatingState();
+    const currentNodeIdsKey = nodesInBoard.map((n) => n.node.id).join(',');
+    if (currentNodeIdsKey !== prevNodeIdsKey) {
+      prevNodeIdsKey = currentNodeIdsKey;
+      if (nodesInBoard.length > 0) {
+        logger.log(`Nodes layout in board "${gridKey}" changed`);
+        applyFloatingPositions(boardId);
+      }
     }
   });
 </script>

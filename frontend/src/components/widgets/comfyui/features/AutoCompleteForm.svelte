@@ -42,11 +42,12 @@
 
   const isValid = $derived.by(() => {
     if (isValidOverride !== undefined) return isValidOverride;
+    const fixedValues = widget.options?.fixed_values ?? [];
     return (
-      new Set(select).has(strValue) ||
+      select.includes(strValue) ||
       strValue.toLocaleLowerCase() === 'none' ||
       strValue.indexOf('Select ') === 0 ||
-      new Set(widget.options?.fixed_values ?? []).has(strValue)
+      fixedValues.includes(strValue)
     );
   });
 
