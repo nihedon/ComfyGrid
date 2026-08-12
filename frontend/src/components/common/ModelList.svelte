@@ -168,9 +168,21 @@
 
   const PAGE_SIZE = 100;
   let currentPage = $state(0);
+  let listContainer = $state<HTMLElement>();
+
+  function scrollToTop() {
+    if (listContainer) {
+      listContainer.scrollTop = 0;
+    }
+  }
+
+  function goToPage(page: number) {
+    currentPage = Math.max(0, Math.min(page, totalPages - 1));
+    scrollToTop();
+  }
 
   $effect(() => {
-    // Reset page when filter/folder/sort changes
+    // Reset page and scroll to top when filter/folder/sort changes
     void filterText;
     void selectedFolder;
     void sortMethod;
@@ -178,6 +190,7 @@
     void showNsfw;
     void favoriteOnly;
     currentPage = 0;
+    scrollToTop();
   });
 
   $effect(() => {
@@ -215,12 +228,14 @@
     });
   });
 
+  let hasInitializedFocus = false;
   $effect(() => {
-    // Jump to the page containing the selected model when the list changes
-    if (!focusSelectedModel || !modalState.selectedModelPath) return;
+    // Jump to the page containing the selected model ONLY once on initial modal open
+    if (!focusSelectedModel || !modalState.selectedModelPath || hasInitializedFocus) return;
     const index = filteredModelList.findIndex((m) => m.path === modalState.selectedModelPath);
     if (index >= 0) {
       currentPage = Math.floor(index / PAGE_SIZE);
+      hasInitializedFocus = true;
     }
   });
 
@@ -229,14 +244,30 @@
     filteredModelList.slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE),
   );
 
+  const visiblePageNumbers = $derived.by(() => {
+    const pages: number[] = [];
+    const maxVisible = 5;
+    let start = Math.max(0, currentPage - 2);
+    let end = Math.min(totalPages - 1, start + maxVisible - 1);
+    if (end - start + 1 < maxVisible) {
+      start = Math.max(0, end - maxVisible + 1);
+    }
+    for (let i = start; i <= end; i++) {
+      pages.push(i);
+    }
+    return pages;
+  });
+
   function toggleSortOrder() {
     optionState.set(`ComfyGrid.ui.${dir}_sort_asc`, !sortAsc);
     saveOptsWithCallback();
+    goToPage(0);
   }
 
   function changeSortType(value: SortType) {
     optionState.set(`ComfyGrid.ui.${dir}_sort`, value);
     saveOptsWithCallback();
+    goToPage(0);
   }
 
   let isReloading = $state(false);
@@ -453,7 +484,10 @@
   {/if}
 
   <div class="flex-grow-1 overflow-hidden d-flex flex-column">
-    <div class="d-flex flex-wrap align-content-start p-2 gap-2 overflow-auto h-100">
+    <div
+      class="d-flex flex-wrap align-content-start p-2 gap-2 overflow-auto h-100"
+      bind:this={listContainer}
+    >
       {#each pagedModelList as model (model.full_path + '?' + modelThumbWidth)}
         <div
           class="card rounded-2 position-relative overflow-hidden shadow-sm"
@@ -490,32 +524,55 @@
     </div>
     {#if totalPages > 1}
       <nav aria-label="Model list pagination">
-        <ul class="pagination justify-content-center mb-0 py-2">
+        <ul class="pagination pagination-sm justify-content-center align-items-center mb-0 py-2">
           <li class="page-item" class:disabled={currentPage === 0}>
-            <button class="page-link" onclick={() => (currentPage = 0)} aria-label="First"
-              ><i class="pi pi-angle-double-left"></i></button
-            >
+            <button class="page-link" onclick={() => goToPage(0)} aria-label="First">
+              <i class="pi pi-angle-double-left"></i>
+            </button>
           </li>
           <li class="page-item" class:disabled={currentPage === 0}>
-            <button class="page-link" onclick={() => currentPage--} aria-label="Previous"
-              ><i class="pi pi-angle-left"></i></button
-            >
+            <button class="page-link" onclick={() => goToPage(currentPage - 1)} aria-label="Previous">
+              <i class="pi pi-angle-left"></i>
+            </button>
           </li>
-          <li class="page-item disabled">
-            <span class="page-link"
-              >{currentPage + 1} / {totalPages} ({filteredModelList.length})</span
-            >
+
+          {#if visiblePageNumbers[0] > 0}
+            <li class="page-item">
+              <button class="page-link" onclick={() => goToPage(0)}>1</button>
+            </li>
+            {#if visiblePageNumbers[0] > 1}
+              <li class="page-item disabled"><span class="page-link">...</span></li>
+            {/if}
+          {/if}
+
+          {#each visiblePageNumbers as pageNum (pageNum)}
+            <li class="page-item" class:active={pageNum === currentPage}>
+              <button class="page-link" onclick={() => goToPage(pageNum)}>{pageNum + 1}</button>
+            </li>
+          {/each}
+
+          {#if visiblePageNumbers.at(-1)! < totalPages - 1}
+            {#if visiblePageNumbers.at(-1)! < totalPages - 2}
+              <li class="page-item disabled"><span class="page-link">...</span></li>
+            {/if}
+            <li class="page-item">
+              <button class="page-link" onclick={() => goToPage(totalPages - 1)}>{totalPages}</button>
+            </li>
+          {/if}
+
+          <li class="page-item" class:disabled={currentPage >= totalPages - 1}>
+            <button class="page-link" onclick={() => goToPage(currentPage + 1)} aria-label="Next">
+              <i class="pi pi-angle-right"></i>
+            </button>
           </li>
           <li class="page-item" class:disabled={currentPage >= totalPages - 1}>
-            <button class="page-link" onclick={() => currentPage++} aria-label="Next"
-              ><i class="pi pi-angle-right"></i></button
-            >
+            <button class="page-link" onclick={() => goToPage(totalPages - 1)} aria-label="Last">
+              <i class="pi pi-angle-double-right"></i>
+            </button>
           </li>
-          <li class="page-item" class:disabled={currentPage >= totalPages - 1}>
-            <button
-              class="page-link"
-              onclick={() => (currentPage = totalPages - 1)}
-              aria-label="Last"><i class="pi pi-angle-double-right"></i></button
+          <li class="page-item disabled ms-2">
+            <span class="page-link text-muted border-0 bg-transparent"
+              >({filteredModelList.length})</span
             >
           </li>
         </ul>
