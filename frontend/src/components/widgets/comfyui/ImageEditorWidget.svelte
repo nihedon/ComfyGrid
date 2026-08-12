@@ -1,7 +1,9 @@
 <script lang="ts">
+  import { comfyUiApiClient } from '@/api/api-client';
   import { refreshModels } from '@/services/models-service';
   import { appState } from '@/states/app-state.svelte';
   import type { ComfyGridWidget } from '@/states/model-state.svelte';
+  import logger from '@/utils/logger';
 
   type UploadWidget = ComfyGridWidget<string>;
 
@@ -12,6 +14,7 @@
 
   let cacheBuster = $state(Math.random());
   let isFullscreen = $state(false);
+  let imageRetryCount = 0;
 
   const previewUrl = $derived.by(() => {
     if (!widget.image) return '';
@@ -42,14 +45,36 @@
     e.stopPropagation();
   }
 
-  function handleDrop(e: DragEvent) {
+  async function handleDrop(e: DragEvent) {
     uiState.isDragging = false;
     e.preventDefault();
     e.stopPropagation();
 
     const files = e.dataTransfer?.files;
     if (files && files.length > 0) {
-      widget.callback(files);
+      const file = files[0];
+      imageRetryCount = 0;
+
+      const res = await comfyUiApiClient.uploadImage(file);
+      const filename = res.ok && res.json?.name ? res.json.name : file.name;
+      const subfolder = res.ok && res.json?.subfolder != null ? res.json.subfolder : '';
+      const type = res.ok && res.json?.type != null ? res.json.type : 'input';
+
+      try {
+        widget.callback(files);
+      } catch (err) {
+        logger.debug('Widget callback error ignored', err);
+      }
+
+      widget.image = {
+        filename,
+        subfolder,
+        type,
+      };
+      cacheBuster = Math.random();
+      widget.updateComfyUiSelect({ value: filename, addOptions: [filename] });
+      widget.node.drawBackground();
+      await refreshModels('images');
     }
   }
 
@@ -64,9 +89,19 @@
   let imageDimension = $state<{ width: number; height: number } | null>(null);
 
   function handleImageLoad(e: Event) {
+    imageRetryCount = 0;
     const img = e.currentTarget as HTMLImageElement;
     if (img.naturalWidth && img.naturalHeight) {
       imageDimension = { width: img.naturalWidth, height: img.naturalHeight };
+    }
+  }
+
+  function handleImageError() {
+    if (imageRetryCount < 5) {
+      imageRetryCount++;
+      setTimeout(() => {
+        cacheBuster = Math.random();
+      }, 300);
     }
   }
 </script>
@@ -112,6 +147,7 @@
       style:min-height={options.isFloating ? '' : '256px'}
       style:cursor="zoom-in"
       onload={handleImageLoad}
+      onerror={handleImageError}
       onclick={() => (isFullscreen = true)}
       ondragover={handleDragOver}
       ondragleave={handleDragLeave}

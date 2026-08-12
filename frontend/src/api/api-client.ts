@@ -340,6 +340,17 @@ class ComfyUiApiClient {
             body: JSON.stringify({ ...payload, free_memory: true }),
         });
     }
+
+    async uploadImage(file: File, overwrite: boolean = true): Promise<ApiResultJson<{ name: string; subfolder: string; type: string }>> {
+        const formData = new FormData();
+        formData.append('image', file);
+        formData.append('overwrite', overwrite ? 'true' : 'false');
+        formData.append('type', 'input');
+        return await fetchApiJson<{ name: string; subfolder: string; type: string }>('/upload/image', {
+            method: 'POST',
+            body: formData,
+        });
+    }
 }
 
 export const comfyGridApiClient = new ComfyGridApiClient();
