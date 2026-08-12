@@ -16,30 +16,29 @@
   let { widget }: { widget: ComboWidget } = $props();
 
   const modelDirInfo = $derived.by(() => {
-    if (widget.name.includes('unet_name') || widget.name.includes('ckpt_name')) {
+    const name = widget.name.toLowerCase();
+    if (name.includes('unet_name') || name.includes('ckpt_name')) {
       return { dir: 'models', subdirs: ['checkpoints', 'diffusion_models'] };
-    } else if (widget.name.includes('vae_name')) {
+    } else if (name.includes('vae_name')) {
       return { dir: 'models', subdirs: ['vae'] };
-    } else if (widget.name.includes('clip_name')) {
+    } else if (name.includes('clip_name')) {
       if (widget.node.type.toLowerCase().indexOf('clipvision') >= 0) {
         return { dir: 'models', subdirs: ['clip_vision'] };
       } else {
         return { dir: 'models', subdirs: ['clip', 'text_encoders'] };
       }
-    } else if (widget.name.includes('hypernetwork_name')) {
+    } else if (name.includes('hypernetwork_name')) {
       return { dir: 'models', subdirs: ['hypernetworks'] };
-    } else if (widget.name.startsWith('lora_')) {
+    } else if (name.startsWith('lora_') || name.includes('lora_name')) {
       return { dir: 'models', subdirs: ['loras'] };
-    } else if (widget.name.includes('control_net_name')) {
+    } else if (name.includes('control_net_name') || name.includes('controlnet')) {
       return { dir: 'models', subdirs: ['controlnet'] };
-    } else if (widget.name.includes('yolo_model')) {
+    } else if (name.includes('yolo_model') || name.includes('vitpose_model')) {
       return { dir: 'models', subdirs: ['detection'] };
-    } else if (widget.name.includes('vitpose_model')) {
-      return { dir: 'models', subdirs: ['detection'] };
-    } else if (widget.name === 'image') {
-      return { dir: 'images', subdirs: [] };
-    } else if (widget.name === 'video') {
+    } else if (name.includes('video') || name.includes('movie') || name.includes('anim')) {
       return { dir: 'videos', subdirs: [] };
+    } else if (name.includes('image') || name === 'file') {
+      return { dir: 'images', subdirs: [] };
     }
     return null;
   }) as { dir: ModelTypes; subdirs: string[] } | null;
