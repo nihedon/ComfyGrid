@@ -31,10 +31,18 @@
   let currentFileName = $state<string | null>(null);
   let currentWorkflowJson = $state<{ [key: string]: unknown } | null>(null);
 
+  const isVideo = $derived.by(() => {
+    if (!currentFileName) return false;
+    const VIDEO_EXTENSIONS = ['.webm', '.m4v', '.mp4', '.mkv', '.gif'];
+    return VIDEO_EXTENSIONS.some((ext) => currentFileName!.endsWith(ext));
+  });
+
   async function handleDrop(event: DragEvent) {
     event.preventDefault();
     const file = event.dataTransfer!.files[0];
-    openFile(file);
+    if (file) {
+      openFile(file);
+    }
   }
 
   async function openFile(file: File, extraMetadata?: Record<string, string> | null) {
@@ -219,7 +227,7 @@
   <div class="d-flex h-100 w-100">
     <input
       type="file"
-      accept="image/*"
+      accept="image/*,video/*"
       style:display="none"
       bind:this={imageFileInput}
       onchange={handleImageSelected}
@@ -239,17 +247,28 @@
         }}
       >
         {#if imageSrc}
-          <img
-            class="h-100 w-100 overflow-hidden object-fit-contain"
-            src={imageSrc}
-            alt={imageSrc}
-          />
+          {#if isVideo}
+            <video
+              class="h-100 w-100 overflow-hidden object-fit-contain"
+              src={imageSrc}
+              controls
+              loop
+              autoplay
+              muted
+            ></video>
+          {:else}
+            <img
+              class="h-100 w-100 overflow-hidden object-fit-contain"
+              src={imageSrc}
+              alt={imageSrc}
+            />
+          {/if}
         {:else}
           <div
             class="vstack h-100 w-100 align-items-center justify-content-center p-2 rounded-3 border border-2 border-secondary-subtle fw-bold text-body-tertiary"
           >
             <span class="fs-1" aria-label="Image placeholder"><i class="pi pi-image"></i></span>
-            <span class="fs-2">Drag and drop an image here</span>
+            <span class="fs-2">Drag and drop an image or video here</span>
           </div>
         {/if}
       </div>
