@@ -655,13 +655,18 @@
           justify-content: center;
           align-items: center;
           height: 100%;
-          :global(> *) {
+          width: 100%;
+
+          :global(.image-compare) {
+            max-width: 100%;
+            max-height: 100%;
             height: 100%;
+            width: auto;
           }
         }
 
-        img,
-        video {
+        > img,
+        > video {
           max-width: 100% !important;
           max-height: 100% !important;
           width: auto;
