@@ -246,6 +246,16 @@
       },
     };
   }
+
+  function cleanVideo(node: HTMLVideoElement) {
+    return {
+      destroy() {
+        node.pause();
+        node.removeAttribute('src');
+        node.load();
+      },
+    };
+  }
 </script>
 
 <svelte:window onkeydown={handleKeydown} />
@@ -310,6 +320,7 @@
               {@const genAssets = galleryState.currentGalleryNode.assets}
               {#if genAssets.isVideo && genAssets.videoSingle}
                 <video
+                  use:cleanVideo
                   src={genAssets.videoSingle}
                   class="generated object-fit-contain"
                   controls

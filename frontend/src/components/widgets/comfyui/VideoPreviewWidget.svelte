@@ -35,6 +35,15 @@
       widget.callback(files);
     }
   }
+  function cleanVideo(node: HTMLVideoElement) {
+    return {
+      destroy() {
+        node.pause();
+        node.removeAttribute('src');
+        node.load();
+      },
+    };
+  }
 </script>
 
 <div
@@ -44,6 +53,7 @@
   data-name={widget.name}
 >
   <video
+    use:cleanVideo
     style={options.isFloating
       ? 'height: 100%; width: 100%;'
       : 'max-width: 100%; max-height: 256px;'}

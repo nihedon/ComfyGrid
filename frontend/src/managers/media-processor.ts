@@ -8,7 +8,15 @@ import logger from '@/utils/logger';
  * Manages preview blob URL lifecycle via {@link JobState}.
  */
 class MediaProcessor {
+    #lastPreviewTime = 0;
+
     async onPreviewUpdated(payload: { blob: Blob; jobId?: string; nodeId?: string }) {
+        const now = Date.now();
+        if (now - this.#lastPreviewTime < 150) {
+            return;
+        }
+        this.#lastPreviewTime = now;
+
         const jobId = payload.jobId ?? appState.executionState.processingJobId;
         const nodeId = payload.nodeId ?? appState.executionState.executingNodeId;
         if (!jobId || !nodeId) {
