@@ -471,6 +471,7 @@ export class ComfyGridWidget<V = string, O = undefined> {
     #textarea: HTMLTextAreaElement | null = null;
     #isTranslating: boolean = $state(false);
     #translationFailed: boolean = $state(false);
+    #isDirty: boolean = $state(false);
     triggerTranslation?: (text?: string) => Promise<void>;
     #callback: (value?: unknown) => void;
 
@@ -548,6 +549,9 @@ export class ComfyGridWidget<V = string, O = undefined> {
     get translationFailed() {
         return this.#translationFailed;
     }
+    get isDirty() {
+        return this.#isDirty;
+    }
     get callback() {
         return this.#callback;
     }
@@ -602,6 +606,9 @@ export class ComfyGridWidget<V = string, O = undefined> {
     }
     set translationFailed(translationFailed: boolean) {
         this.#translationFailed = translationFailed;
+    }
+    set isDirty(isDirty: boolean) {
+        this.#isDirty = isDirty;
     }
     set callback(callback: (value?: unknown) => void) {
         this.#callback = callback;

@@ -27,7 +27,6 @@
   const isTranslate = $derived(layout.isTranslateWidget(widget.id));
   const isPromptGroup = $derived(isPrompt || isPositivePrompt || isNegativePrompt);
 
-  let lastTranslatedSourceText = $state<string>('');
   let activeTranslationText = '';
   let activeTranslationPromise: Promise<void> | null = null;
   let prevIsTranslate = $state<boolean>(false);
@@ -43,7 +42,7 @@
       return activeTranslationPromise;
     }
 
-    if (text === lastTranslatedSourceText && !widget.translationFailed) {
+    if (!widget.isDirty && !widget.translationFailed) {
       return;
     }
 
@@ -55,7 +54,7 @@
         if (currentReqId === translationRequestId) {
           widget.value = text;
           widget.updateComfyUiValue();
-          lastTranslatedSourceText = text;
+          widget.isDirty = false;
           widget.isTranslating = false;
           widget.translationFailed = false;
           translationManager.unregister(widget.id);
@@ -76,6 +75,7 @@
           widget.value = text;
           widget.isTranslating = false;
           widget.translationFailed = true;
+          widget.isDirty = true;
           translationManager.unregister(widget.id);
         }
         return;
@@ -90,14 +90,16 @@
         if (res.ok && res.json?.translated_text) {
           widget.value = res.json.translated_text;
           widget.updateComfyUiRawValue({ rawValue: text });
+          widget.isDirty = false;
         }
         widget.translationFailed = !res.ok;
-        if (res.ok) {
-          lastTranslatedSourceText = text;
+        if (!res.ok) {
+          widget.isDirty = true;
         }
       } catch {
         if (currentReqId === translationRequestId) {
           widget.translationFailed = true;
+          widget.isDirty = true;
         }
       } finally {
         if (currentReqId === translationRequestId) {
@@ -115,6 +117,7 @@
         activeTranslationText = '';
       }
     });
+    translationManager.trackPromise(activeTranslationPromise);
 
     return activeTranslationPromise;
   }
@@ -122,12 +125,7 @@
   function registerOrUnregisterPending() {
     const timing = appState.optionState.get('ComfyGrid.ollama.translate_timing') ?? 'on_generate';
     const text = widget.rawValue ?? '';
-    if (
-      isTranslate &&
-      timing !== 'manual' &&
-      text.trim() !== '' &&
-      text !== lastTranslatedSourceText
-    ) {
+    if (isTranslate && timing !== 'manual' && widget.isDirty && text.trim() !== '') {
       translationManager.register(widget.id, () => triggerTranslation(text));
     } else {
       translationManager.unregister(widget.id);
@@ -139,12 +137,14 @@
     const val = widget.value;
     const text = raw ?? val ?? '';
     if (text.trim()) {
+      widget.isDirty = true;
       triggerTranslation(text);
     }
   }
 
   function handleInput() {
     if (isTranslate) {
+      widget.isDirty = true;
       registerOrUnregisterPending();
     } else {
       widget.updateComfyUiValue();
@@ -154,7 +154,7 @@
   function handleBlur() {
     const timing = appState.optionState.get('ComfyGrid.ollama.translate_timing') ?? 'on_generate';
     const text = widget.rawValue ?? '';
-    if (isTranslate && timing === 'on_blur' && text !== lastTranslatedSourceText) {
+    if (isTranslate && timing === 'on_blur' && widget.isDirty) {
       triggerTranslation(text);
     }
   }
@@ -167,11 +167,12 @@
         if (widget.rawValue === undefined || widget.rawValue === null) {
           widget.rawValue = widget.value ?? '';
         }
+        widget.isDirty = true;
         registerOrUnregisterPending();
         const timing =
           appState.optionState.get('ComfyGrid.ollama.translate_timing') ?? 'on_generate';
         const text = widget.rawValue ?? '';
-        if (timing === 'on_blur' && text.trim() && text !== lastTranslatedSourceText) {
+        if (timing === 'on_blur' && text.trim()) {
           triggerTranslation(text);
         }
       } else {
@@ -193,11 +194,11 @@
     const config = currentOllamaConfig;
     if (prevOllamaConfig && config && config !== prevOllamaConfig) {
       prevOllamaConfig = config;
+      widget.isDirty = true;
       const text = widget.rawValue ?? '';
       if (isTranslate && text.trim()) {
-        const timing = appState.optionState.get('ComfyGrid.ollama.translate_timing') ?? 'on_blur';
+        const timing = appState.optionState.get('ComfyGrid.ollama.translate_timing') ?? 'on_generate';
         if (timing === 'on_generate') {
-          lastTranslatedSourceText = '';
           registerOrUnregisterPending();
         } else {
           triggerTranslation(text);
@@ -234,6 +235,7 @@
       const raw = widget.rawValue;
       const val = widget.value;
       const text = t ?? (raw && raw.trim() ? raw : val) ?? '';
+      widget.isDirty = true;
       return triggerTranslation(text);
     };
   });

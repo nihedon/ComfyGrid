@@ -20,7 +20,6 @@
   const isPositivePrompt = $derived(layout.positivePromptWidgetId === widget.id);
   const isNegativePrompt = $derived(layout.negativePromptWidgetId === widget.id);
   const isTranslate = $derived(layout.isTranslateWidget(widget.id));
-  const isTranslating = $derived(widget.isTranslating);
   const isManual = $derived(
     (optionState.get('ComfyGrid.ollama.translate_timing') ?? 'on_generate') === 'manual',
   );
@@ -121,12 +120,12 @@
       <i class="pi pi-cog"></i>
     </button>
   {/if}
-  {#if isTranslate && isTranslating}
+  {#if widget.isTranslating}
     <span class="badge text-bg-primary ms-2 fs-7">
       <i class="pi pi-spin pi-spinner me-1"></i>
       {$t('widget.translate.indicator')}
     </span>
-  {:else if isTranslate && isManual}
+  {:else if isTranslate && isManual && widget.isDirty}
     <button
       class="badge btn btn-primary ms-2 px-2"
       onclick={() => {

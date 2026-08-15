@@ -66,12 +66,12 @@ export class ComfyUiBridge {
      * @param batchCount - Number of batches to queue
      */
     async queuePrompt(batchCount: number): Promise<void> {
-        await translationManager.translateAllPending();
+        await translationManager.waitForAllTranslations();
         this.#app.queuePrompt(0, batchCount);
     }
 
     async nodeQueue(payload: { nodeId: string }): Promise<void> {
-        await translationManager.translateAllPending();
+        await translationManager.waitForAllTranslations();
         const { nodeId } = payload;
         await nodeQueueManager.queueOutputNodes(this.#app, nodeId);
     }
