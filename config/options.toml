@@ -91,5 +91,5 @@ default = "You are an AI artist."
 
 [ComfyGrid.ollama.translate_timing]
 type = "dropdown"
-choices = ["on_generate", "on_blur"]
+choices = ["on_generate", "on_blur", "manual"]
 default = "on_generate"

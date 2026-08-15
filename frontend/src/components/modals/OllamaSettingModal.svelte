@@ -209,7 +209,7 @@
           <textarea
             id="ollama-system"
             class="form-control"
-            rows="4"
+            rows="12"
             bind:value={system}
             placeholder="e.g. Translate the user input into English. Output ONLY the translated text."
           ></textarea>

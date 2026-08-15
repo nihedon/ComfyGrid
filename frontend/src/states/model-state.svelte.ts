@@ -471,6 +471,7 @@ export class ComfyGridWidget<V = string, O = undefined> {
     #textarea: HTMLTextAreaElement | null = null;
     #isTranslating: boolean = $state(false);
     #translationFailed: boolean = $state(false);
+    triggerTranslation?: (text?: string) => Promise<void>;
     #callback: (value?: unknown) => void;
 
     constructor(

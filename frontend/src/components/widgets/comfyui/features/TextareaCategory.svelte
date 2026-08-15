@@ -6,9 +6,11 @@
   import { appState } from '@/states/app-state.svelte';
   import type { ComfyGridWidget } from '@/states/model-state.svelte';
 
-  let { widget }: { widget: ComfyGridWidget } = $props();
+  let { widget, onManualTranslate }: { widget: ComfyGridWidget; onManualTranslate?: () => void } =
+    $props();
 
   const workspaceState = appState.workspaceState;
+  const optionState = appState.optionState;
 
   let textareaElement = $state<HTMLTextAreaElement>()!;
 
@@ -19,6 +21,9 @@
   const isNegativePrompt = $derived(layout.negativePromptWidgetId === widget.id);
   const isTranslate = $derived(layout.isTranslateWidget(widget.id));
   const isTranslating = $derived(widget.isTranslating);
+  const isManual = $derived(
+    (optionState.get('ComfyGrid.ollama.translate_timing') ?? 'on_generate') === 'manual',
+  );
 
   const textCategoryLabel = $derived.by(() => {
     if (isTranslate) {
@@ -121,6 +126,20 @@
       <i class="pi pi-spin pi-spinner me-1"></i>
       {$t('widget.translate.indicator')}
     </span>
+  {:else if isTranslate && isManual}
+    <button
+      class="badge btn btn-primary ms-2 px-2"
+      onclick={() => {
+        if (onManualTranslate) {
+          onManualTranslate();
+        } else if (widget.triggerTranslation) {
+          widget.triggerTranslation();
+        }
+      }}
+    >
+      <i class="pi pi-language me-1"></i>
+      {$t('widget.translate.manual_button')}
+    </button>
   {:else if isTranslate && widget.translationFailed}
     <span class="badge text-bg-danger ms-2 fs-7">
       <i class="pi pi-exclamation-triangle me-1"></i>
