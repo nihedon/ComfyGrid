@@ -26,6 +26,10 @@ type = "dropdown"
 choices = ["none", "all_top_groups", "tab_groups_only"]
 default = "all_top_groups"
 
+[ComfyGrid.ui.common_tab_board]
+type = "checkbox"
+default = true
+
 [ComfyGrid.ui.model_thumbnail_width]
 type = "slider"
 default = "160"

@@ -35,9 +35,13 @@
 
   type FlatNodeEntry = { group: ComfyGridGroup; node: ComfyGridNode };
 
+  const commonTabBoard = $derived(
+    (appState.optionState.get('ComfyGrid.ui.common_tab_board') as boolean) ?? false,
+  );
+
   const groups = $derived.by(() => {
     let filteredGroups: ReadonlyArray<ComfyGridGroup>;
-    if (boardId === 'Global') {
+    if (boardId === 'Global' || (boardId === 'Tab' && commonTabBoard)) {
       filteredGroups = workspaceState.groups;
     } else {
       const groups = workspaceState.groups.filter((g) => {
@@ -54,9 +58,8 @@
   ): FlatNodeEntry[] {
     const result: FlatNodeEntry[] = [];
     for (const group of groups) {
-      //if (!group) continue;
       if (isTopLevel) {
-        if (boardId !== 'Global') {
+        if (boardId !== 'Global' && !(boardId === 'Tab' && commonTabBoard)) {
           if (groupId !== undefined) {
             // Specific Tab board: only include the designated group
             if (group.id !== groupId) {
@@ -88,6 +91,8 @@
     };
   }
 
+  let gridInstance = $state<GridStack | null>(null);
+
   onMount(() => {
     logger.log(`gridstack init: board "${gridKey}"`);
     const grid = GridStack.init(
@@ -105,7 +110,9 @@
       },
       container,
     );
+    gridInstance = grid;
     workspaceState.setGridStackBoard(gridKey, grid);
+    applyFloatingPositions(gridKey);
 
     const handleGridChange = () => {
       updateAttribute(grid);
@@ -120,8 +127,15 @@
       grid.off('change');
       grid.off('resizestop');
       grid.off('dragstop');
+      gridInstance = null;
       workspaceState.deleteGridStackBoard(gridKey);
     };
+  });
+
+  $effect(() => {
+    if (gridInstance) {
+      workspaceState.setGridStackBoard(gridKey, gridInstance);
+    }
   });
 
   let prevNodeIdsKey = '';
@@ -130,8 +144,11 @@
     if (currentNodeIdsKey !== prevNodeIdsKey) {
       prevNodeIdsKey = currentNodeIdsKey;
       if (nodesInBoard.length > 0) {
+        if (gridInstance) {
+          workspaceState.setGridStackBoard(gridKey, gridInstance);
+        }
         logger.log(`Nodes layout in board "${gridKey}" changed`);
-        applyFloatingPositions(boardId);
+        applyFloatingPositions(gridKey);
       }
     }
   });

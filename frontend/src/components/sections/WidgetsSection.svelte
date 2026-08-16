@@ -43,11 +43,19 @@
       resizeObserver.disconnect();
     };
   });
+
+  const commonTabBoard = $derived(
+    (appState.optionState.get('ComfyGrid.ui.common_tab_board') as boolean) ?? false,
+  );
+  const showBoard = $derived(!commonTabBoard || !group);
+  const effectiveGroupId = $derived(commonTabBoard ? undefined : group?.id);
 </script>
 
-<div class="mb-1">
-  <GridStackBoard boardId="Tab" groupId={group?.id}></GridStackBoard>
-</div>
+{#if showBoard}
+  <div class="mb-1">
+    <GridStackBoard boardId="Tab" groupId={effectiveGroupId}></GridStackBoard>
+  </div>
+{/if}
 <div class="vstack gap-2">
   {#each sortedGroups as g (g.id)}
     {#snippet widgetGroup()}

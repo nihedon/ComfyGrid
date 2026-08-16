@@ -5,7 +5,6 @@ import { t } from '@/i18n/i18n';
 import { callLayoutChangedCallbacks } from '@/services/callback-service';
 import { appState } from '@/states/app-state.svelte';
 import { Layout } from '@/states/workspace-state.svelte';
-import type { BoardId } from '@/types/board';
 import type { FloatingPosition, LayoutType } from '@/types/layout';
 import logger from '@/utils/logger';
 import { waitForDom } from '@/utils/schedule';
@@ -168,8 +167,11 @@ export function updateAttribute(grid: GridStack) {
     });
 }
 
-export function applyFloatingPositions(boardId?: BoardId, initSettings?: Record<string, Record<string, FloatingPosition>>) {
-    const boardIds = boardId ? [boardId] : appState.workspaceState.gridStackBoards.keys();
+export function applyFloatingPositions(boardId?: string, initSettings?: Record<string, Record<string, FloatingPosition>>) {
+    const activeKeys = Array.from(appState.workspaceState.gridStackBoards.keys());
+    const boardIds = boardId
+        ? activeKeys.filter((k) => k === boardId || k.startsWith(boardId + '-'))
+        : activeKeys;
 
     for (const exactGridKey of boardIds) {
         const grid = appState.workspaceState.gridStackBoards.get(exactGridKey);
@@ -180,7 +182,7 @@ export function applyFloatingPositions(boardId?: BoardId, initSettings?: Record<
         if (!container) continue;
 
         const children = Array.from(container.children) as HTMLElement[];
-        const boardSettings = initSettings?.[logicalKey] ?? appState.workspaceState.layout?.floatingPositions?.[logicalKey];
+        const boardSettings = initSettings?.[logicalKey] ?? appState.workspaceState.layout?.floatingPositions?.get(logicalKey);
 
         // 1. Sync attributes from settings for DOM nodes (if settings available)
         if (boardSettings) {

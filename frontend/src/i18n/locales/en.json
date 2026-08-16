@@ -22,6 +22,8 @@
     "opts.ComfyGrid.ui.group_tabify.choice.none": "Disable tabify",
     "opts.ComfyGrid.ui.group_tabify.choice.all_top_groups": "Tabify all top-level groups",
     "opts.ComfyGrid.ui.group_tabify.choice.tab_groups_only": "Tabify only groups whose name starts with '[Tab]'",
+    "opts.ComfyGrid.ui.common_tab_board.label": "Share board across tabs",
+    "opts.ComfyGrid.ui.common_tab_board.hint": "Use a single shared board on all tab pages instead of separate boards per tab.",
     "opts.ComfyGrid.ui.model_thumbnail_width.label": "Model Thumbnail Width",
     "opts.ComfyGrid.ui.model_thumbnail_width.hint": "Specifies the width of model thumbnail images. The aspect ratio is always 3:4.",
     "opts.ComfyGrid.ui.gallery_image_max_size.label": "Gallery Image Max Size",

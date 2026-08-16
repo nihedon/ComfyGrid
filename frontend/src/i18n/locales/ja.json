@@ -22,6 +22,8 @@
     "opts.ComfyGrid.ui.group_tabify.choice.none": "タブ化しない",
     "opts.ComfyGrid.ui.group_tabify.choice.all_top_groups": "トップレベルのグループを全てタブ化",
     "opts.ComfyGrid.ui.group_tabify.choice.tab_groups_only": "グループ名が'[Tab]'で始まるグループのみタブ化",
+    "opts.ComfyGrid.ui.common_tab_board.label": "各タブのボードを共通化する",
+    "opts.ComfyGrid.ui.common_tab_board.hint": "各タブページ上に表示されるフローティングボードを、すべてのタブで共通のボードにします。",
     "opts.ComfyGrid.ui.model_thumbnail_width.label": "モデルサムネイルの幅",
     "opts.ComfyGrid.ui.model_thumbnail_width.hint": "モデルサムネイル画像の幅を指定します。アスペクト比は常に3:4です。",
     "opts.ComfyGrid.ui.gallery_image_max_size.label": "ギャラリー画像の最大サイズ",
