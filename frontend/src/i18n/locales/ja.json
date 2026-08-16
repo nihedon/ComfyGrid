@@ -61,7 +61,7 @@
     "tab.comfyui.restart": "再起動",
     "tab.comfyui.reload": "リロード",
     "menu.reload": "ComfyUIから再読み込み",
-    "menu.setup": "セットアップ画面を開く",
+    "menu.setup": "セットアップ画面に戻る",
     "menu.update_request": "モデルリストの最新化を要求",
     "menu.import": "レイアウトをインポート",
     "menu.export.workflow": "ComfyUIワークフローをエクスポート",
