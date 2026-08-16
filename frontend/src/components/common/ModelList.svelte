@@ -316,7 +316,7 @@
         subfolder: subfolder,
       });
       if (res.ok) {
-        reloadModels();
+        storageState.deleteFor(dir, model.full_path);
       } else {
         logger.error('Failed to delete');
       }
