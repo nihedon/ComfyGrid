@@ -1,8 +1,8 @@
 type TranslateTask = () => Promise<void>;
 
 class TranslationManager {
-    #tasks = new Map<string, TranslateTask>();
-    #activePromises = new Set<Promise<void>>();
+    readonly #tasks = new Map<string, TranslateTask>();
+    readonly #activePromises = new Set<Promise<void>>();
 
     register(id: string, task: TranslateTask) {
         this.#tasks.set(id, task);
