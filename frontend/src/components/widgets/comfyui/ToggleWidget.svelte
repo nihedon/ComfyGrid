@@ -7,8 +7,8 @@
   let { widget }: { widget: ToggleWidget } = $props();
 
   function handleInput() {
-    widget.updateComfyUiValue();
-    widget.node.drawBackground();
+    widget.updateValue();
+    widget.onDrawBackground();
   }
 </script>
 

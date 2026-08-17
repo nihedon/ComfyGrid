@@ -29,8 +29,8 @@
       widget.image.filename = filename;
       cacheBuster = Math.random(); // Force refresh preview
 
-      widget.updateComfyUiSelect({ value: filename, addOptions: [filename] });
-      widget.node.drawBackground();
+      widget.updateSelect({ value: filename, addOptions: [filename] });
+      widget.onDrawBackground();
       refreshModels('images');
     });
   }
@@ -72,8 +72,8 @@
         type,
       };
       cacheBuster = Math.random();
-      widget.updateComfyUiSelect({ value: filename, addOptions: [filename] });
-      widget.node.drawBackground();
+      widget.updateSelect({ value: filename, addOptions: [filename] });
+      widget.onDrawBackground();
       await refreshModels('images');
     }
   }

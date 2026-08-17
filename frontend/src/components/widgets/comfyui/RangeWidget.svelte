@@ -14,11 +14,11 @@
   let { widget }: { widget: RangeWidget } = $props();
 
   function handleInput() {
-    widget.updateComfyUiValue();
+    widget.updateValue();
   }
 
   function handleChange() {
-    widget.updateComfyUiValue();
+    widget.updateValue();
   }
 </script>
 

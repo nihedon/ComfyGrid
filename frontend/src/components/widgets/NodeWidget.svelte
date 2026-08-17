@@ -251,7 +251,6 @@
 
   function handleStateChange(e: Event, mode: ComfyNodeMode) {
     node.mode = mode;
-    node.setComfyUiProperty('mode', node.mode);
     e.stopPropagation();
   }
 
@@ -261,7 +260,6 @@
 
   function handleChangeTitle() {
     node.title = node.title.trim();
-    node.setComfyUiProperty('title', node.title);
   }
 
   function focusOnMount(e: HTMLInputElement) {

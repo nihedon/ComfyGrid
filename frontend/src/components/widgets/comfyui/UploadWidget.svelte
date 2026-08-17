@@ -27,8 +27,8 @@
     } else {
       widget.value = e.detail.value;
     }
-    widget.updateComfyUiSelect();
-    widget.node.drawBackground();
+    widget.updateSelect();
+    widget.onDrawBackground();
   }
 </script>
 

@@ -80,7 +80,7 @@ class GalleryManager {
                 for (const node of appState.workspaceState.nodes.values()) {
                     for (const widget of node.widgets) {
                         if (widget.className === 'ComboWidget') {
-                            widget.updateComfyUiSelect({ addOptions: [filename] });
+                            widget.updateSelect({ addOptions: [filename] });
                         }
                     }
                 }

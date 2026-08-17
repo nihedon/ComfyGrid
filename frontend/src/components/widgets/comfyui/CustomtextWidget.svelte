@@ -53,7 +53,7 @@
       if (!text.trim()) {
         if (currentReqId === translationRequestId) {
           widget.value = text;
-          widget.updateComfyUiValue();
+          widget.updateValue();
           widget.isDirty = false;
           widget.isTranslating = false;
           widget.translationFailed = false;
@@ -89,7 +89,7 @@
 
         if (res.ok && res.json?.translated_text) {
           widget.value = res.json.translated_text;
-          widget.updateComfyUiRawValue({ rawValue: text });
+          widget.updateRawValue({ rawValue: text });
           widget.isDirty = false;
         }
         widget.translationFailed = !res.ok;
@@ -103,7 +103,7 @@
         }
       } finally {
         if (currentReqId === translationRequestId) {
-          widget.updateComfyUiValue();
+          widget.updateValue();
           widget.isTranslating = false;
           saveLayoutObject(layout);
           registerOrUnregisterPending();
@@ -147,7 +147,7 @@
       widget.isDirty = true;
       registerOrUnregisterPending();
     } else {
-      widget.updateComfyUiValue();
+      widget.updateValue();
     }
   }
 

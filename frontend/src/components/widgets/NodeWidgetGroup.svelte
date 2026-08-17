@@ -62,7 +62,6 @@
   function handleStateChange(e: Event, mode: ComfyNodeMode) {
     nodes.forEach((node) => {
       node.mode = mode;
-      node.setComfyUiProperty('mode', node.mode);
     });
     e.stopPropagation();
   }

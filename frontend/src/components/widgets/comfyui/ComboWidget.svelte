@@ -22,7 +22,7 @@
     } else if (name.includes('vae_name')) {
       return { dir: 'models', subdirs: ['vae'] };
     } else if (name.includes('clip_name')) {
-      if (widget.node.type.toLowerCase().indexOf('clipvision') >= 0) {
+      if (widget.node.type!.toLowerCase().indexOf('clipvision') >= 0) {
         return { dir: 'models', subdirs: ['clip_vision'] };
       } else {
         return { dir: 'models', subdirs: ['clip', 'text_encoders'] };
@@ -57,9 +57,9 @@
       widget.value = (e.currentTarget as HTMLSelectElement).value;
     }
 
-    widget.updateComfyUiValue();
+    widget.updateValue();
     if (doUpdate) {
-      widget.node.drawBackground();
+      widget.onDrawBackground();
     }
   }
 </script>

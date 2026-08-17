@@ -56,7 +56,7 @@
   }
 
   function handleChange() {
-    widget.updateComfyUiValue();
+    widget.updateValue();
   }
 </script>
 
