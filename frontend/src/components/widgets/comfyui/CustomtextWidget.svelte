@@ -3,7 +3,7 @@
   import { comfyGridApiClient } from '@/api/api-client';
   import { t } from '@/i18n/i18n';
   import { saveLayoutObject, updateBoardFloatingState } from '@/services/gridstack-service';
-  import { translationManager } from '@/services/translation-service';
+  import { translationManager } from '@/services/translation-service.svelte';
   import { appState } from '@/states/app-state.svelte';
   import type { ComfyGridWidget } from '@/states/model-state.svelte';
   import { keyupEditAttention } from '../../../helpers/edit-attention';
@@ -197,7 +197,8 @@
       widget.isDirty = true;
       const text = widget.rawValue ?? '';
       if (isTranslate && text.trim()) {
-        const timing = appState.optionState.get('ComfyGrid.ollama.translate_timing') ?? 'on_generate';
+        const timing =
+          appState.optionState.get('ComfyGrid.ollama.translate_timing') ?? 'on_generate';
         if (timing === 'on_generate') {
           registerOrUnregisterPending();
         } else {

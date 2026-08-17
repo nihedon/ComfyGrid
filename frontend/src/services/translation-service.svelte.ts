@@ -3,6 +3,7 @@ type TranslateTask = () => Promise<void>;
 class TranslationManager {
     readonly #tasks = new Map<string, TranslateTask>();
     readonly #activePromises = new Set<Promise<void>>();
+    #pendingQueueCount = $state(0);
 
     register(id: string, task: TranslateTask) {
         this.#tasks.set(id, task);
@@ -21,6 +22,22 @@ class TranslationManager {
 
     get isTranslating(): boolean {
         return this.#activePromises.size > 0;
+    }
+
+    get hasPendingTasks(): boolean {
+        return this.#tasks.size > 0;
+    }
+
+    get pendingQueueCount(): number {
+        return this.#pendingQueueCount;
+    }
+
+    incrementPendingQueue(count: number = 1) {
+        this.#pendingQueueCount += count;
+    }
+
+    decrementPendingQueue(count: number = 1) {
+        this.#pendingQueueCount = Math.max(0, this.#pendingQueueCount - count);
     }
 
     async translateAllPending() {
