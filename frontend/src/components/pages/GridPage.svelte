@@ -3,7 +3,7 @@
   import { saveLayoutObject } from '@/services/gridstack-service';
   import { appState } from '@/states/app-state.svelte';
   import { ComfyGridGroup } from '@/states/model-state.svelte';
-  import { COMFY_NODE_MODE } from '@/types/model-shared';
+  import { COMFY_NODE_MODE, type ComfyNodeMode } from '@/types/model-shared';
   import InnerTab from '../common/InnerTab.svelte';
   import InnerTabContainer from '../common/InnerTabContainer.svelte';
   import Gallery from '../sections/Gallery.svelte';
@@ -28,6 +28,59 @@
   function handleOptionChanged() {
     saveLayoutObject(workspaceState.layout);
   }
+
+  const commonTabBoard = $derived(
+    (optionState.get('ComfyGrid.ui.common_tab_board') as boolean) ?? false,
+  );
+
+  const nodesTabClass = $derived.by(() => {
+    const classNames: string[] = [];
+
+    const nonTabifiedGroups = workspaceState.groups.filter((g) => !g.isTabify);
+    let hasError = nonTabifiedGroups.some((g) => g.hasError);
+
+    if (!hasError && commonTabBoard) {
+      for (const group of workspaceState.groups) {
+        for (const node of group.nodes) {
+          const isNodeFloatingOnTab = workspaceState.layout?.floatingNodes.get(node.id) === 'Tab';
+          const hasWidgetFloatingOnTab = node.widgets.some(
+            (w) =>
+              w.type === 'customtext' && workspaceState.layout?.floatingWidgets.get(w.id) === 'Tab',
+          );
+          if (
+            (isNodeFloatingOnTab || hasWidgetFloatingOnTab) &&
+            workspaceState.hasErrorNode(node.id)
+          ) {
+            hasError = true;
+            break;
+          }
+        }
+        if (hasError) break;
+      }
+    }
+
+    if (hasError) {
+      classNames.push('is-invalid');
+    }
+
+    // eslint-disable-next-line svelte/prefer-svelte-reactivity
+    const modeSet = new Set<ComfyNodeMode>();
+    for (const g of nonTabifiedGroups) {
+      for (const mode of g.modeSet) {
+        modeSet.add(mode);
+      }
+    }
+    if (modeSet.size === 1) {
+      const [mode] = modeSet;
+      if (mode === COMFY_NODE_MODE.BYPASS) {
+        classNames.push('bypass');
+      } else if (mode === COMFY_NODE_MODE.MUTE) {
+        classNames.push('mute');
+      }
+    }
+
+    return classNames;
+  });
 
   function tabClass(group: ComfyGridGroup) {
     const classNames = [];
@@ -107,7 +160,7 @@
               </div>
             </div>
             <ul class="nav nav-tabs sticky-top" style="background-color: var(--bs-body-bg);">
-              <InnerTab id="nodes" text="Nodes" bind:activeTabId />
+              <InnerTab id="nodes" classNames={nodesTabClass} text="Nodes" bind:activeTabId />
               {#each sortedGroups.filter((g) => g.isTabify) as group (group.id)}
                 <InnerTab
                   id={group.id}
