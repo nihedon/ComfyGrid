@@ -254,6 +254,7 @@
       rows={options.isFloating ? 1 : 6}
       style:min-height={options.isFloating ? '0' : undefined}
       readonly={widget.readonly}
+      placeholder={widget.placeholder}
       bind:value={widget.rawValue}
       bind:this={textareaElement}
     ></textarea>
@@ -267,6 +268,7 @@
       rows={options.isFloating ? 1 : 6}
       style:min-height={options.isFloating ? '0' : undefined}
       readonly={widget.readonly}
+      placeholder={widget.placeholder}
       bind:value={widget.value}
       bind:this={textareaElement}
     ></textarea>

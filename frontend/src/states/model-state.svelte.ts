@@ -464,6 +464,7 @@ export class ComfyGridWidget<V = string, O = undefined> {
     #rawValue: string = $state();
     #image: ImageInfo = $state({ filename: '', subfolder: '', type: '' });
     #element: HTMLElement = $state();
+    #placeholder: string = $state();
     #readonly: boolean = $state();
     #input: { id: string; slot: string } | null = $state();
     #options: O = $state();
@@ -528,6 +529,9 @@ export class ComfyGridWidget<V = string, O = undefined> {
     get element() {
         return this.#element;
     }
+    get placeholder() {
+        return this.#placeholder;
+    }
     get readonly() {
         return this.#readonly;
     }
@@ -586,6 +590,9 @@ export class ComfyGridWidget<V = string, O = undefined> {
     set element(element: HTMLElement) {
         this.#element = element;
     }
+    set placeholder(placeholder: string) {
+        this.#placeholder = placeholder;
+    }
     set readonly(readonly: boolean) {
         this.#readonly = readonly;
     }
@@ -634,6 +641,7 @@ export class ComfyGridWidget<V = string, O = undefined> {
         this.#rawValue = this.#comfyNode.properties.rawValues?.[this.#index] ?? this.#value;
         this.#image = image ? { filename: '', subfolder: '', type: '', ...image } : { filename: '', subfolder: '', type: '' };
         this.#element = this.#comfyWidget.inputEl || this.#comfyWidget.element || null;
+        this.#placeholder = this.#comfyWidget.inputEl?.placeholder || this.#comfyWidget.element?.placeholder || '';
         this.#readonly = this.#comfyWidget.inputEl?.readOnly || this.#comfyWidget.element?.readOnly || false;
         this.#input = input;
 

@@ -76,8 +76,8 @@ export interface ComfyWidget {
     };
     disabled: boolean;
     image?: ImageInfo;
-    element?: HTMLElement & { disabled: boolean; readOnly: boolean };
-    inputEl: HTMLElement & { disabled: boolean; readOnly: boolean };
+    element?: HTMLElement & { disabled: boolean; readOnly: boolean; placeholder: string };
+    inputEl?: HTMLElement & { disabled: boolean; readOnly: boolean; placeholder: string };
     constructor: { name: string };
     setValue?: (value: unknown, ctx: WidgetContext) => void;
     callback?: (value: unknown) => void;
