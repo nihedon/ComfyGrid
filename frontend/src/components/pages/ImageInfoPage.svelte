@@ -1,6 +1,7 @@
 <script lang="ts">
-  import { JSONEditor } from 'svelte-jsoneditor';
+  import { onDestroy } from 'svelte';
   import { comfyGridApiClient } from '@/api/api-client';
+  import JsonViewer from '@/components/common/JsonViewer.svelte';
   import { t } from '@/i18n/i18n';
   import { workflowManager } from '@/managers/workflow-manager';
   import { appState } from '@/states/app-state.svelte';
@@ -17,18 +18,31 @@
     }
   });
 
+  onDestroy(() => {
+    if (imageSrc) {
+      URL.revokeObjectURL(imageSrc);
+    }
+  });
+
   let imageFileInput = $state<HTMLInputElement>()!;
 
   let metadataJson = $state({});
   let imageSrc: string | null = $state(null);
-  let jsonEditor: JSONEditor;
   let currentFileName = $state<string | null>(null);
   let currentWorkflowJson = $state<{ [key: string]: unknown } | null>(null);
+
+  const isVideo = $derived.by(() => {
+    if (!currentFileName) return false;
+    const VIDEO_EXTENSIONS = ['.webm', '.m4v', '.mp4', '.mkv', '.gif'];
+    return VIDEO_EXTENSIONS.some((ext) => currentFileName!.endsWith(ext));
+  });
 
   async function handleDrop(event: DragEvent) {
     event.preventDefault();
     const file = event.dataTransfer!.files[0];
-    openFile(file);
+    if (file) {
+      openFile(file);
+    }
   }
 
   async function openFile(file: File, extraMetadata?: Record<string, string> | null) {
@@ -113,8 +127,10 @@
       metadataJson = { error: 'No recognizable prompt metadata found.' };
     }
 
+    if (imageSrc) {
+      URL.revokeObjectURL(imageSrc);
+    }
     imageSrc = URL.createObjectURL(file);
-    jsonEditor.set({ text: undefined, json: unescape(metadataJson) });
   }
 
   function parseCustomString(input: string) {
@@ -141,15 +157,14 @@
     return result;
   }
 
-  function unescape(obj: object): object | string | null {
-    if (obj === null) return null;
-    if (typeof obj === 'undefined') return null;
+  function unescape(obj: unknown): unknown {
+    if (obj === null || typeof obj === 'undefined') return null;
     if (Array.isArray(obj)) {
       return obj.map((item) => unescape(item));
     }
     if (typeof obj === 'object') {
       const datas: Record<string, unknown> = {};
-      Object.entries(obj).reduce((acc, [k, v]) => {
+      Object.entries(obj as Record<string, unknown>).reduce((acc, [k, v]) => {
         acc[k] = unescape(v);
         return acc;
       }, datas);
@@ -158,18 +173,11 @@
     if (typeof obj === 'string') {
       return String(obj).replaceAll('\\\\', '\\').replaceAll('\\n', '\n').replaceAll('\\t', '\t');
     }
-    return obj as object;
+    return obj;
   }
 
   function handleDragOver(event: DragEvent) {
     event.preventDefault();
-  }
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  function handleRenderMenu(items: any[]) {
-    return items.filter((item) => {
-      return item?.text !== 'table';
-    });
   }
 
   function handleImageSelected(event: Event) {
@@ -219,7 +227,7 @@
   <div class="d-flex h-100 w-100">
     <input
       type="file"
-      accept="image/*"
+      accept="image/*,video/*"
       style:display="none"
       bind:this={imageFileInput}
       onchange={handleImageSelected}
@@ -239,17 +247,28 @@
         }}
       >
         {#if imageSrc}
-          <img
-            class="h-100 w-100 overflow-hidden object-fit-contain"
-            src={imageSrc}
-            alt={imageSrc}
-          />
+          {#if isVideo}
+            <video
+              class="h-100 w-100 overflow-hidden object-fit-contain"
+              src={imageSrc}
+              controls
+              loop
+              autoplay
+              muted
+            ></video>
+          {:else}
+            <img
+              class="h-100 w-100 overflow-hidden object-fit-contain"
+              src={imageSrc}
+              alt={imageSrc}
+            />
+          {/if}
         {:else}
           <div
             class="vstack h-100 w-100 align-items-center justify-content-center p-2 rounded-3 border border-2 border-secondary-subtle fw-bold text-body-tertiary"
           >
             <span class="fs-1" aria-label="Image placeholder"><i class="pi pi-image"></i></span>
-            <span class="fs-2">Drag and drop an image here</span>
+            <span class="fs-2">Drag and drop an image or video here</span>
           </div>
         {/if}
       </div>
@@ -264,14 +283,8 @@
         </div>
       {/if}
     </div>
-    <div id="json-editor" class="flex-grow-1 h-100">
-      <JSONEditor bind:this={jsonEditor} readOnly={true} onRenderMenu={handleRenderMenu} />
+    <div class="flex-grow-1 h-100 p-2 overflow-hidden">
+      <JsonViewer value={unescape(metadataJson)} />
     </div>
   </div>
 </div>
-
-<style>
-  #json-editor {
-    --jse-theme-color: #aebbc5;
-  }
-</style>

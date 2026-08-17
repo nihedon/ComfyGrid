@@ -38,14 +38,16 @@
   const workspaceState = appState.workspaceState;
 
   const showNsfw = $derived(appState.optionState.get('ComfyGrid.ui.show_nsfw'));
+  const strValue = $derived(typeof widget.value === 'number' ? String(widget.value) : widget.value);
 
   const isValid = $derived.by(() => {
     if (isValidOverride !== undefined) return isValidOverride;
+    const fixedValues = widget.options?.fixed_values ?? [];
     return (
-      new Set(select).has(widget.value) ||
-      widget.value.toLocaleLowerCase() === 'none' ||
-      widget.value.indexOf('Select ') === 0 ||
-      new Set(widget.options?.fixed_values ?? []).has(widget.value)
+      select.includes(strValue) ||
+      strValue.toLocaleLowerCase() === 'none' ||
+      strValue.indexOf('Select ') === 0 ||
+      fixedValues.includes(strValue)
     );
   });
 
@@ -70,7 +72,7 @@
     }
   }
 
-  onMount(async () => {
+  onMount(() => {
     const inputEl = jQuery(inputDomEl!);
     inputEl.autoComplete({
       resolver: 'custom',
@@ -124,13 +126,11 @@
     window.addEventListener('scroll', handleScrollOrResize, true);
     window.addEventListener('resize', handleScrollOrResize);
 
-    return {
-      destroy() {
-        inputEl.autoComplete('destroy');
-        ddEl?.remove();
-        window.removeEventListener('scroll', handleScrollOrResize, true);
-        window.removeEventListener('resize', handleScrollOrResize);
-      },
+    return () => {
+      inputEl.autoComplete('destroy');
+      ddEl?.remove();
+      window.removeEventListener('scroll', handleScrollOrResize, true);
+      window.removeEventListener('resize', handleScrollOrResize);
     };
   });
 

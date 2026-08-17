@@ -4,8 +4,8 @@
   import type { ComfyGridGroup, ComfyGridNode } from '@/states/model-state.svelte';
   import type { Model } from '@/states/storage-state.svelte';
   import { toastState } from '@/states/toast-state.svelte';
-  import Tab from '../common/InnerTab.svelte';
-  import TabContainer from '../common/InnerTabContainer.svelte';
+  import InnerTab from '../common/InnerTab.svelte';
+  import InnerTabContainer from '../common/InnerTabContainer.svelte';
   import ModelList from '../common/ModelList.svelte';
 
   type ModelTabDefine = {
@@ -102,15 +102,15 @@
   <div class="h-100 vstack px-1">
     <ul class="nav nav-tabs sticky-top pt-2" style="background-color: var(--bs-body-bg);">
       {#each Object.entries(tabs) as [key, tab] (key)}
-        <Tab id={key} text={tab.title} bind:activeTabId />
+        <InnerTab id={key} text={tab.title} bind:activeTabId />
       {/each}
     </ul>
     <div class="vstack overflow-y-hidden py-2">
-      <TabContainer tabId={activeTabId} {activeTabId}>
+      <InnerTabContainer tabId={activeTabId} {activeTabId}>
         {#key activeTabId}
           <ModelList dir="models" subdirs={activeTab.subdirs} action={activeTab.action} />
         {/key}
-      </TabContainer>
+      </InnerTabContainer>
     </div>
   </div>
 </div>

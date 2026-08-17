@@ -32,6 +32,8 @@ export interface ComfyApi {
 
 export interface ComfyGraph extends LGraph {
     id: string;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    extra?: Record<string, any>;
     nodes: ComfyNode[];
     groups: ComfyGroup[];
     getNodeById: (id: string | number) => ComfyNode | undefined;
@@ -74,8 +76,8 @@ export interface ComfyWidget {
     };
     disabled: boolean;
     image?: ImageInfo;
-    element?: HTMLElement & { disabled: boolean; readOnly: boolean };
-    inputEl: HTMLElement & { disabled: boolean; readOnly: boolean };
+    element?: HTMLElement & { disabled: boolean; readOnly: boolean; placeholder: string };
+    inputEl?: HTMLElement & { disabled: boolean; readOnly: boolean; placeholder: string };
     constructor: { name: string };
     setValue?: (value: unknown, ctx: WidgetContext) => void;
     callback?: (value: unknown) => void;

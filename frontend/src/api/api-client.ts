@@ -72,6 +72,10 @@ class ComfyGridApiClient {
         return await fetchApiJson('/comfygrid/api/setup/status');
     }
 
+    async postSetupStop(): Promise<ApiResultJson<{ message: string }>> {
+        return await fetchApiJson('/comfygrid/api/setup/stop', { method: 'POST' });
+    }
+
     async getVersionInfo(): Promise<ApiResultJson<Version>> {
         return await fetchApiJson('/comfygrid/api/version_info');
     }
@@ -208,9 +212,7 @@ class ComfyGridApiClient {
         });
     }
 
-    async getResize(url: string, size: number): Promise<ApiResultBlob> {
-        return await fetchApiBlob(`/comfygrid/api/resize?url=${encodeURIComponent(url)}&size=${size}`);
-    }
+
 
     async getVideoThumbnail(url: string, size: number = 120): Promise<ApiResultBlob> {
         return await fetchApiBlob(`/comfygrid/api/video_thumbnail?url=${encodeURIComponent(url)}&size=${size}`);
@@ -336,6 +338,17 @@ class ComfyUiApiClient {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ ...payload, free_memory: true }),
+        });
+    }
+
+    async uploadImage(file: File, overwrite: boolean = true): Promise<ApiResultJson<{ name: string; subfolder: string; type: string }>> {
+        const formData = new FormData();
+        formData.append('image', file);
+        formData.append('overwrite', overwrite ? 'true' : 'false');
+        formData.append('type', 'input');
+        return await fetchApiJson<{ name: string; subfolder: string; type: string }>('/upload/image', {
+            method: 'POST',
+            body: formData,
         });
     }
 }

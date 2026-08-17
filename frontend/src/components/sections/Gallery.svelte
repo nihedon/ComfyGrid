@@ -106,20 +106,7 @@
     container?.focus();
   });
 
-  // Trigger lazy medium URL restoration when the displayed node changes
-  $effect(() => {
-    const node = galleryState.currentGalleryNode;
-    if (
-      node?.jobId &&
-      node.nodeId != null &&
-      node.assets &&
-      !node.assets.mediumSingle &&
-      !node.assets.mediumCompare &&
-      !node.assets.isVideo
-    ) {
-      galleryState.ensureMediumUrls(node.jobId, node.nodeId, node.batchJobIndex);
-    }
-  });
+
 
   function handleKeydown(e: KeyboardEvent) {
     if (fullscreen && (e.key === 'Escape' || e.key === 'Esc')) {
@@ -201,20 +188,26 @@
   $effect(() => {
     // eslint-disable-next-line @typescript-eslint/no-unused-expressions
     galleryState.currentJobIndex;
-    setTimeout(scrollToActiveJobThumbnail, 50);
+    const timerId = setTimeout(scrollToActiveJobThumbnail, 50);
+    return () => clearTimeout(timerId);
   });
 
   $effect(() => {
     // eslint-disable-next-line @typescript-eslint/no-unused-expressions
     galleryState.selectedNodeIndex;
-    setTimeout(scrollToActiveNodeThumbnail, 50);
+    const timerId = setTimeout(scrollToActiveNodeThumbnail, 50);
+    return () => clearTimeout(timerId);
   });
 
   $effect(() => {
     // eslint-disable-next-line @typescript-eslint/no-unused-expressions
     fullscreen;
-    setTimeout(scrollToActiveNodeThumbnail, 50);
-    setTimeout(scrollToActiveJobThumbnail, 50);
+    const timerId1 = setTimeout(scrollToActiveNodeThumbnail, 50);
+    const timerId2 = setTimeout(scrollToActiveJobThumbnail, 50);
+    return () => {
+      clearTimeout(timerId1);
+      clearTimeout(timerId2);
+    };
   });
 
   function portal(node: HTMLElement, enabled: boolean) {
@@ -253,6 +246,16 @@
       },
     };
   }
+
+  function cleanVideo(node: HTMLVideoElement) {
+    return {
+      destroy() {
+        node.pause();
+        node.removeAttribute('src');
+        node.load();
+      },
+    };
+  }
 </script>
 
 <svelte:window onkeydown={handleKeydown} />
@@ -270,7 +273,7 @@
     use:portal={fullscreen}
   >
     <!-- Compare toggle (if current image has multiple originals from comparison node) -->
-    {#if galleryState.currentGalleryNode?.assets?.mediumCompare}
+    {#if galleryState.currentGalleryNode?.assets?.originalCompare}
       <div class="btn-group w-100 pb-1 compare-buttons" role="group">
         <button
           type="button"
@@ -317,6 +320,7 @@
               {@const genAssets = galleryState.currentGalleryNode.assets}
               {#if genAssets.isVideo && genAssets.videoSingle}
                 <video
+                  use:cleanVideo
                   src={genAssets.videoSingle}
                   class="generated object-fit-contain"
                   controls
@@ -325,14 +329,8 @@
                   muted
                 ></video>
               {:else}
-                {@const isCompare = genAssets.mediumCompare && genAssets.mediumCompare.length > 1}
-                {@const src = fullscreen
-                  ? isCompare
-                    ? genAssets.originalCompare
-                    : [genAssets.originalSingle]
-                  : isCompare
-                    ? genAssets.mediumCompare
-                    : [genAssets.mediumSingle]}
+                {@const isCompare = genAssets.originalCompare && genAssets.originalCompare.length > 1}
+                {@const src = isCompare ? genAssets.originalCompare : [genAssets.originalSingle]}
                 {#if isCompare && src && src.length > 1}
                   <div class="generated object-fit-contain">
                     <ImageCompare
@@ -657,13 +655,18 @@
           justify-content: center;
           align-items: center;
           height: 100%;
-          :global(> *) {
+          width: 100%;
+
+          :global(.image-compare) {
+            max-width: 100%;
+            max-height: 100%;
             height: 100%;
+            width: auto;
           }
         }
 
-        img,
-        video {
+        > img,
+        > video {
           max-width: 100% !important;
           max-height: 100% !important;
           width: auto;

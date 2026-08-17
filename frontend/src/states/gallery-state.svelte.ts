@@ -9,8 +9,6 @@ import { appState } from './app-state.svelte';
 export type GeneratedAssets = {
     originalSingle?: string;
     originalCompare?: string[];
-    mediumSingle?: string; // blob URL, runtime only
-    mediumCompare?: string[]; // blob URLs, runtime only
     videoSingle?: string;
     isVideo?: boolean;
     thumbnail: string;
@@ -220,6 +218,7 @@ class GalleryState {
                 ...partial,
             });
             this.#jobs.set(jobId, stateJob);
+            this.#trimJobsIfNeeded();
         }
     }
 
@@ -306,33 +305,22 @@ class GalleryState {
     }
 
     // -----------------------------------------------------------------------
-    // Lazy medium URL restoration
-    // -----------------------------------------------------------------------
-
-    async ensureMediumUrls(jobId: string, nodeId: string, batchJobIndex: number): Promise<void> {
-        const node = this.#findNode(jobId, nodeId, batchJobIndex);
-        if (!node?.assets) return;
-        if (node.assets.mediumSingle || node.assets.mediumCompare || node.assets.isVideo) return;
-
-        if (node.assets.originalSingle) {
-            const res = await comfyGridApiClient.getResize(node.assets.originalSingle, 1024);
-            if (res.ok) {
-                node.assets.mediumSingle = URL.createObjectURL(res.blob);
-            }
-        } else if (node.assets.originalCompare) {
-            const blobs = await Promise.all(
-                node.assets.originalCompare.map(async (url) => {
-                    const res = await comfyGridApiClient.getResize(url, 1024);
-                    if (res.ok) return res.blob;
-                }),
-            );
-            node.assets.mediumCompare = blobs.map((b) => URL.createObjectURL(b));
-        }
-    }
-
-    // -----------------------------------------------------------------------
     // Private helpers
     // -----------------------------------------------------------------------
+
+    readonly MAX_GALLERY_JOBS = 50;
+
+    #trimJobsIfNeeded(): void {
+        if (this.#jobs.size <= this.MAX_GALLERY_JOBS) return;
+
+        const sortedJobs = [...this.#jobs.values()].sort((a, b) => a.createdAt - b.createdAt);
+        const candidates = sortedJobs.filter((r) => r.completed && !r.nodes.some((n) => n.saved));
+        const toDeleteCount = this.#jobs.size - this.MAX_GALLERY_JOBS;
+
+        for (let i = 0; i < Math.min(toDeleteCount, candidates.length); i++) {
+            this.#revokeAndDelete(candidates[i].jobId);
+        }
+    }
 
     #findNode(jobId: string, nodeId: string, batchJobIndex: number): GalleryNodeRecord | undefined {
         return this.#jobs.get(jobId)?.nodes.find((n) => n.nodeId === nodeId && n.batchJobIndex === batchJobIndex);
@@ -341,12 +329,16 @@ class GalleryState {
     #revokeAndDelete(jobId: string): void {
         const record = this.#jobs.get(jobId);
         if (!record) return;
-        comfyGridApiClient.patchJobViewed(jobId);
         for (const node of record.nodes) {
-            if (!node.assets || node.assets.isVideo) continue;
-            if (node.assets.mediumSingle) URL.revokeObjectURL(node.assets.mediumSingle);
-            node.assets.mediumCompare?.forEach((u) => URL.revokeObjectURL(u));
+            if (node.previewUrl && node.previewUrl.startsWith('blob:')) {
+                try {
+                    URL.revokeObjectURL(node.previewUrl);
+                } catch {
+                    // ignore
+                }
+            }
         }
+        comfyGridApiClient.patchJobViewed(jobId);
         this.#jobs.delete(jobId);
     }
 }

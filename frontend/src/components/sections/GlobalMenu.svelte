@@ -49,6 +49,10 @@
       }
     }
   }
+
+  function handleClickOpenSetup() {
+    window.dispatchEvent(new CustomEvent('comfygrid:open_setup'));
+  }
 </script>
 
 <div class="dropdown">
@@ -63,6 +67,12 @@
   </button>
 
   <ul class="dropdown-menu">
+    <li>
+      <button class="dropdown-item" onclick={handleClickOpenSetup}>
+        <i class="pi pi-cog"></i>{$t('menu.setup')}
+      </button>
+    </li>
+    <li><hr class="dropdown-divider" /></li>
     <li>
       <button class="dropdown-item" onclick={handleClickReloadGraph}>
         <i class="pi pi-sync"></i>{$t('menu.reload')}

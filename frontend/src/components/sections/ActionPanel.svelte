@@ -1,5 +1,6 @@
 <script lang="ts">
   import { t } from '@/i18n/i18n';
+  import { translationManager } from '@/services/translation-service.svelte';
   import { appState } from '@/states/app-state.svelte';
   import SelectablePopover from '../common/SelectablePopover.svelte';
 
@@ -41,10 +42,24 @@
   <div class="input-group d-flex flex-nowrap align-items-center">
     <button
       type="button"
-      class="btn btn-primary btn-exec text-nowrap"
+      class="btn btn-primary btn-exec text-nowrap position-relative"
       title={$t('action.execute')}
-      onclick={handleExecute}><i class="pi pi-caret-right pe-1"></i>{$t('action.execute')}</button
+      onclick={handleExecute}
     >
+      <i class="pi pi-caret-right pe-1"></i>{$t('action.execute')}
+      {#if translationManager.pendingQueueCount > 0}
+        <span
+          class="top-0 start-100 d-flex align-items-center justify-content-center translate-middle badge rounded-pill bg-danger"
+          style="position: absolute !important;"
+        >
+          {#if translationManager.pendingQueueCount > 99}
+            99+
+          {:else}
+            {translationManager.pendingQueueCount}
+          {/if}
+        </span>
+      {/if}
+    </button>
     <input
       type="number"
       class="form-control batch-counter action"

@@ -1,6 +1,7 @@
 export type SetupConfig = {
     workspaces: WorkspaceInfo[];
     last_workspace: string;
+    connect_host?: string | null;
     connect_port: number | null;
 };
 

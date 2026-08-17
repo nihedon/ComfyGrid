@@ -1,7 +1,9 @@
 <script lang="ts">
+  import { comfyUiApiClient } from '@/api/api-client';
   import { refreshModels } from '@/services/models-service';
   import { appState } from '@/states/app-state.svelte';
   import type { ComfyGridWidget } from '@/states/model-state.svelte';
+  import logger from '@/utils/logger';
 
   type UploadWidget = ComfyGridWidget<string>;
 
@@ -12,6 +14,7 @@
 
   let cacheBuster = $state(Math.random());
   let isFullscreen = $state(false);
+  let imageRetryCount = 0;
 
   const previewUrl = $derived.by(() => {
     if (!widget.image) return '';
@@ -42,14 +45,36 @@
     e.stopPropagation();
   }
 
-  function handleDrop(e: DragEvent) {
+  async function handleDrop(e: DragEvent) {
     uiState.isDragging = false;
     e.preventDefault();
     e.stopPropagation();
 
     const files = e.dataTransfer?.files;
     if (files && files.length > 0) {
-      widget.callback(files);
+      const file = files[0];
+      imageRetryCount = 0;
+
+      const res = await comfyUiApiClient.uploadImage(file);
+      const filename = res.ok && res.json?.name ? res.json.name : file.name;
+      const subfolder = res.ok && res.json?.subfolder != null ? res.json.subfolder : '';
+      const type = res.ok && res.json?.type != null ? res.json.type : 'input';
+
+      try {
+        widget.callback(files);
+      } catch (err) {
+        logger.debug('Widget callback error ignored', err);
+      }
+
+      widget.image = {
+        filename,
+        subfolder,
+        type,
+      };
+      cacheBuster = Math.random();
+      widget.updateComfyUiSelect({ value: filename, addOptions: [filename] });
+      widget.node.drawBackground();
+      await refreshModels('images');
     }
   }
 
@@ -60,6 +85,24 @@
         node.remove();
       },
     };
+  }
+  let imageDimension = $state<{ width: number; height: number } | null>(null);
+
+  function handleImageLoad(e: Event) {
+    imageRetryCount = 0;
+    const img = e.currentTarget as HTMLImageElement;
+    if (img.naturalWidth && img.naturalHeight) {
+      imageDimension = { width: img.naturalWidth, height: img.naturalHeight };
+    }
+  }
+
+  function handleImageError() {
+    if (imageRetryCount < 5) {
+      imageRetryCount++;
+      setTimeout(() => {
+        cacheBuster = Math.random();
+      }, 300);
+    }
   }
 </script>
 
@@ -73,7 +116,7 @@
     class="d-flex flex-grow-1 h-100 position-relative justify-content-center border rounded p-1 checkerboard"
     style="background-color: #f8f9fa; min-height: 0;"
   >
-    <div class="vstack position-absolute gap-1 top-0 end-0 me-1 mt-1">
+    <div class="vstack position-absolute gap-1 top-0 end-0 me-1 mt-1 z-1">
       <!-- svelte-ignore a11y_consider_explicit_label -->
       <button
         class="btn btn-primary btn-sm"
@@ -84,6 +127,16 @@
         <i class="pi pi-pencil"></i>
       </button>
     </div>
+
+    {#if imageDimension}
+      <span
+        class="position-absolute bottom-0 start-0 m-1 px-1 py-0.5 bg-dark bg-opacity-75 text-white rounded font-monospace small user-select-none z-1"
+        style="font-size: 0.75rem;"
+      >
+        {imageDimension.width} × {imageDimension.height}
+      </span>
+    {/if}
+
     <!-- svelte-ignore a11y_click_events_have_key_events -->
     <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
     <img
@@ -93,6 +146,8 @@
       style:max-height={options.isFloating ? '' : '256px'}
       style:min-height={options.isFloating ? '' : '256px'}
       style:cursor="zoom-in"
+      onload={handleImageLoad}
+      onerror={handleImageError}
       onclick={() => (isFullscreen = true)}
       ondragover={handleDragOver}
       ondragleave={handleDragLeave}

@@ -5,7 +5,6 @@ import { t } from '@/i18n/i18n';
 import { callLayoutChangedCallbacks } from '@/services/callback-service';
 import { appState } from '@/states/app-state.svelte';
 import { Layout } from '@/states/workspace-state.svelte';
-import type { BoardId } from '@/types/board';
 import type { FloatingPosition, LayoutType } from '@/types/layout';
 import logger from '@/utils/logger';
 import { waitForDom } from '@/utils/schedule';
@@ -33,8 +32,13 @@ export function saveLayoutObject(layout: Readonly<Layout>) {
 }
 
 export function saveLayout(layout: LayoutType) {
-    localStorage.setItem(`comfygrid-layout-${layout.graphId}`, JSON.stringify(layout));
-    logger.log('Current floatingPositions saved:', layout);
+    const app = appState.comfyUiState.app;
+    if (app?.rootGraph) {
+        app.rootGraph.extra = app.rootGraph.extra || {};
+        app.rootGraph.extra.comfygrid = app.rootGraph.extra.comfygrid || {};
+        app.rootGraph.extra.comfygrid.layout = layout;
+    }
+    logger.log('Current layout saved to extra.comfygrid.layout:', layout);
 }
 
 function makeEptyLayout(graph_id: string): LayoutType {
@@ -53,6 +57,12 @@ function makeEptyLayout(graph_id: string): LayoutType {
 }
 
 export function loadLayout(graphId: string): LayoutType {
+    const app = appState.comfyUiState.app;
+    const graphLayout = app?.rootGraph?.extra?.comfygrid?.layout as LayoutType | undefined;
+    if (graphLayout && typeof graphLayout === 'object') {
+        return graphLayout;
+    }
+
     if (graphId === '') {
         return makeEptyLayout(graphId);
     }
@@ -60,7 +70,13 @@ export function loadLayout(graphId: string): LayoutType {
     const strLayout = localStorage.getItem(`comfygrid-layout-${graphId}`);
     if (strLayout) {
         try {
-            return JSON.parse(strLayout) as LayoutType;
+            const parsed = JSON.parse(strLayout) as LayoutType;
+            if (app?.rootGraph) {
+                app.rootGraph.extra = app.rootGraph.extra || {};
+                app.rootGraph.extra.comfygrid = app.rootGraph.extra.comfygrid || {};
+                app.rootGraph.extra.comfygrid.layout = parsed;
+            }
+            return parsed;
         } catch (err) {
             logger.error('Failed to load gridStackWidget:', err);
             localStorage.removeItem(`comfygrid-layout-${graphId}`);
@@ -151,8 +167,11 @@ export function updateAttribute(grid: GridStack) {
     });
 }
 
-export function applyFloatingPositions(boardId?: BoardId, initSettings?: Record<string, Record<string, FloatingPosition>>) {
-    const boardIds = boardId ? [boardId] : appState.workspaceState.gridStackBoards.keys();
+export function applyFloatingPositions(boardId?: string, initSettings?: Record<string, Record<string, FloatingPosition>>) {
+    const activeKeys = Array.from(appState.workspaceState.gridStackBoards.keys());
+    const boardIds = boardId
+        ? activeKeys.filter((k) => k === boardId || k.startsWith(boardId + '-'))
+        : activeKeys;
 
     for (const exactGridKey of boardIds) {
         const grid = appState.workspaceState.gridStackBoards.get(exactGridKey);
@@ -163,7 +182,7 @@ export function applyFloatingPositions(boardId?: BoardId, initSettings?: Record<
         if (!container) continue;
 
         const children = Array.from(container.children) as HTMLElement[];
-        const boardSettings = initSettings?.[logicalKey] ?? appState.workspaceState.layout?.floatingPositions?.[logicalKey];
+        const boardSettings = initSettings?.[logicalKey] ?? appState.workspaceState.layout?.floatingPositions?.get(logicalKey);
 
         // 1. Sync attributes from settings for DOM nodes (if settings available)
         if (boardSettings) {

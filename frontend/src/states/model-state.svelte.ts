@@ -4,17 +4,10 @@ import type { ComfyApp, ComfyGroup, ComfyNode, ComfyWidget } from '@/types/comfy
 import type { ComfyNodeMode, ImageInfo, WidgetContext } from '@/types/model-shared';
 import { appState } from './app-state.svelte';
 
-function safeParse<T>(obj: T): T {
-    const seen = new WeakSet();
-    return JSON.parse(
-        JSON.stringify(obj, (_key, value) => {
-            if (typeof value === 'object' && value !== null) {
-                if (seen.has(value)) return undefined;
-                seen.add(value);
-            }
-            return value;
-        }),
-    );
+function safeClone<T>(obj: T): T {
+    if (obj == null || typeof obj !== 'object') return obj;
+    if (Array.isArray(obj)) return [...obj] as unknown as T;
+    return { ...obj };
 }
 
 function isNodeInGroup(node: ComfyNode, group: ComfyGroup): boolean {
@@ -225,7 +218,7 @@ export class ComfyGridNode<P = undefined> {
             this.#groups.push(new ComfyGridGroup(group));
         }
 
-        this.#properties = (typeof comfyNode.properties === 'object' ? safeParse(comfyNode.properties) : comfyNode.properties) as P;
+        this.#properties = (typeof comfyNode.properties === 'object' ? safeClone(comfyNode.properties) : comfyNode.properties) as P;
     }
 
     static #buildWidgetConfigList(
@@ -471,6 +464,7 @@ export class ComfyGridWidget<V = string, O = undefined> {
     #rawValue: string = $state();
     #image: ImageInfo = $state({ filename: '', subfolder: '', type: '' });
     #element: HTMLElement = $state();
+    #placeholder: string = $state();
     #readonly: boolean = $state();
     #input: { id: string; slot: string } | null = $state();
     #options: O = $state();
@@ -478,6 +472,8 @@ export class ComfyGridWidget<V = string, O = undefined> {
     #textarea: HTMLTextAreaElement | null = null;
     #isTranslating: boolean = $state(false);
     #translationFailed: boolean = $state(false);
+    #isDirty: boolean = $state(false);
+    triggerTranslation?: (text?: string) => Promise<void>;
     #callback: (value?: unknown) => void;
 
     constructor(
@@ -533,6 +529,9 @@ export class ComfyGridWidget<V = string, O = undefined> {
     get element() {
         return this.#element;
     }
+    get placeholder() {
+        return this.#placeholder;
+    }
     get readonly() {
         return this.#readonly;
     }
@@ -553,6 +552,9 @@ export class ComfyGridWidget<V = string, O = undefined> {
     }
     get translationFailed() {
         return this.#translationFailed;
+    }
+    get isDirty() {
+        return this.#isDirty;
     }
     get callback() {
         return this.#callback;
@@ -588,6 +590,9 @@ export class ComfyGridWidget<V = string, O = undefined> {
     set element(element: HTMLElement) {
         this.#element = element;
     }
+    set placeholder(placeholder: string) {
+        this.#placeholder = placeholder;
+    }
     set readonly(readonly: boolean) {
         this.#readonly = readonly;
     }
@@ -609,6 +614,9 @@ export class ComfyGridWidget<V = string, O = undefined> {
     set translationFailed(translationFailed: boolean) {
         this.#translationFailed = translationFailed;
     }
+    set isDirty(isDirty: boolean) {
+        this.#isDirty = isDirty;
+    }
     set callback(callback: (value?: unknown) => void) {
         this.#callback = callback;
     }
@@ -629,14 +637,15 @@ export class ComfyGridWidget<V = string, O = undefined> {
         this.#name = this.#comfyWidget.name;
         this.#tooltip = this.#comfyNode.constructor.nodeData?.inputs?.[this.#comfyWidget.name]?.tooltip ?? null;
         this.#type = overrides?.type ?? this.#comfyWidget.type;
-        this.#value = (typeof this.#comfyWidget.value === 'object' ? safeParse(this.#comfyWidget.value) : this.#comfyWidget.value) as V;
+        this.#value = (typeof this.#comfyWidget.value === 'object' ? safeClone(this.#comfyWidget.value) : this.#comfyWidget.value) as V;
         this.#rawValue = this.#comfyNode.properties.rawValues?.[this.#index] ?? this.#value;
         this.#image = image ? { filename: '', subfolder: '', type: '', ...image } : { filename: '', subfolder: '', type: '' };
         this.#element = this.#comfyWidget.inputEl || this.#comfyWidget.element || null;
+        this.#placeholder = this.#comfyWidget.inputEl?.placeholder || this.#comfyWidget.element?.placeholder || '';
         this.#readonly = this.#comfyWidget.inputEl?.readOnly || this.#comfyWidget.element?.readOnly || false;
         this.#input = input;
 
-        const options = safeParse(this.#comfyWidget.options) as Record<string, unknown>;
+        const options = safeClone(this.#comfyWidget.options) as Record<string, unknown>;
         if (this.#comfyWidget.type === 'combo') {
             options['values'] = [
                 ...((typeof this.#comfyWidget.options?.values === 'function' ? this.#comfyWidget.options.values() : this.#comfyWidget.options?.values) ?? []),

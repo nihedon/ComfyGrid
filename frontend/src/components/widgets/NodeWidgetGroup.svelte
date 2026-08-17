@@ -7,15 +7,15 @@
   import NodeMode from './comfyui/features/NodeModeSelector.svelte';
 
   let {
-    group = $bindable(),
+    group,
     columnCount,
     depth = 0,
-    fixedExpanded = false,
+    alwaysExpanded = false,
   }: {
     group: ComfyGridGroup;
     columnCount: number;
     depth?: number;
-    fixedExpanded?: boolean;
+    alwaysExpanded?: boolean;
   } = $props();
 
   const workspaceState = appState.workspaceState;
@@ -60,8 +60,7 @@
   }
 
   function handleStateChange(e: Event, mode: ComfyNodeMode) {
-    const targetNodes = nodes.filter((node) => mode === 0 || !node.collapsed);
-    targetNodes.forEach((node) => {
+    nodes.forEach((node) => {
       node.mode = mode;
       node.setComfyUiProperty('mode', node.mode);
     });
@@ -81,7 +80,7 @@
   class:normal={group.modeSet.has(0)}
   class:mute={group.modeSet.has(2)}
   class:bypass={group.modeSet.has(4)}
-  class:accordion-item={!fixedExpanded}
+  class:accordion-item={!alwaysExpanded}
 >
   {#snippet header()}
     {#if nodeColorOpts !== 'none'}
@@ -133,7 +132,7 @@
       />
     {/if}
   {/snippet}
-  {#if fixedExpanded}
+  {#if alwaysExpanded}
     <div
       class="d-flex align-items-center p-2"
       aria-controls="group-{group.id}-contents"
@@ -146,8 +145,8 @@
       <button
         type="button"
         class="accordion-button p-2"
-        class:collapsed={fixedExpanded ? false : !group.expanded}
-        aria-expanded={fixedExpanded ? true : group.expanded}
+        class:collapsed={alwaysExpanded ? false : !group.expanded}
+        aria-expanded={alwaysExpanded ? true : group.expanded}
         aria-controls="group-{group.id}-contents"
         onclick={toggleExpanded}
         style:padding-left="{0.75 + depth * 1}rem"
@@ -175,14 +174,13 @@
     {/if}
     {#each group.sortedChildren as child (child.id ?? `child-${child.id}`)}
       {#if !group.hasVisibleNodes || child.hasVisibleNodes}
-        {@const childIndex = group.children.indexOf(child)}
         <div class="accordion">
-          <Self bind:group={group.children[childIndex]} {columnCount} depth={depth + 1} />
+          <Self group={child} {columnCount} depth={depth + 1} />
         </div>
       {/if}
     {/each}
   {/snippet}
-  {#if fixedExpanded}
+  {#if alwaysExpanded}
     <div class="vstack gap-2" style="padding-left: 2rem !important">
       {@render contents()}
     </div>
@@ -190,7 +188,7 @@
     <div
       id="group-{group.id}-contents"
       class="accordion-collapse"
-      class:collapse={fixedExpanded ? false : !group.expanded}
+      class:collapse={alwaysExpanded ? false : !group.expanded}
     >
       <div class="accordion-body vstack p-2 gap-2" style="padding-left: 2rem !important">
         {@render contents()}

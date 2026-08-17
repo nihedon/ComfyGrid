@@ -65,13 +65,17 @@ def save_launch_workspace(workspace: WorkspaceInfo) -> None:
     config["last_workspace"] = workspace.name
     save_config(config)
     os.environ["COMFYUI_PORT"] = str(workspace.comfyui_port)
+    os.environ["COMFYUI_TARGET"] = f"127.0.0.1:{workspace.comfyui_port}"
 
 
-def save_connect_port(connect_port: int) -> None:
+def save_connect_port(connect_port: int, connect_host: str = "127.0.0.1") -> None:
     config = load_config()
+    config["connect_host"] = connect_host or "127.0.0.1"
     config["connect_port"] = connect_port
     save_config(config)
+    host = connect_host or "127.0.0.1"
     os.environ["COMFYUI_PORT"] = str(connect_port)
+    os.environ["COMFYUI_TARGET"] = f"{host}:{connect_port}"
 
 
 def prepare_launch_dependencies(comfy_service) -> None:

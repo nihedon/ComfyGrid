@@ -24,6 +24,7 @@
     comfyui_port: DEFAULT_COMFYUI_PORT,
     comfyui_args: '',
   });
+  let connectHost = $state<string>('127.0.0.1');
   let connectPort = $state<number | null>(DEFAULT_COMFYUI_PORT);
   let isSubmitting = $state(false);
   let errorMessage = $state('');
@@ -46,6 +47,7 @@
         const res = await comfyGridApiClient.getSetupConfig();
         if (res.ok) {
           config = res.json;
+          connectHost = config.connect_host ?? '127.0.0.1';
           connectPort = config.connect_port;
 
           if (config.workspaces.length > 0) {
@@ -126,7 +128,7 @@
       const body =
         mode === 'launch'
           ? { mode: 'launch', workspace: { ...editingWorkspace } }
-          : { mode: 'connect', connect_port: connectPort };
+          : { mode: 'connect', connect_host: connectHost, connect_port: connectPort };
 
       const res = await comfyGridApiClient.postSetupLaunch(JSON.stringify(body));
 
@@ -225,11 +227,10 @@
               name="mode"
               id="mode-connect"
               value="connect"
-              disabled
               bind:group={mode}
             />
             <label class="btn btn-outline-primary" for="mode-connect">
-              <i class="bi bi-link-45deg me-1"></i>Attach to existing (WIP)
+              <i class="bi bi-link-45deg me-1"></i>Attach to existing
             </label>
           </div>
         </div>
@@ -321,21 +322,21 @@
                 />
               </div>
               <div class="col-md-3">
-                <label for="ws-comfyui-port" class="form-label">Port</label>
+                <label for="ws-port" class="form-label">Port</label>
                 <input
-                  id="ws-comfyui-port"
-                  type="text"
+                  id="ws-port"
+                  type="number"
                   class="form-control font-monospace"
                   bind:value={editingWorkspace.comfyui_port}
                   placeholder={String(DEFAULT_COMFYUI_PORT)}
                   required
                 />
-                <div class="invalid-feedback">Please specify the ComfyUI port.</div>
+                <div class="invalid-feedback">Port is required.</div>
               </div>
               <div class="col-md-12">
-                <label for="ws-extra-args" class="form-label">ComfyUI Arguments</label>
+                <label for="ws-args" class="form-label">Extra launch arguments</label>
                 <textarea
-                  id="ws-extra-args"
+                  id="ws-args"
                   class="form-control font-monospace"
                   rows="3"
                   bind:value={editingWorkspace.comfyui_args}
@@ -349,24 +350,26 @@
           <!-- Connect URL -->
           <div class="mb-3">
             <div class="settings-form row g-3 rounded mt-0 mb-3 pb-3">
-              <div class="col-md-9">
-                <label for="connect-host" class="form-label">ComfyUI Host</label>
+              <div class="col-md-8">
+                <label for="connect-host" class="form-label">ComfyUI Host / IP</label>
                 <input
                   id="connect-host"
                   type="text"
-                  class="form-control font-monospace readonly"
-                  value="127.0.0.1"
-                  disabled
+                  class="form-control font-monospace"
+                  bind:value={connectHost}
+                  placeholder="e.g. 172.16.0.100 or 127.0.0.1"
+                  required
                 />
               </div>
-              <div class="col-md-3">
+              <div class="col-md-4">
                 <label for="connect-port" class="form-label">Port</label>
                 <input
                   id="connect-port"
-                  type="text"
+                  type="number"
                   class="form-control font-monospace"
                   bind:value={connectPort}
                   placeholder={String(DEFAULT_COMFYUI_PORT)}
+                  required
                 />
               </div>
             </div>

@@ -35,9 +35,6 @@ export default defineConfig({
             output: {
                 manualChunks(id) {
                     if (id.includes('node_modules')) {
-                        if (id.includes('svelte-jsoneditor') || id.includes('codemirror')) {
-                            return 'json-editor';
-                        }
                         if (id.includes('gridstack')) {
                             return 'gridstack';
                         }

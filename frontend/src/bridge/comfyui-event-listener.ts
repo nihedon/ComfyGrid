@@ -36,11 +36,18 @@ export class ComfyUiEventListener {
     #currentJobId: string | null = null;
 
     static #instance: ComfyUiEventListener;
+    static #listenedApis = new WeakSet<ComfyApi>();
+
+    static getInstance() {
+        return this.#instance;
+    }
 
     static listen(api: ComfyApi) {
-        if (!this.#instance) {
-            this.#instance = new this(api);
+        if (!api || this.#listenedApis.has(api)) {
+            return;
         }
+        this.#listenedApis.add(api);
+        this.#instance = new this(api);
     }
 
     private constructor(api: ComfyApi) {

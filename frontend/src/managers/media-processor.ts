@@ -1,5 +1,4 @@
 import { SvelteDate } from 'svelte/reactivity';
-import { comfyGridApiClient } from '@/api/api-client';
 import { appState } from '@/states/app-state.svelte';
 import type { GeneratedAssets } from '@/states/gallery-state.svelte';
 import logger from '@/utils/logger';
@@ -9,7 +8,15 @@ import logger from '@/utils/logger';
  * Manages preview blob URL lifecycle via {@link JobState}.
  */
 class MediaProcessor {
+    #lastPreviewTime = 0;
+
     async onPreviewUpdated(payload: { blob: Blob; jobId?: string; nodeId?: string }) {
+        const now = Date.now();
+        if (now - this.#lastPreviewTime < 150) {
+            return;
+        }
+        this.#lastPreviewTime = now;
+
         const jobId = payload.jobId ?? appState.executionState.processingJobId;
         const nodeId = payload.nodeId ?? appState.executionState.executingNodeId;
         if (!jobId || !nodeId) {
@@ -96,52 +103,19 @@ class MediaProcessor {
         return this.#makeImageAssets(images);
     }
 
-    async #resizeImage(url: string, size: number): Promise<Blob | string> {
-        try {
-            const r = await comfyGridApiClient.getResize(url, size);
-            if (r.ok) return r.blob;
-        } catch (e: unknown) {
-            logger.error('Failed to resize image:', e);
-        }
-        return url;
-    }
-
     async #makeImageAssets(images: string[]): Promise<GeneratedAssets> {
-        const [mediums, thumb] = await Promise.all([Promise.all(images.map((url) => this.#resizeImage(url, 1024))), this.#resizeImage(images[0], 120)]);
-        const mediumUrls = mediums.map((medium) => (typeof medium === 'string' ? medium : URL.createObjectURL(medium)));
-
-        let thumbnail: string;
-        if (typeof thumb === 'string') {
-            thumbnail = thumb;
-        } else {
-            thumbnail = await new Promise<string>((resolve) => {
-                const reader = new FileReader();
-                reader.onloadend = () => resolve(reader.result as string);
-                reader.readAsDataURL(thumb);
-            });
-        }
+        const thumbnail = images[0];
 
         if (images.length === 1) {
-            return { originalSingle: images[0], mediumSingle: mediumUrls[0], thumbnail };
+            return { originalSingle: images[0], thumbnail };
         }
-        return { originalCompare: images, mediumCompare: mediumUrls, thumbnail };
+        return { originalCompare: images, thumbnail };
     }
 
     async #makeVideoAssets(images: string[]): Promise<GeneratedAssets> {
-        let thumbnail = '';
-        try {
-            const res = await comfyGridApiClient.getVideoThumbnail(images[0], 120);
-            if (res.ok) {
-                thumbnail = await new Promise<string>((resolve) => {
-                    const reader = new FileReader();
-                    reader.onloadend = () => resolve(reader.result as string);
-                    reader.readAsDataURL(res.blob);
-                });
-            }
-        } catch (e) {
-            logger.error('Failed to generate video thumbnail', e);
-        }
-        return { videoSingle: images[0], isVideo: true, thumbnail };
+        const videoUrl = images[0];
+        const thumbnail = `/comfygrid/api/video_thumbnail?url=${encodeURIComponent(videoUrl)}&size=120`;
+        return { videoSingle: videoUrl, isVideo: true, thumbnail };
     }
 
     clearOtherPreviews(currentJobId: string) {

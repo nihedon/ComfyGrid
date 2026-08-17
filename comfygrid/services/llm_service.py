@@ -75,7 +75,7 @@ def translate_text(model: str | None, prompt: str, system: str | None = None) ->
             headers={"Content-Type": "application/json", "User-Agent": "ComfyGrid"},
             method="POST",
         )
-        with urllib.request.urlopen(req, timeout=30.0) as resp:
+        with urllib.request.urlopen(req, timeout=120.0) as resp:
             res_data = json.loads(resp.read().decode("utf-8"))
             translated = res_data.get("response", "").strip()
             if not translated:

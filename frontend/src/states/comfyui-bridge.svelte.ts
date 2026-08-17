@@ -1,6 +1,6 @@
 import { ComfyUiApiHook } from '@/bridge/comfyui-api-hook';
 import { nodeQueueManager } from '@/bridge/node-queue-manager';
-import { translationManager } from '@/services/translation-service';
+import { translationManager } from '@/services/translation-service.svelte';
 import type { ComfyGraph, ComfyNode } from '@/types/comfy-model';
 import logger from '@/utils/logger';
 import { appState } from './app-state.svelte';
@@ -66,14 +66,34 @@ export class ComfyUiBridge {
      * @param batchCount - Number of batches to queue
      */
     async queuePrompt(batchCount: number): Promise<void> {
-        await translationManager.translateAllPending();
-        this.#app.queuePrompt(0, batchCount);
+        const isWaiting = translationManager.isTranslating || translationManager.hasPendingTasks;
+        if (isWaiting) {
+            translationManager.incrementPendingQueue(batchCount);
+        }
+        try {
+            await translationManager.waitForAllTranslations();
+            this.#app.queuePrompt(0, batchCount);
+        } finally {
+            if (isWaiting) {
+                translationManager.decrementPendingQueue(batchCount);
+            }
+        }
     }
 
     async nodeQueue(payload: { nodeId: string }): Promise<void> {
-        await translationManager.translateAllPending();
-        const { nodeId } = payload;
-        await nodeQueueManager.queueOutputNodes(this.#app, nodeId);
+        const isWaiting = translationManager.isTranslating || translationManager.hasPendingTasks;
+        if (isWaiting) {
+            translationManager.incrementPendingQueue(1);
+        }
+        try {
+            await translationManager.waitForAllTranslations();
+            const { nodeId } = payload;
+            await nodeQueueManager.queueOutputNodes(this.#app, nodeId);
+        } finally {
+            if (isWaiting) {
+                translationManager.decrementPendingQueue(1);
+            }
+        }
     }
 
     /**

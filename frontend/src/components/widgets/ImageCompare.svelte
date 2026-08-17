@@ -62,8 +62,8 @@
     alt={alt1}
     class="img-base"
     draggable="false"
-    style:max-height={maxHeight ? `${maxHeight}px` : 'none'}
-    style:max-width={maxWidth ? `${maxWidth}px` : 'none'}
+    style:max-height={maxHeight ? `${maxHeight}px` : undefined}
+    style:max-width={maxWidth ? `${maxWidth}px` : undefined}
   />
 
   <!-- Overlay Image (Foreground, clipped) -->
@@ -73,8 +73,8 @@
     class="img-overlay"
     draggable="false"
     style:clip-path="inset(0 {100 - value}% 0 0)"
-    style:max-height={maxHeight ? `${maxHeight}px` : 'none'}
-    style:max-width={maxWidth ? `${maxWidth}px` : 'none'}
+    style:max-height={maxHeight ? `${maxHeight}px` : undefined}
+    style:max-width={maxWidth ? `${maxWidth}px` : undefined}
   />
 
   <!-- Divider Line -->
@@ -84,9 +84,12 @@
 <style>
   .image-compare {
     position: relative;
-    display: inline-block;
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
     overflow: hidden;
-    width: 100%;
+    max-width: 100%;
+    max-height: 100%;
     user-select: none;
     cursor: col-resize;
     line-height: 0;
@@ -96,6 +99,8 @@
     display: block;
     width: 100%;
     height: auto;
+    max-width: 100%;
+    max-height: 100%;
     object-fit: contain;
   }
 
@@ -103,9 +108,11 @@
     position: absolute;
     top: 0;
     left: 0;
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
+    width: 100% !important;
+    height: 100% !important;
+    max-width: 100% !important;
+    max-height: 100% !important;
+    object-fit: contain !important;
     pointer-events: none;
   }
 
@@ -113,8 +120,9 @@
     position: absolute;
     top: 0;
     bottom: 0;
-    width: 1px;
-    background: rgba(0, 0, 0, 0.5);
+    width: 2px;
+    background: rgba(255, 255, 255, 0.8);
+    box-shadow: 0 0 4px rgba(0, 0, 0, 0.5);
     pointer-events: none;
     transform: translateX(-50%);
   }

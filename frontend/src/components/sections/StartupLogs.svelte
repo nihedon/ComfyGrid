@@ -40,6 +40,9 @@
             : false;
 
           logs.push(data.message);
+          if (logs.length > 500) {
+            logs.shift();
+          }
 
           if (isNearBottom) {
             setTimeout(() => {

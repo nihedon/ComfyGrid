@@ -29,11 +29,26 @@ async def get_setup_status(comfy_service: ComfyUIService = Depends(get_comfy_ser
     }
 
 
+@router.post("/stop")
+async def stop_comfyui(comfy_service: ComfyUIService = Depends(get_comfy_service)):
+    if comfy_service.proc or comfy_service.started:
+        logger.info("Stopping ComfyUI instance...")
+        comfy_service.exit()
+        comfy_service.proc = None
+        comfy_service.started = False
+        comfy_service.url = None
+    return {"message": "stopped"}
+
+
 @router.post("/launch")
 async def launch_comfyui(request: Request, body: LaunchRequest, comfy_service: ComfyUIService = Depends(get_comfy_service)):
 
-    if comfy_service.started:
-        return JSONResponse({"error": "ComfyUI is already running"}, status_code=409)
+    if comfy_service.started or comfy_service.proc:
+        logger.info("Stopping previous ComfyUI instance before launching new workspace...")
+        comfy_service.exit()
+        comfy_service.proc = None
+        comfy_service.started = False
+        comfy_service.url = None
 
     current_port = os.environ.get("COMFYUI_PORT")
 
@@ -98,11 +113,13 @@ async def launch_comfyui(request: Request, body: LaunchRequest, comfy_service: C
         if not body.connect_port:
             return JSONResponse({"error": "connect_port is required for connect mode"}, status_code=400)
 
-        setup_service.save_connect_port(body.connect_port)
-        comfy_service.apply_connect_config(body.connect_port)
+        connect_host = body.connect_host or "127.0.0.1"
+        setup_service.save_connect_port(body.connect_port, connect_host)
+        comfy_service.apply_connect_config(body.connect_port, connect_host)
 
         async def background_connect():
-            await restart_caddy_if_needed(body.connect_port)
+            await asyncio.sleep(0.5)
+            await asyncio.to_thread(setup_service.start_caddy_proxy)
             asyncio.create_task(
                 asyncio.to_thread(callbacks.call_callbacks, "on_app_started", request.app)
             )

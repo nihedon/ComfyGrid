@@ -67,6 +67,16 @@ class StorageState {
         this.#videos.set(reactiveModel.full_path, reactiveModel);
     }
 
+    deleteFor(key: ModelTypes, full_path: string) {
+        if (key === 'models') {
+            this.#models.delete(full_path);
+        } else if (key === 'images') {
+            this.#images.delete(full_path);
+        } else if (key === 'videos') {
+            this.#videos.delete(full_path);
+        }
+    }
+
     findModel(modelDir: string, modelSubdirs: string[], path: string): Model | undefined {
         return modelSubdirs
             .map((subdir) => {
