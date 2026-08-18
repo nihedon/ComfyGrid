@@ -461,8 +461,8 @@
         >
         <button
           class="btn btn-secondary d-flex align-items-center justify-content-center"
-          aria-label="Upload to input"
-          title={$t('gallery.upload_to_input')}
+          aria-label="Send to input"
+          title={$t('gallery.send_to_input')}
           onclick={() => galleryManager.uploadToInput()}><IconUpload size={16} /></button
         >
         <button

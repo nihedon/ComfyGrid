@@ -99,7 +99,7 @@
     "gallery.clear_saved": "Clear Saved Images",
     "gallery.clear_viewed": "Clear Viewed Images",
     "gallery.clear_all": "Clear All Images",
-    "gallery.upload_to_input": "Upload to Input",
+    "gallery.send_to_input": "Send to Input",
     "gallery.send_to_image_info": "Send to Image Info",
     "imageinfo.send_to_comfyui": "Send to ComfyUI",
     "toast.metadata_load_failed": "Failed to load metadata",
@@ -116,6 +116,8 @@
     "toast.free_memory_and_unload_models.completed": "Free memory and unload models completed",
     "toast.update_requested": "Update requested",
     "toast.update_request_completed": "Update completed",
+    "toast.send_to_input_success": "Sent file to input folder",
+    "toast.send_to_input_failed": "Failed to send file to input folder",
     "contextmenu.free_memory": "Free Memory",
     "contextmenu.free_memory_and_unload": "Free Memory and Unload Models",
     "warn.ollama.not_available": "Ollama is not available or not running. Please start Ollama or check the URL."
