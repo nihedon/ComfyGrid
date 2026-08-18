@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onDestroy, untrack } from 'svelte';
+  import { IconLayoutBoard } from '@tabler/icons-svelte';
   import { comfyGridApiClient } from '@/api/api-client';
   import { t } from '@/i18n/i18n';
   import { saveLayoutObject, updateBoardFloatingState } from '@/services/gridstack-service';
@@ -288,12 +289,12 @@
       >
         <TextareaCategory {widget} onManualTranslate={handleManualTranslate} />
         <button
-          class="btn btn-xs ms-auto"
+          class="btn btn-xs ms-auto d-flex align-items-center justify-content-center"
           title={$t(floatingButtonTitle)}
           style="background: var(--background-fill-primary);"
           onclick={toggleFloating}
         >
-          <i class="pi pi-objects-column"></i>
+          <IconLayoutBoard size={14} />
         </button>
       </div>
       <div class="d-flex flex-grow-1 overflow-y-hidden">

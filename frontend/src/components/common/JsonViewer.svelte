@@ -1,4 +1,10 @@
 <script lang="ts">
+  import {
+    IconCheck,
+    IconChevronDown,
+    IconChevronRight,
+    IconCopy,
+  } from '@tabler/icons-svelte';
   import { SvelteSet } from 'svelte/reactivity';
 
   let { value }: { value: unknown } = $props();
@@ -61,17 +67,21 @@
     <div class="d-flex gap-1">
       <button
         type="button"
-        class="btn btn-sm btn-outline-secondary"
+        class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1"
         onclick={() => expandAll(value)}
       >
-        <i class="pi pi-angle-down me-1"></i>Expand All
+        <IconChevronDown size={16} />Expand All
       </button>
-      <button type="button" class="btn btn-sm btn-outline-secondary" onclick={collapseAll}>
-        <i class="pi pi-angle-right me-1"></i>Collapse All
+      <button type="button" class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1" onclick={collapseAll}>
+        <IconChevronRight size={16} />Collapse All
       </button>
     </div>
-    <button type="button" class="btn btn-sm btn-outline-secondary" onclick={copyJson}>
-      <i class="pi {copySuccess ? 'pi-check text-success' : 'pi-copy'} me-1"></i>
+    <button type="button" class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1" onclick={copyJson}>
+      {#if copySuccess}
+        <IconCheck size={16} class="text-success" />
+      {:else}
+        <IconCopy size={16} />
+      {/if}
       {copySuccess ? 'Copied!' : 'Copy JSON'}
     </button>
   </div>
@@ -87,13 +97,17 @@
           {@const closeChar = isArr ? ']' : '}'}
 
           <span
-            class="json-toggle me-1"
+            class="json-toggle me-1 d-inline-flex align-items-center"
             role="button"
             tabindex="0"
             onclick={() => togglePath(path)}
             onkeydown={(e) => e.key === 'Enter' && togglePath(path)}
           >
-            <i class="pi {isExpanded ? 'pi-chevron-down' : 'pi-chevron-right'}"></i>
+            {#if isExpanded}
+              <IconChevronDown size={14} />
+            {:else}
+              <IconChevronRight size={14} />
+            {/if}
           </span>
 
           {#if keyName !== undefined}

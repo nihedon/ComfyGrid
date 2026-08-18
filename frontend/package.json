@@ -31,6 +31,7 @@
         "litegraph.js": "^0.7.18",
         "prettier": "^3.9.6",
         "prettier-plugin-svelte": "^4.1.1",
+        "rollup-plugin-license": "^3.7.1",
         "rollup-plugin-visualizer": "^7.1.1",
         "sass": "^1.102.0",
         "sass-embedded": "1.102.0",
@@ -43,10 +44,10 @@
     },
     "dependencies": {
         "@popperjs/core": "^2.11.8",
+        "@tabler/icons-svelte": "^3.46.0",
         "bootstrap": "^5.3.8",
         "bootstrap-autocomplete": "^2.3.7",
         "bootstrap-contextmenu": "^1.0.0",
-        "bootstrap-icons": "^1.13.1",
         "dompurify": "^3.4.13",
         "es-toolkit": "^1.50.0",
         "gridstack": "^13.1.2",
@@ -55,7 +56,6 @@
         "lit-html": "^3.3.3",
         "loglevel": "^1.9.2",
         "marked": "^18.0.9",
-        "primeicons": "^8.0.0",
         "split.js": "^1.6.5"
     },
     "packageManager": "pnpm@11.1.1+sha512.d1fdf5f73c617b64fa1a56a81c3c8dfe0e966e33a6010aa256b517ae77be21d93e05affc0de1a83b0e4f29d569f68b446ae8f068cd7247c0bb3df0fb4d7bdf9a",

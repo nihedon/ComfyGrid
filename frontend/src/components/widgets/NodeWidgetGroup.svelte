@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { IconCircleFilled } from '@tabler/icons-svelte';
   import { appState } from '@/states/app-state.svelte';
   import { ComfyGridGroup, ComfyGridNode } from '@/states/model-state.svelte';
   import type { ComfyNodeMode } from '@/types/model-shared';
@@ -84,9 +85,10 @@
   {#snippet header()}
     {#if nodeColorOpts !== 'none'}
       <div
-        class="pi pi-circle-fill position-relative me-2"
-        style:color={group.color ? group.color + '70' : '#00000000'}
+        class="position-relative me-2 d-inline-flex align-items-center"
+        style:color={group.color ? group.color + '70' : 'transparent'}
       >
+        <IconCircleFilled size={16} />
         <input
           class="position-absolute top-0 end-0 w-100 h-100 opacity-0"
           type="color"

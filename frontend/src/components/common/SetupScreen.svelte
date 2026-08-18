@@ -1,5 +1,14 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import {
+    IconBriefcase,
+    IconCirclePlus,
+    IconFolderOpen,
+    IconGridDots,
+    IconLink,
+    IconPlayerPlay,
+    IconSparkles,
+  } from '@tabler/icons-svelte';
   import { comfyGridApiClient } from '@/api/api-client';
   import type { SetupConfig, WorkspaceInfo } from '@/types/setup';
   import logger from '@/utils/logger';
@@ -185,7 +194,7 @@
 >
   <div class="setup-card card shadow-lg">
     <div class="card-header d-flex align-items-center gap-2 py-3">
-      <i class="bi bi-grid-3x3-gap-fill text-primary fs-5"></i>
+      <IconGridDots class="text-primary fs-5" />
       <span class="fw-bold fs-5">ComfyGrid Setup</span>
     </div>
 
@@ -200,7 +209,7 @@
         {#if updateInfo?.has_update && updateInfo.download_url}
           <div class="alert alert-info mb-4 shadow-sm border-0 bg-info-subtle">
             <h6 class="mb-1">
-              <i class="bi bi-stars me-1 text-primary"></i>New Update Available:
+              <IconSparkles size={18} class="me-1 text-primary" />New Update Available:
               <strong>{updateInfo.latest_version}</strong>
             </h6>
             <p class="mb-0 small opacity-75">A newer version of ComfyGrid is ready to download.</p>
@@ -218,8 +227,11 @@
               value="launch"
               bind:group={mode}
             />
-            <label class="btn btn-outline-primary" for="mode-launch">
-              <i class="bi bi-play-circle me-1"></i>Launch ComfyUI
+            <label
+              class="btn btn-outline-primary d-flex align-items-center justify-content-center gap-1"
+              for="mode-launch"
+            >
+              <IconPlayerPlay size={16} />Launch ComfyUI
             </label>
             <input
               type="radio"
@@ -229,8 +241,11 @@
               value="connect"
               bind:group={mode}
             />
-            <label class="btn btn-outline-primary" for="mode-connect">
-              <i class="bi bi-link-45deg me-1"></i>Attach to existing
+            <label
+              class="btn btn-outline-primary d-flex align-items-center justify-content-center gap-1"
+              for="mode-connect"
+            >
+              <IconLink size={16} />Attach to existing
             </label>
           </div>
         </div>
@@ -244,20 +259,20 @@
               {#each config.workspaces as ws, index (index)}
                 <button
                   type="button"
-                  class="workspace-item btn btn-sm text-start w-100"
+                  class="workspace-item btn btn-sm text-start w-100 d-flex align-items-center gap-2"
                   class:active={selectedWorkspaceName === ws.name && !isNewWorkspace}
                   onclick={() => handleWorkspaceSelect(ws.name)}
                 >
-                  <i class="bi bi-person-workspace me-2"></i>{ws.name}
+                  <IconBriefcase size={16} />{ws.name}
                 </button>
               {/each}
               <button
                 type="button"
-                class="workspace-item btn btn-sm btn-outline-secondary text-start w-100"
+                class="workspace-item btn btn-sm btn-outline-secondary text-start w-100 d-flex align-items-center gap-2"
                 class:active={isNewWorkspace}
                 onclick={handleAddWorkspace}
               >
-                <i class="bi bi-plus-circle me-2"></i>New workspace
+                <IconCirclePlus size={16} />New workspace
               </button>
             </div>
           </div>
@@ -286,9 +301,10 @@
                     placeholder="e.g. D:\ComfyUI_windows\ComfyUI\main.py"
                     required
                   />
-                  <!-- svelte-ignore a11y_consider_explicit_label -->
-                  <button class="btn btn-primary" type="button" onclick={pickMainScriptFile}
-                    ><i class="pi pi-folder-open"></i></button
+                  <button
+                    class="btn btn-primary d-flex align-items-center justify-content-center"
+                    type="button"
+                    onclick={pickMainScriptFile}><IconFolderOpen size={16} /></button
                   >
                 </div>
                 <div class="invalid-feedback">Please specify the ComfyUI main script path.</div>
@@ -304,9 +320,10 @@
                     placeholder="e.g. D:\ComfyUI_windows\python_embeded\python.exe"
                     required
                   />
-                  <!-- svelte-ignore a11y_consider_explicit_label -->
-                  <button class="btn btn-primary" type="button" onclick={pickPythonFile}
-                    ><i class="pi pi-folder-open"></i></button
+                  <button
+                    class="btn btn-primary d-flex align-items-center justify-content-center"
+                    type="button"
+                    onclick={pickPythonFile}><IconFolderOpen size={16} /></button
                   >
                 </div>
                 <div class="invalid-feedback">Please specify the Python executable path.</div>

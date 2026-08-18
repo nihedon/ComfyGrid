@@ -1,5 +1,12 @@
 <script lang="ts">
   import { type Component } from 'svelte';
+  import {
+    IconArrowsExchange,
+    IconInfoCircle,
+    IconLayoutDashboard,
+    IconPlayerPlay,
+    IconWindowMinimize,
+  } from '@tabler/icons-svelte';
   import { t } from '@/i18n/i18n';
   import { notifyNodeChanged } from '@/services/custom-node-service.svelte';
   import { updateBoardFloatingState } from '@/services/gridstack-service';
@@ -307,19 +314,18 @@
             handleChange={(e, val) => handleStateChange(e, val)}
           />
           {#if node.hasOutputNode}
-            <!-- svelte-ignore a11y_consider_explicit_label -->
             <button
               type="button"
-              class="d-flex align-items-center btn btn-sm btn-primary"
+              class="d-flex align-items-center btn btn-sm btn-primary p-1"
               onclick={handleExecuteNode}
             >
-              <i class="pi pi-caret-right"></i>
+              <IconPlayerPlay size={14} />
             </button>
           {/if}
           {#if appState.isDebugMode}
             <button
               type="button"
-              class="btn btn-xs"
+              class="btn btn-xs d-flex align-items-center justify-content-center"
               title={node.id}
               onclick={(e) => {
                 e.stopPropagation();
@@ -332,7 +338,7 @@
                 });
               }}
             >
-              <i class="pi pi-info-circle"></i>
+              <IconInfoCircle size={14} />
             </button>
           {/if}
         {/if}
@@ -371,28 +377,28 @@
       />
     {/if}
     {#if !isTitleEditing}
-      <div class="d-flex align-items-center">
+      <div class="d-flex align-items-center gap-1">
         {#if isFloating && otherBoardId}
           <button
             type="button"
-            class="btn btn-xs"
+            class="btn btn-xs d-flex align-items-center justify-content-center"
             title={$t('node.move_to_other_board')}
             onclick={() => moveToBoard(otherBoardId)}
           >
-            <i class="pi pi-arrow-right-arrow-left"></i>
+            <IconArrowsExchange size={14} />
           </button>
         {/if}
         <div>
           <button
             type="button"
-            class="btn btn-xs"
+            class="btn btn-xs d-flex align-items-center justify-content-center"
             title={$t(floatingButtonTitle)}
             onclick={toggleFloating}
           >
             {#if isFloating}
-              <i class="pi pi-window-minimize"></i>
+              <IconWindowMinimize size={14} />
             {:else}
-              <i class="pi pi-objects-column"></i>
+              <IconLayoutDashboard size={14} />
             {/if}
           </button>
         </div>

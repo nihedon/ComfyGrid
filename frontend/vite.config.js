@@ -1,6 +1,7 @@
 import inject from '@rollup/plugin-inject';
 import { svelte, vitePreprocess } from '@sveltejs/vite-plugin-svelte';
-import { resolve } from 'path';
+import path, { resolve } from 'path';
+import license from 'rollup-plugin-license';
 import { visualizer } from 'rollup-plugin-visualizer';
 import { defineConfig } from 'vite';
 
@@ -23,6 +24,11 @@ export default defineConfig({
             jQuery: 'jquery',
             'window.jQuery': 'jquery',
             'window.$': 'jquery',
+        }),
+        license({
+            thirdParty: {
+                output: [path.join(__dirname, 'dist', 'THIRD_PARTY_LICENSES.txt'), path.join(__dirname, '..', 'THIRD_PARTY_LICENSES.txt')],
+            },
         }),
     ],
     resolve: {

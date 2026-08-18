@@ -25,6 +25,7 @@
   import logger from '@/utils/logger';
   import Body from './Body.svelte';
   import Header from './Header.svelte';
+  import { IconAlertTriangle, IconRefresh, IconReload } from '@tabler/icons-svelte';
   import { comfyGridApiClient } from './api/api-client';
   import { bindKeyboardShortcuts } from './helpers/keybind.svelte';
   import { workflowManager } from './managers/workflow-manager';
@@ -251,7 +252,7 @@
         <div class="col-md-8">
           <div class="card border-danger shadow-lg">
             <div class="card-header bg-danger text-white d-flex align-items-center gap-2">
-              <i class="pi pi-exclamation-triangle"></i>
+              <IconAlertTriangle size={20} />
               <h5 class="card-title mb-0">Application Error</h5>
             </div>
             <div class="card-body">
@@ -271,14 +272,14 @@
               </div>
               <div class="d-flex justify-content-end gap-2 mt-4">
                 <button type="button" class="btn btn-outline-secondary" onclick={reset}>
-                  <i class="pi pi-refresh me-1"></i>Reset View
+                  <IconRefresh size={16} class="me-1" />Reset View
                 </button>
                 <button
                   type="button"
                   class="btn btn-danger"
                   onclick={() => globalThis.location.reload()}
                 >
-                  <i class="pi pi-sync me-1"></i>Reload Page
+                  <IconReload size={16} class="me-1" />Reload Page
                 </button>
               </div>
             </div>

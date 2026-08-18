@@ -1,24 +1,15 @@
 <script lang="ts">
+  import {
+    IconAlertTriangle,
+    IconCheck,
+    IconInfoCircle,
+    IconX,
+  } from '@tabler/icons-svelte';
   import { SvelteMap } from 'svelte/reactivity';
   import { appState } from '@/states/app-state.svelte';
 
   let toastState = appState.toastState;
   let toastElements = new SvelteMap<string, HTMLDivElement>();
-
-  function getToastIcon(type: string): string {
-    switch (type) {
-      case 'success':
-        return 'pi-check-circle';
-      case 'error':
-        return 'pi-times-circle';
-      case 'warning':
-        return 'pi-exclamation-triangle';
-      case 'info':
-        return 'pi-info-circle';
-      default:
-        return 'pi-info-circle';
-    }
-  }
 
   function getToastClass(type: string): string {
     switch (type) {
@@ -70,8 +61,16 @@
       aria-live="assertive"
       aria-atomic="true"
     >
-      <div class="toast-header {getToastClass(toast.type)}">
-        <i class="pi {getToastIcon(toast.type)} me-2"></i>
+      <div class="toast-header {getToastClass(toast.type)} d-flex align-items-center gap-1">
+        {#if toast.type === 'success'}
+          <IconCheck size={16} />
+        {:else if toast.type === 'error'}
+          <IconX size={16} />
+        {:else if toast.type === 'warning'}
+          <IconAlertTriangle size={16} />
+        {:else}
+          <IconInfoCircle size={16} />
+        {/if}
         <strong class="me-auto">{toast.title}</strong>
         <small>{new Date(toast.timestamp).toLocaleTimeString()}</small>
         <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>

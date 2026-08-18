@@ -1,4 +1,11 @@
 <script lang="ts">
+  import {
+    IconFileExport,
+    IconFileImport,
+    IconMenu2,
+    IconReload,
+    IconSettings,
+  } from '@tabler/icons-svelte';
   import { t } from '@/i18n/i18n';
   import { workflowManager } from '@/managers/workflow-manager';
   import { openLayout } from '@/services/gridstack-service';
@@ -56,64 +63,69 @@
 </script>
 
 <div class="dropdown">
-  <!-- svelte-ignore a11y_consider_explicit_label -->
   <button
-    class="dropdown-toggle btn btn-outline-secondary d-flex justify-content-center align-items-center"
+    class="dropdown-toggle btn btn-outline-secondary d-flex justify-content-center align-items-center p-1"
     type="button"
     data-bs-toggle="dropdown"
     aria-expanded="false"
     style="width: 2.2rem; height: 2.2rem;"
-    ><i class="pi pi-bars"></i>
+    ><IconMenu2 size={18} />
   </button>
 
   <ul class="dropdown-menu">
     <li>
-      <button class="dropdown-item" onclick={handleClickOpenSetup}>
-        <i class="pi pi-cog"></i>{$t('menu.setup')}
+      <button class="dropdown-item d-flex align-items-center gap-2" onclick={handleClickOpenSetup}>
+        <IconSettings size={16} />{$t('menu.setup')}
       </button>
     </li>
     <li><hr class="dropdown-divider" /></li>
     <li>
-      <button class="dropdown-item" onclick={handleClickReloadGraph}>
-        <i class="pi pi-sync"></i>{$t('menu.reload')}
+      <button
+        class="dropdown-item d-flex align-items-center gap-2"
+        onclick={handleClickReloadGraph}
+      >
+        <IconReload size={16} />{$t('menu.reload')}
       </button>
     </li>
     <li><hr class="dropdown-divider" /></li>
     <li>
-      <button class="dropdown-item" onclick={handleRefreshComboInNodes}
-        ><i></i>{$t('menu.update_request')}</button
+      <button
+        class="dropdown-item d-flex align-items-center gap-2"
+        onclick={handleRefreshComboInNodes}
+        ><span class="ps-4">{$t('menu.update_request')}</span></button
       >
     </li>
     <li><hr class="dropdown-divider" /></li>
     <li>
-      <button class="dropdown-item" onclick={handleClickImportLayout}
-        ><i class="pi pi-file-import"></i>{$t('menu.import')}</button
+      <button
+        class="dropdown-item d-flex align-items-center gap-2"
+        onclick={handleClickImportLayout}><IconFileImport size={16} />{$t('menu.import')}</button
       >
     </li>
     <li>
-      <button class="dropdown-item" onclick={handleClickExportWorkflow}
-        ><i></i>{$t('menu.export.workflow')}</button
+      <button
+        class="dropdown-item d-flex align-items-center gap-2"
+        onclick={handleClickExportWorkflow}
+        ><span class="ps-4">{$t('menu.export.workflow')}</span></button
       >
     </li>
     <li>
-      <button class="dropdown-item" onclick={handleClickExportLayout}>
-        <i></i>{$t('menu.export.layout')}</button
+      <button
+        class="dropdown-item d-flex align-items-center gap-2"
+        onclick={handleClickExportLayout}
+      >
+        <span class="ps-4">{$t('menu.export.layout')}</span></button
       >
     </li>
     <li>
-      <button class="dropdown-item" onclick={handleClickExportAll}
-        ><i class="pi pi-file-export"></i>{$t('menu.export.all')}</button
+      <button class="dropdown-item d-flex align-items-center gap-2" onclick={handleClickExportAll}
+        ><IconFileExport size={16} />{$t('menu.export.all')}</button
       >
     </li>
   </ul>
 </div>
 
 <style lang="scss">
-  button > i {
-    width: 2rem;
-    display: inline-block;
-  }
-
   .dropdown-toggle::after {
     display: none;
   }

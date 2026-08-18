@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { IconLoader2, IconPower, IconReload } from '@tabler/icons-svelte';
   import { comfyGridApiClient } from '@/api/api-client';
   import { t } from '@/i18n/i18n';
   import { workflowManager } from '@/managers/workflow-manager';
@@ -65,7 +66,7 @@
     <ul class="dropdown-menu">
       <li>
         <button class="dropdown-item d-flex align-items-center gap-2" onclick={handleReload}>
-          <i class="pi pi-refresh"></i>
+          <IconReload size={16} />
           {$t('tab.comfyui.reload')}
         </button>
       </li>
@@ -76,9 +77,9 @@
           disabled={isRestarting}
         >
           {#if isRestarting}
-            <i class="pi pi-spin pi-spinner"></i>
+            <IconLoader2 size={16} class="spin" />
           {:else}
-            <i class="pi pi-power-off"></i>
+            <IconPower size={16} />
           {/if}
           {$t('tab.comfyui.restart')}
         </button>

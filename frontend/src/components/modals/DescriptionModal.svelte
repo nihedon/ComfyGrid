@@ -1,4 +1,17 @@
 <script lang="ts">
+  import {
+    IconChevronLeft,
+    IconChevronRight,
+    IconEdit,
+    IconHeart,
+    IconHeartFilled,
+    IconLink,
+    IconPlus,
+    IconRefresh,
+    IconStar,
+    IconStarFilled,
+    IconX,
+  } from '@tabler/icons-svelte';
   import { Modal } from 'bootstrap';
   import DOMPurify from 'dompurify';
   import { marked } from 'marked';
@@ -217,22 +230,25 @@
           <h5 class="modal-title d-flex align-items-center gap-2">
             <!-- svelte-ignore a11y_click_events_have_key_events -->
             <!-- svelte-ignore a11y_role_has_required_aria_props -->
-            <!-- svelte-ignore a11y_interactive_supports_focus -->
-            <i
-              class="pi pi-heart{tempFavorite ? '-fill text-warning' : ''}"
+            <span
               style="cursor: pointer;"
               role="switch"
+              tabindex="0"
               onclick={() => (tempFavorite = !tempFavorite)}
-            ></i>
+            >
+              {#if tempFavorite}
+                <IconHeartFilled size={20} class="text-warning" />
+              {:else}
+                <IconHeart size={20} />
+              {/if}
+            </span>
             {model.name}
             {#if tempUrl}
               <!-- svelte-ignore a11y_click_events_have_key_events -->
               <!-- svelte-ignore a11y_no_static_element_interactions -->
-              <i
-                class="pi pi-link fs-5"
-                style="cursor: pointer;"
-                onclick={() => window.open(tempUrl, '_blank')}
-              ></i>
+              <span style="cursor: pointer;" onclick={() => window.open(tempUrl, '_blank')}>
+                <IconLink size={18} />
+              </span>
             {/if}
           </h5>
           <button type="button" class="btn-close" aria-label="Close" onclick={handleClose}></button>
@@ -256,27 +272,31 @@
                   {#each [1, 2, 3, 4, 5] as star, i (i)}
                     <!-- svelte-ignore a11y_click_events_have_key_events -->
                     <!-- svelte-ignore a11y_no_static_element_interactions -->
-                    <i
-                      class="pi pi-star{tempRate && tempRate >= star
-                        ? '-fill text-warning'
-                        : ''} fs-4 me-1"
+                    <span
                       style="cursor: pointer;"
+                      class="me-1"
                       onclick={() => (tempRate = tempRate === star ? undefined : star)}
-                    ></i>
+                    >
+                      {#if tempRate && tempRate >= star}
+                        <IconStarFilled size={20} class="text-warning" />
+                      {:else}
+                        <IconStar size={20} />
+                      {/if}
+                    </span>
                   {/each}
                 </div>
               </div>
               <div class="mb-1 vstack flex-grow-1 description">
-                <!-- svelte-ignore a11y_label_has_associated_control -->
                 <label class="fs-5 mb-0 form-label fw-bold d-flex align-items-center gap-2"
                   >Description
                   <!-- svelte-ignore a11y_click_events_have_key_events -->
                   <!-- svelte-ignore a11y_no_static_element_interactions -->
-                  <i
-                    class="pi pi-file-edit fs-5 text-secondary"
+                  <span
                     style="cursor: pointer;"
                     onclick={() => (isEditingDescription = !isEditingDescription)}
-                  ></i>
+                  >
+                    <IconEdit size={18} class="text-secondary" />
+                  </span>
                 </label>
                 {#if isEditingDescription}
                   <textarea
@@ -299,26 +319,25 @@
                     {#each { length: tempTrainedWords.length }, i (i)}
                       <div class="input-group input-group-sm mb-1">
                         <input type="text" class="form-control" bind:value={tempTrainedWords[i]} />
-                        <!-- svelte-ignore a11y_consider_explicit_label -->
                         <button
-                          class="btn btn-secondary"
+                          class="btn btn-secondary d-flex align-items-center justify-content-center"
                           type="button"
                           onclick={() => {
                             tempTrainedWords.splice(i, 1);
                           }}
                         >
-                          <i class="pi pi-times"></i>
+                          <IconX size={14} />
                         </button>
                       </div>
                     {/each}
                   {/if}
                   <button
-                    class="btn btn-sm btn-primary mt-1"
+                    class="btn btn-sm btn-primary mt-1 d-inline-flex align-items-center gap-1"
                     onclick={() => {
                       tempTrainedWords.push('');
                     }}
                   >
-                    <i class="pi pi-plus me-1"></i>Add Word
+                    <IconPlus size={16} />Add Word
                   </button>
                 </div>
               {/if}
@@ -373,7 +392,7 @@
               {#if fetchedImages.length > 1 && fetchedImages.includes(tempPreviewUrl || '')}
                 <div class="d-flex align-items-center justify-content-between px-1">
                   <button
-                    class="btn btn-sm btn-outline-secondary"
+                    class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1"
                     onclick={(e) => {
                       e.stopPropagation();
                       selectedImageIndex =
@@ -381,20 +400,20 @@
                       tempPreviewUrl = fetchedImages[selectedImageIndex];
                     }}
                   >
-                    <i class="pi pi-chevron-left"></i> Prev
+                    <IconChevronLeft size={16} /> Prev
                   </button>
                   <span class="text-muted small fw-bold">
                     {selectedImageIndex + 1} / {fetchedImages.length}
                   </span>
                   <button
-                    class="btn btn-sm btn-outline-secondary"
+                    class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1"
                     onclick={(e) => {
                       e.stopPropagation();
                       selectedImageIndex = (selectedImageIndex + 1) % fetchedImages.length;
                       tempPreviewUrl = fetchedImages[selectedImageIndex];
                     }}
                   >
-                    Next <i class="pi pi-chevron-right"></i>
+                    Next <IconChevronRight size={16} />
                   </button>
                 </div>
               {/if}
@@ -405,7 +424,7 @@
           <div class="flex flex-row flex-grow-1 d-flex gap-2">
             <button
               type="button"
-              class="btn btn-secondary"
+              class="btn btn-secondary d-flex align-items-center gap-1"
               onclick={handleFetch}
               disabled={isFetching || isSaving}
             >
@@ -413,17 +432,17 @@
                 <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
                 <span class="visually-hidden" role="status">Loading...</span>
               {:else}
-                <i class="pi pi-refresh me-1"></i>Fetch Info
+                <IconRefresh size={16} />Fetch Info
               {/if}
             </button>
             {#if tempUrl}
               <button
                 type="button"
-                class="btn btn-outline-secondary"
+                class="btn btn-outline-secondary d-flex align-items-center gap-1"
                 onclick={handleEditUrl}
                 disabled={isFetching || isSaving}
               >
-                <i class="pi pi-link me-1"></i>Edit URL
+                <IconLink size={16} />Edit URL
               </button>
             {/if}
           </div>

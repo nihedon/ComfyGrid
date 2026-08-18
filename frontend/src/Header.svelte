@@ -1,5 +1,6 @@
 <script lang="ts">
   import Page from '@/components/pages/PageTab.svelte';
+  import { IconDownload } from '@tabler/icons-svelte';
   import ActionForm from '@/components/sections/ActionPanel.svelte';
   import GlobalMenu from '@/components/sections/GlobalMenu.svelte';
   import ProgressBar from '@/components/sections/ProgressBar.svelte';
@@ -43,7 +44,7 @@
       ondrop={(e) => fileManager.handleDrop(e)}
     >
       <div class="drop-content text-center">
-        <i class="pi pi-download"></i>
+        <IconDownload size={32} />
         <div>Drop here to load workflow</div>
       </div>
     </div>

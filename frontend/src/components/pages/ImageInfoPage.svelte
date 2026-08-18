@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { IconPhoto, IconSend } from '@tabler/icons-svelte';
   import { onDestroy } from 'svelte';
   import { comfyGridApiClient } from '@/api/api-client';
   import JsonViewer from '@/components/common/JsonViewer.svelte';
@@ -267,7 +268,7 @@
           <div
             class="vstack h-100 w-100 align-items-center justify-content-center p-2 rounded-3 border border-2 border-secondary-subtle fw-bold text-body-tertiary"
           >
-            <span class="fs-1" aria-label="Image placeholder"><i class="pi pi-image"></i></span>
+            <span class="fs-1" aria-label="Image placeholder"><IconPhoto size={48} /></span>
             <span class="fs-2">Drag and drop an image or video here</span>
           </div>
         {/if}
@@ -278,7 +279,7 @@
             class="btn btn-primary w-100 d-flex align-items-center justify-content-center gap-2"
             onclick={(e) => handleTransferToComfyUI(e)}
           >
-            <i class="pi pi-send"></i>{$t('imageinfo.send_to_comfyui')}
+            <IconSend size={18} />{$t('imageinfo.send_to_comfyui')}
           </button>
         </div>
       {/if}

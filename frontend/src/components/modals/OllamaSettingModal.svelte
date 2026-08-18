@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { IconAlertTriangle, IconLoader2, IconReload, IconSettings } from '@tabler/icons-svelte';
   import { Modal } from 'bootstrap';
   import { comfyGridApiClient } from '@/api/api-client';
   import { t } from '@/i18n/i18n';
@@ -121,14 +122,14 @@
     <div class="modal-content">
       <div class="modal-header">
         <h5 class="modal-title d-flex align-items-center gap-2">
-          <i class="pi pi-cog"></i> Ollama Settings
+          <IconSettings size={18} /> Ollama Settings
         </h5>
         <button type="button" class="btn-close" aria-label="Close" onclick={handleClose}></button>
       </div>
       <div class="modal-body vstack gap-3">
         {#if !isAvailable && !loadingModels}
           <div class="alert alert-warning d-flex align-items-center gap-2 mb-0" role="alert">
-            <i class="pi pi-exclamation-triangle flex-shrink-0"></i>
+            <IconAlertTriangle size={18} class="flex-shrink-0" />
             <div>
               {$t('warn.ollama.not_available')}
             </div>
@@ -180,7 +181,7 @@
                 disabled={loadingModels}
                 title={$t('tab.comfyui.reload') ?? 'Reload'}
               >
-                <i class="pi pi-refresh" class:pi-spin={loadingModels}></i>
+                <IconReload size={16} class={loadingModels ? 'spin' : ''} />
               </button>
             {/if}
           </div>
@@ -224,7 +225,7 @@
           disabled={isSaving}
         >
           {#if isSaving}
-            <i class="pi pi-spin pi-spinner"></i>
+            <IconLoader2 size={16} class="spin" />
           {/if}
           Save
         </button>
