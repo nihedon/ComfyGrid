@@ -77,7 +77,7 @@
   </div>
 
   <div class="json-viewer-content flex-grow-1 p-3 overflow-auto font-monospace small">
-    {#snippet node(val: unknown, keyName?: string, path = 'root', isLast = true)}
+    {#snippet node(val: unknown, keyName: string | undefined = undefined, path = 'root', isLast = true)}
       <div class="json-node-line">
         {#if isObject(val)}
           {@const keys = Object.keys(val)}

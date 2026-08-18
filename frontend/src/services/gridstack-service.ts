@@ -169,9 +169,7 @@ export function updateAttribute(grid: GridStack) {
 
 export function applyFloatingPositions(boardId?: string, initSettings?: Record<string, Record<string, FloatingPosition>>) {
     const activeKeys = Array.from(appState.workspaceState.gridStackBoards.keys());
-    const boardIds = boardId
-        ? activeKeys.filter((k) => k === boardId || k.startsWith(boardId + '-'))
-        : activeKeys;
+    const boardIds = boardId ? activeKeys.filter((k) => k === boardId || k.startsWith(boardId + '-')) : activeKeys;
 
     for (const exactGridKey of boardIds) {
         const grid = appState.workspaceState.gridStackBoards.get(exactGridKey);
@@ -229,7 +227,7 @@ export function applyFloatingPositions(boardId?: string, initSettings?: Record<s
         children.forEach((child) => {
             grid.makeWidget(child);
         });
-        grid.commit();
+        grid.batchUpdate(false);
 
         // 5. Final sync internal -> DOM attributes to ensure Svelte sees the actual final positions
         updateAttribute(grid);

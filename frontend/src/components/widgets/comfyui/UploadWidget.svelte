@@ -36,7 +36,7 @@
   <div class="d-flex flex-grow-1 gap-2">
     <ModalComboWidget {widget} {modelDir} modelSubdirs={[]} {handleInput} />
     <!-- svelte-ignore a11y_consider_explicit_label -->
-    <button class="btn btn-primary btn-sm p-2" onclick={() => widget.callback()}>
+    <button class="btn btn-primary btn-sm" onclick={() => widget.callback()}>
       <i class="pi pi-folder-open"></i>
     </button>
   </div>
