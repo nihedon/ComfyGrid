@@ -17,44 +17,24 @@ from comfy_execution.utils import get_executing_context
 from server import PromptServer
 
 
-def hook_sample():
-    org_sample = comfy.sample.sample
+def hook_prepare_noise():
+    org_prepare_noise = comfy.sample.prepare_noise
 
-    def sample_hook(*args, **kwargs):
-        org_return = org_sample(*args, **kwargs)
+    def prepare_noise_hook(*args, **kwargs):
+        org_return = org_prepare_noise(*args, **kwargs)
         try:
             ctx = get_executing_context()
             PromptServer.instance.send_sync("comfygrid.sampling_info", {
                 "job_id": ctx.prompt_id if ctx else "",
                 "node_id": ctx.node_id if ctx else "",
+                "seed": args[1],
                 "list_index": ctx.list_index if ctx else None,
-                **{key: value for key, value in kwargs.items() if type(value) is str or type(value) is int or type(value) is float},
             })
         except Exception as e:
             print(f"Error sending message: {e}")
         return org_return
 
-    comfy.sample.sample = sample_hook
-
-
-def hook_sample_custom():
-    org_sample_custom = comfy.sample.sample_custom
-
-    def sample_custom_hook(*args, **kwargs):
-        org_return = org_sample_custom(*args, **kwargs)
-        try:
-            ctx = get_executing_context()
-            PromptServer.instance.send_sync("comfygrid.sampling_info", {
-                "job_id": ctx.prompt_id if ctx else "",
-                "node_id": ctx.node_id if ctx else "",
-                "list_index": ctx.list_index if ctx else None,
-                **{key: value for key, value in kwargs.items() if type(value) is str or type(value) is int or type(value) is float},
-            })
-        except Exception as e:
-            print(f"Error sending message: {e}")
-        return org_return
-
-    comfy.sample.sample_custom = sample_custom_hook
+    comfy.sample.prepare_noise = prepare_noise_hook
 
 
 def hook_get_output_data():
@@ -143,8 +123,7 @@ def hook_decode_latent_to_preview():
 
 
 def hook_comfygrid():
-    hook_sample()
-    hook_sample_custom()
+    hook_prepare_noise()
     hook_get_output_data()
     hook_preview_to_image()
     hook_decode_latent_to_preview()
