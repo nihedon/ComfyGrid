@@ -330,6 +330,40 @@ class WorkspaceState {
     hasErrorNode(nodeId: string) {
         return this.#errorWidgets.has(nodeId);
     }
+
+    hasDefaultTabError(commonTabBoard: boolean): boolean {
+        const nonTabifiedGroups = this.#groups.filter((g) => !g.isTabify);
+        let hasError = nonTabifiedGroups.some((g) => g.hasError);
+
+        if (!hasError && commonTabBoard) {
+            for (const group of this.#groups) {
+                for (const node of group.nodes) {
+                    const isNodeFloatingOnTab = this.#layout.floatingNodes.get(node.id) === 'Tab';
+                    const hasWidgetFloatingOnTab = node.widgets.some(
+                        (w) => w.type === 'customtext' && this.#layout.floatingWidgets.get(w.id) === 'Tab',
+                    );
+                    if ((isNodeFloatingOnTab || hasWidgetFloatingOnTab) && this.hasErrorNode(node.id)) {
+                        hasError = true;
+                        break;
+                    }
+                }
+                if (hasError) break;
+            }
+        }
+        return hasError;
+    }
+
+    getDefaultTabModeSet(): Set<number> {
+        const nonTabifiedGroups = this.#groups.filter((g) => !g.isTabify);
+        // eslint-disable-next-line svelte/prefer-svelte-reactivity
+        const modeSet = new Set<number>();
+        for (const g of nonTabifiedGroups) {
+            for (const mode of g.modeSet) {
+                modeSet.add(mode);
+            }
+        }
+        return modeSet;
+    }
 }
 
 export const workspaceState = new WorkspaceState();
