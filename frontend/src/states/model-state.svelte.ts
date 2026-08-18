@@ -407,6 +407,10 @@ export class ComfyGridNode {
     onDrawBackground() {
         this.#comfyNode.onDrawBackground?.();
     }
+
+    updateNode() {
+        workflowManager.handleUpdateNode({ nodeId: this.id });
+    }
 }
 
 export class ComfyGridWidget<V = string, O = undefined> {
