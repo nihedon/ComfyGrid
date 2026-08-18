@@ -1,7 +1,8 @@
 <script lang="ts">
   import { type Component } from 'svelte';
   import {
-    IconArrowsExchange,
+    IconArrowsUpLeft,
+    IconFocus2,
     IconInfoCircle,
     IconLayoutDashboard,
     IconPlayerPlay,
@@ -49,8 +50,14 @@
     return Boolean(workspaceState.layout.floatingNodes.get(node.id));
   });
 
+  const isInvalid = $derived(workspaceState.hasErrorNode(node.id));
+
+  const alwaysShowFocusButton = $derived(
+    (appState.optionState.get('ComfyGrid.ui.always_show_node_focus_button') as boolean) ?? false,
+  );
+
   const showNode = $derived.by(() => {
-    if (isFloating || workspaceState.hasErrorNode(node.id)) {
+    if (isFloating || isInvalid) {
       return true;
     }
     if (noControlNodes && containsWidgets.length === 0) {
@@ -288,6 +295,11 @@
     };
   }
 
+  function focusNodeInComfyUI() {
+    appState.comfyUiState.app?.canvas?.animateToBounds(node.comfyNode.boundingRect);
+    appState.uiState.activePageId = 'comfyui';
+  }
+
   $effect(() => {
     notifyNodeChanged(node.id, node);
   });
@@ -299,7 +311,7 @@
   class:normal={node.mode === COMFY_NODE_MODE.NORMAL}
   class:mute={node.mode === COMFY_NODE_MODE.MUTE}
   class:bypass={node.mode === COMFY_NODE_MODE.BYPASS}
-  class:is-invalid={workspaceState.hasErrorNode(node.id)}
+  class:is-invalid={isInvalid}
   style:background-color={bgColor}
   style:display={showNode ? '' : 'none'}
   data-id={node.id}
@@ -313,10 +325,20 @@
             mode={new Set([node.mode])}
             handleChange={(e, val) => handleStateChange(e, val)}
           />
+          {#if alwaysShowFocusButton || isInvalid}
+            <button
+              type="button"
+              class={`btn btn-xs btn-${isInvalid ? 'danger' : 'outline-secondary'} d-flex align-items-center justify-content-center p-1`}
+              title={$t('node.focus')}
+              onclick={focusNodeInComfyUI}
+            >
+              <IconFocus2 size={14} />
+            </button>
+          {/if}
           {#if node.hasOutputNode}
             <button
               type="button"
-              class="d-flex align-items-center btn btn-sm btn-primary p-1"
+              class="btn btn-xs btn-primary d-flex align-items-center p-1"
               onclick={handleExecuteNode}
             >
               <IconPlayerPlay size={14} />
@@ -325,7 +347,7 @@
           {#if appState.isDebugMode}
             <button
               type="button"
-              class="btn btn-xs d-flex align-items-center justify-content-center"
+              class="btn btn-xs btn-outline-secondary d-flex align-items-center justify-content-center p-1"
               title={node.id}
               onclick={(e) => {
                 e.stopPropagation();
@@ -385,27 +407,25 @@
             title={$t('node.move_to_other_board')}
             onclick={() => moveToBoard(otherBoardId)}
           >
-            <IconArrowsExchange size={14} />
+            <IconArrowsUpLeft size={14} />
           </button>
         {/if}
-        <div>
-          <button
-            type="button"
-            class="btn btn-xs d-flex align-items-center justify-content-center"
-            title={$t(floatingButtonTitle)}
-            onclick={toggleFloating}
-          >
-            {#if isFloating}
-              <IconWindowMinimize size={14} />
-            {:else}
-              <IconLayoutDashboard size={14} />
-            {/if}
-          </button>
-        </div>
+        <button
+          type="button"
+          class="btn btn-xs d-flex align-items-center justify-content-center"
+          title={$t(floatingButtonTitle)}
+          onclick={toggleFloating}
+        >
+          {#if isFloating}
+            <IconWindowMinimize size={14} />
+          {:else}
+            <IconLayoutDashboard size={14} />
+          {/if}
+        </button>
       </div>
     {/if}
   </div>
-  {#if workspaceState.hasErrorNode(node.id) || (!node.collapsed && containsWidgets.length > 0)}
+  {#if isInvalid || (!node.collapsed && containsWidgets.length > 0)}
     <div
       class="widget-stack {node.type} {nodeStyle}"
       class:py-1={!widget && !isTextareaOnly}

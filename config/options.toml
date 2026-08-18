@@ -30,6 +30,10 @@ default = "all_top_groups"
 type = "checkbox"
 default = true
 
+[ComfyGrid.ui.always_show_node_focus_button]
+type = "checkbox"
+default = false
+
 [ComfyGrid.ui.model_thumbnail_width]
 type = "slider"
 default = "160"

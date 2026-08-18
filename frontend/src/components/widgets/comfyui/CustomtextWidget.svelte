@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onDestroy, untrack } from 'svelte';
-  import { IconLayoutBoard } from '@tabler/icons-svelte';
+  import { IconLayoutDashboard } from '@tabler/icons-svelte';
   import { comfyGridApiClient } from '@/api/api-client';
   import { t } from '@/i18n/i18n';
   import { saveLayoutObject, updateBoardFloatingState } from '@/services/gridstack-service';
@@ -257,8 +257,7 @@
       readonly={widget.readonly}
       placeholder={widget.placeholder}
       bind:value={widget.rawValue}
-      bind:this={textareaElement}
-    ></textarea>
+      bind:this={textareaElement}></textarea>
   {:else}
     <textarea
       class="flex-grow-1 form-control overflow-y-scroll rounded-top-0"
@@ -271,8 +270,7 @@
       readonly={widget.readonly}
       placeholder={widget.placeholder}
       bind:value={widget.value}
-      bind:this={textareaElement}
-    ></textarea>
+      bind:this={textareaElement}></textarea>
   {/if}
 {/snippet}
 
@@ -294,7 +292,7 @@
           style="background: var(--background-fill-primary);"
           onclick={toggleFloating}
         >
-          <IconLayoutBoard size={14} />
+          <IconLayoutDashboard size={14} />
         </button>
       </div>
       <div class="d-flex flex-grow-1 overflow-y-hidden">
