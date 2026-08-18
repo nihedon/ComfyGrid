@@ -227,7 +227,7 @@ export function applyFloatingPositions(boardId?: string, initSettings?: Record<s
         children.forEach((child) => {
             grid.makeWidget(child);
         });
-        grid.batchUpdate(false);
+        grid.commit();
 
         // 5. Final sync internal -> DOM attributes to ensure Svelte sees the actual final positions
         updateAttribute(grid);

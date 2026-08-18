@@ -27,13 +27,13 @@ export default defineConfig({
         }),
         license({
             thirdParty: {
-                output: [path.join(__dirname, 'dist', 'THIRD_PARTY_LICENSES.txt'), path.join(__dirname, '..', 'THIRD_PARTY_LICENSES.txt')],
+                output: [path.join(import.meta.dirname, 'dist', 'THIRD_PARTY_LICENSES.txt'), path.join(import.meta.dirname, '..', 'THIRD_PARTY_LICENSES.txt')],
             },
         }),
     ],
     resolve: {
         alias: {
-            '@': resolve(__dirname, './src'),
+            '@': resolve(import.meta.dirname, './src'),
         },
     },
     build: {
