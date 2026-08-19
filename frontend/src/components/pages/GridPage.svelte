@@ -16,7 +16,7 @@
   const workspaceState = appState.workspaceState;
   const optionState = appState.optionState;
 
-  let activeTabId: string = $state('nodes');
+  let activeTabId: string = $state('__ungrouped__');
   let tabContainer = $state<HTMLElement>();
 
   const sortedGroups = $derived.by(() => {
@@ -29,18 +29,17 @@
     saveLayoutObject(workspaceState.layout);
   }
 
-  const commonTabBoard = $derived(
-    (optionState.get('ComfyGrid.ui.common_tab_board') as boolean) ?? false,
-  );
-
-  const nodesTabClass = $derived.by(() => {
+  function getTabClassNames(tabId: string) {
     const classNames: string[] = [];
 
-    if (workspaceState.hasDefaultTabError(commonTabBoard)) {
+    if (workspaceState.isTabExecuting(tabId)) {
+      classNames.push('executing');
+    }
+    if (workspaceState.hasTabError(tabId)) {
       classNames.push('is-invalid');
     }
 
-    const modeSet = workspaceState.getDefaultTabModeSet();
+    const modeSet = workspaceState.getTabModeSet(tabId);
     if (modeSet.size === 1) {
       const [mode] = modeSet;
       if (mode === COMFY_NODE_MODE.BYPASS) {
@@ -50,25 +49,6 @@
       }
     }
 
-    return classNames;
-  });
-
-  function tabClass(group: ComfyGridGroup) {
-    const classNames = [];
-    if (group.isExecuting) {
-      classNames.push('executing');
-    }
-    if (group.hasError) {
-      classNames.push('is-invalid');
-    }
-    if (group.modeSet.size === 1) {
-      const [mode] = group.modeSet;
-      if (mode === COMFY_NODE_MODE.BYPASS) {
-        classNames.push('bypass');
-      } else if (mode === COMFY_NODE_MODE.MUTE) {
-        classNames.push('mute');
-      }
-    }
     return classNames;
   }
 </script>
@@ -98,7 +78,7 @@
                   type="checkbox"
                   class="form-check-input"
                   id="toggle-collapsed-nodes"
-                  name="toggle_no_collapsed_nodes"
+                  name="toggle_collapsed_nodes"
                   onchange={handleOptionChanged}
                   bind:checked={workspaceState.layout.noCollapsedNodes}
                 />
@@ -131,22 +111,31 @@
               </div>
             </div>
             <ul class="nav nav-tabs sticky-top" style="background-color: var(--bs-body-bg);">
-              <InnerTab id="nodes" classNames={nodesTabClass} text="Nodes" bind:activeTabId />
-              {#each sortedGroups.filter((g) => g.isTabify) as group (group.id)}
+              {#if workspaceState.hasTabContent('__ungrouped__')}
+                <InnerTab
+                  id="__ungrouped__"
+                  classNames={getTabClassNames('__ungrouped__')}
+                  text="Nodes"
+                  bind:activeTabId
+                />
+              {/if}
+              {#each sortedGroups.filter((g) => g.isTabify && workspaceState.hasTabContent(g.id)) as group (group.id)}
                 <InnerTab
                   id={group.id}
-                  classNames={tabClass(group)}
+                  classNames={getTabClassNames(group.id)}
                   text={group.title}
                   bind:activeTabId
                 />
               {/each}
             </ul>
             <div class="py-2" bind:this={tabContainer}>
-              <InnerTabContainer tabId="nodes" {activeTabId}>
-                <WidgetsSection container={tabContainer} />
-              </InnerTabContainer>
+              {#if workspaceState.hasTabContent('__ungrouped__')}
+                <InnerTabContainer tabId="__ungrouped__" {activeTabId}>
+                  <WidgetsSection container={tabContainer} />
+                </InnerTabContainer>
+              {/if}
               {#each workspaceState.groups as group (group.id)}
-                {#if group.isTabify}
+                {#if group.isTabify && workspaceState.hasTabContent(group.id)}
                   <InnerTabContainer tabId={group.id} {activeTabId}>
                     <WidgetsSection container={tabContainer} {group} />
                   </InnerTabContainer>

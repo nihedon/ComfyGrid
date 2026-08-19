@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { IconMenu2, IconPlayerPlay, IconPlayerStop, IconX } from '@tabler/icons-svelte';
+  import { IconList, IconPlayerPlay, IconPlayerStop, IconX } from '@tabler/icons-svelte';
   import { t } from '@/i18n/i18n';
   import { translationManager } from '@/services/translation-service.svelte';
   import { appState } from '@/states/app-state.svelte';
@@ -90,7 +90,7 @@
     type="button"
     class="btn btn-light btn-square position-relative d-flex justify-content-center align-items-center"
     bind:this={jobListElement}
-    ><IconMenu2 size={18} />
+    ><IconList size={18} />
     {#if executionState.queueJobIds.size > 0}
       <span
         class="top-0 start-100 d-flex align-items-center justify-content-center translate-middle badge rounded-pill bg-danger"
@@ -121,7 +121,7 @@
               </div>
             </div>
             <button
-              class="btn btn-sm btn-danger"
+              class="btn btn-xs btn-danger d-flex justify-content-center align-items-center p-1"
               aria-label={$t('action.remove')}
               onclick={(e: Event) => {
                 e.stopPropagation();

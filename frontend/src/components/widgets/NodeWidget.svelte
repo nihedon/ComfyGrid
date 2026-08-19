@@ -88,13 +88,9 @@
   });
 
   const otherBoardId = $derived.by(() => {
-    if (!isFloating) return '';
-    return (
-      [...workspaceState.gridStackBoards.keys()]
-        .map((id) => id.split('-')[0])
-        .find((id) => id !== currentBoardId) || ''
-    );
-  }) as BoardId;
+    if (!isFloating) return '' as BoardId;
+    return (currentBoardId === 'Global' ? 'Tab' : 'Global') as BoardId;
+  });
 
   const isTextareaOnly = $derived.by(() => {
     if (node.widgets.length === 1 && node.widgets[0].type === 'customtext') {

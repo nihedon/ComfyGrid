@@ -331,26 +331,180 @@ class WorkspaceState {
         return this.#errorWidgets.has(nodeId);
     }
 
-    hasDefaultTabError(commonTabBoard: boolean): boolean {
-        const nonTabifiedGroups = this.#groups.filter((g) => !g.isTabify);
-        let hasError = nonTabifiedGroups.some((g) => g.hasError);
+    getLogicalNodes(groupId?: string): ComfyGridNode[] {
+        if (!groupId || groupId === '__ungrouped__') {
+            return this.#groups.filter((g) => !g.isTabify).flatMap((g) => g.nodes);
+        }
+        const group = this.#groups.find((g) => g.id === groupId);
+        return group ? [...group.nodes] : [];
+    }
 
-        if (!hasError && commonTabBoard) {
-            for (const group of this.#groups) {
-                for (const node of group.nodes) {
-                    const isNodeFloatingOnTab = this.#layout.floatingNodes.get(node.id) === 'Tab';
-                    const hasWidgetFloatingOnTab = node.widgets.some(
-                        (w) => w.type === 'customtext' && this.#layout.floatingWidgets.get(w.id) === 'Tab',
-                    );
-                    if ((isNodeFloatingOnTab || hasWidgetFloatingOnTab) && this.hasErrorNode(node.id)) {
-                        hasError = true;
-                        break;
+    getEffectiveNodes(boardTarget: BoardId | 'default' = '', groupId?: string): ComfyGridNode[] {
+        const commonTabBoard = (appState.optionState.get('ComfyGrid.ui.common_tab_board') as boolean) ?? false;
+
+        // eslint-disable-next-line svelte/prefer-svelte-reactivity
+        const nodeGroupMap = new Map<string, ComfyGridGroup>();
+        const traverseGroup = (g: ComfyGridGroup) => {
+            for (const n of g.nodes) {
+                nodeGroupMap.set(n.id, g);
+            }
+            for (const child of g.children) {
+                traverseGroup(child);
+            }
+        };
+        for (const g of this.#groups) {
+            traverseGroup(g);
+        }
+
+        const noControlNodes = this.#layout.noControlNodes;
+        const noCollapsedNodes = this.#layout.noCollapsedNodes;
+
+        return Array.from(this.#nodes.values()).filter((node) => {
+            const hasError = this.hasErrorNode(node.id);
+            if (!hasError) {
+                if (noControlNodes && node.widgets.length === 0) return false;
+                if (noCollapsedNodes && node.collapsed) return false;
+            }
+
+            const floatingBoard = this.#layout.floatingNodes.get(node.id);
+            const parentGroup = nodeGroupMap.get(node.id);
+
+            if (floatingBoard) {
+                if (boardTarget === 'Global') return floatingBoard === 'Global';
+                if (boardTarget === 'Tab') {
+                    if (commonTabBoard) return floatingBoard === 'Tab';
+                    return floatingBoard === 'Tab' && (groupId === undefined || parentGroup?.id === groupId);
+                }
+                return false;
+            }
+
+            if (boardTarget === '' || boardTarget === 'default') {
+                return !parentGroup || !parentGroup.isTabify;
+            }
+
+            return false;
+        });
+    }
+
+    hasEffectiveNodes(boardTarget: BoardId | 'default' = '', groupId?: string): boolean {
+        if (this.getEffectiveNodes(boardTarget, groupId).length > 0) {
+            return true;
+        }
+        if (boardTarget !== 'Tab') {
+            return false;
+        }
+        const commonTabBoard = (appState.optionState.get('ComfyGrid.ui.common_tab_board') as boolean) ?? false;
+        for (const [widgetId, targetBoard] of this.#layout.floatingWidgets) {
+            if (targetBoard !== 'Tab') {
+                continue;
+            }
+            if (commonTabBoard) {
+                return true;
+            }
+            if (groupId) {
+                for (const node of this.#nodes.values()) {
+                    if (node.widgets.some((w) => w.id === widgetId)) {
+                        const parentGroup = this.#groups.find((g) => g.nodes.some((n) => n.id === node.id));
+                        if (parentGroup?.id === groupId) {
+                            return true;
+                        }
                     }
                 }
-                if (hasError) break;
             }
         }
-        return hasError;
+        return false;
+    }
+
+    hasTabContent(tabId: string): boolean {
+        const commonTabBoard = (appState.optionState.get('ComfyGrid.ui.common_tab_board') as boolean) ?? false;
+
+        if (tabId === '__ungrouped__') {
+            const hasDefaultNodes = this.getEffectiveNodes('default').length > 0;
+            const hasCommonTabBoardNodes = commonTabBoard && this.hasEffectiveNodes('Tab');
+            return hasDefaultNodes || hasCommonTabBoardNodes;
+        }
+
+        const group = this.#groups.find((g) => g.id === tabId);
+        if (!group) return false;
+
+        const hasGroupVisibleNodes = group.hasVisibleNodes;
+        const hasFloatingOnThisTab = !commonTabBoard && (this.getEffectiveNodes('Tab', tabId).length > 0 || this.hasEffectiveNodes('Tab', tabId));
+
+        return hasGroupVisibleNodes || hasFloatingOnThisTab;
+    }
+
+    hasTabError(tabId: string): boolean {
+        const commonTabBoard = (appState.optionState.get('ComfyGrid.ui.common_tab_board') as boolean) ?? false;
+
+        if (tabId === '__ungrouped__') {
+            const effectiveNodes = this.getEffectiveNodes('default');
+            if (effectiveNodes.some((n) => this.hasErrorNode(n.id))) {
+                return true;
+            }
+
+            if (commonTabBoard) {
+                const tabBoardNodes = this.getEffectiveNodes('Tab');
+                if (tabBoardNodes.some((n) => this.hasErrorNode(n.id))) {
+                    return true;
+                }
+                for (const [widgetId, board] of this.#layout.floatingWidgets) {
+                    if (board === 'Tab') {
+                        for (const node of this.#nodes.values()) {
+                            if (node.widgets.some((w) => w.id === widgetId) && this.hasErrorNode(node.id)) {
+                                return true;
+                            }
+                        }
+                    }
+                }
+            }
+            return false;
+        }
+
+        const commonTabNodes = !commonTabBoard ? this.getEffectiveNodes('Tab', tabId) : [];
+        if (commonTabNodes.some((n) => this.hasErrorNode(n.id))) {
+            return true;
+        }
+
+        const group = this.#groups.find((g) => g.id === tabId);
+        if (!group) return false;
+
+        const nonFloatingNodes = group.nodes.filter((n) => !this.#layout.floatingNodes.get(n.id));
+        return nonFloatingNodes.some((n) => this.hasErrorNode(n.id));
+    }
+
+    getTabNodes(tabId: string): ComfyGridNode[] {
+        const commonTabBoard = (appState.optionState.get('ComfyGrid.ui.common_tab_board') as boolean) ?? false;
+
+        if (tabId === '__ungrouped__') {
+            const nodes = [...this.getEffectiveNodes('default')];
+            if (commonTabBoard) {
+                nodes.push(...this.getEffectiveNodes('Tab'));
+            }
+            return nodes;
+        }
+
+        const nodes = !commonTabBoard ? this.getEffectiveNodes('Tab', tabId) : [];
+        const group = this.#groups.find((g) => g.id === tabId);
+        if (group) {
+            const nonFloatingNodes = group.nodes.filter((n) => !this.#layout.floatingNodes.get(n.id));
+            nodes.push(...nonFloatingNodes);
+        }
+        return nodes;
+    }
+
+    getTabModeSet(tabId: string): Set<number> {
+        const tabNodes = this.getTabNodes(tabId);
+        // eslint-disable-next-line svelte/prefer-svelte-reactivity
+        const modeSet = new Set<number>();
+        for (const node of tabNodes) {
+            modeSet.add(node.mode);
+        }
+        return modeSet;
+    }
+
+    isTabExecuting(tabId: string): boolean {
+        const tabNodes = this.getTabNodes(tabId);
+        return tabNodes.some((n) => appState.executionState.runningNodeId === n.id);
     }
 
     getDefaultTabModeSet(): Set<number> {

@@ -78,7 +78,11 @@
     return result;
   }
 
-  const nodesInBoard = $derived(flattenNodes(groups));
+  const nodesInBoard = $derived.by(() => {
+    const effectiveNodes = workspaceState.getEffectiveNodes(boardId, groupId);
+    const nodeSet = new Set(effectiveNodes.map((n) => n.id));
+    return flattenNodes(groups).filter((entry) => nodeSet.has(entry.node.id));
+  });
 
   function getGSParams(id: string, node: ComfyGridNode) {
     const saved = workspaceState.layout?.floatingPositions?.get(boardId)?.[String(id)];

@@ -36,5 +36,5 @@
   onclick={() => openModelModal()}
   aria-label="Select model"
 >
-  <IconAppWindow size={16} />
+  <IconAppWindow size={16} stroke={1.25} />
 </button>
