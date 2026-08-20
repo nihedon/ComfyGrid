@@ -321,10 +321,12 @@
     {#if !isTitleEditing}
       <div class="d-flex align-items-center gap-2">
         {#if !widget}
-          <NodeMode
-            mode={new Set([node.mode])}
-            handleChange={(e, val) => handleStateChange(e, val)}
-          />
+          {#if !node.isNote}
+            <NodeMode
+              mode={new Set([node.mode])}
+              handleChange={(e, val) => handleStateChange(e, val)}
+            />
+          {/if}
           {#if alwaysShowFocusButton || isInvalid}
             <button
               type="button"
