@@ -86,6 +86,7 @@
     "node.focus": "Focus node in ComfyUI",
     "group.toggle_show_collapsed_nodes.label": "Show Collapsed Nodes",
     "group.toggle_show_control_less_nodes.label": "Show Nodes without Controls",
+    "group.toggle_show_note_nodes.label": "Show Note Nodes",
     "group.sort.default": "Default Order",
     "group.sort.name": "Sort by Name",
     "widget.select.text.title": "Text",

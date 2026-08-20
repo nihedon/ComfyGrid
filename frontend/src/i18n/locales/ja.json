@@ -86,6 +86,7 @@
     "node.focus": "ComfyUI上でノードにフォーカス",
     "group.toggle_show_collapsed_nodes.label": "折りたたまれたノードを表示する",
     "group.toggle_show_control_less_nodes.label": "コントロールのないノードを表示する",
+    "group.toggle_show_note_nodes.label": "ノートを表示する",
     "group.sort.default": "デフォルト順",
     "group.sort.name": "名前順",
     "widget.select.text.title": "テキスト",

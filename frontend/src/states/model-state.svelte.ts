@@ -86,11 +86,13 @@ export class ComfyGridGroup {
 
     readonly showControlLessNodes = $derived(appState.workspaceState.layout.showControlLessNodes ?? false);
     readonly showCollapsedNodes = $derived(appState.workspaceState.layout.showCollapsedNodes ?? false);
+    readonly showNoteNodes = $derived(appState.workspaceState.layout.showNoteNodes ?? false);
     readonly hasVisibleNodes = $derived.by(() => {
         if (
             this.#nodes.some((node) => {
                 if (!this.showControlLessNodes && node.widgets.length === 0) return false;
                 if (!this.showCollapsedNodes && node.collapsed) return false;
+                if (!this.showNoteNodes && node.isNote) return false;
                 if (appState.workspaceState.layout.floatingNodes.get(node.id)) return false;
                 return true;
             })
@@ -337,6 +339,9 @@ export class ComfyGridNode {
     }
     get bgcolor() {
         return this.#bgcolor;
+    }
+    get isNote() {
+        return this.type.endsWith('Note');
     }
     get widgets() {
         return this.#widgets;

@@ -167,7 +167,10 @@
       </div>
     {/if}
     {#if listNodes.length > 0}
-      <div class="list-group" style:display={!showControlLessNodes && !showCollapsedNodes ? 'none' : ''}>
+      <div
+        class="list-group"
+        style:display={!showControlLessNodes && !showCollapsedNodes ? 'none' : ''}
+      >
         {#each listNodes as node, index (`${node.id}-${index}`)}
           <NodeWidget {node} />
         {/each}

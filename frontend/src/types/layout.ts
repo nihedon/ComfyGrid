@@ -20,5 +20,6 @@ export type LayoutType = {
     translateSystems?: Record<string, string>;
     showControlLessNodes?: boolean;
     showCollapsedNodes?: boolean;
+    showNoteNodes?: boolean;
     sortOrder: 'default' | 'name';
 };

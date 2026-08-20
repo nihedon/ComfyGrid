@@ -128,6 +128,23 @@
                       {$t('group.toggle_show_control_less_nodes.label')}
                     </label>
                   </li>
+                  <li>
+                    <input
+                      type="checkbox"
+                      class="btn-check"
+                      id="toggle-note-nodes"
+                      name="toggle_note_nodes"
+                      onchange={handleOptionChanged}
+                      bind:checked={workspaceState.layout.showNoteNodes}
+                    />
+                    <label
+                      class="dropdown-item"
+                      class:active={workspaceState.layout.showNoteNodes}
+                      for="toggle-note-nodes"
+                    >
+                      {$t('group.toggle_show_note_nodes.label')}
+                    </label>
+                  </li>
                 </ul>
               </div>
             </div>

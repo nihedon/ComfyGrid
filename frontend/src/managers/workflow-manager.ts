@@ -52,8 +52,7 @@ class WorkflowManager {
             logger.log('Injected extra.comfygrid:', app.rootGraph.extra.comfygrid);
         }
 
-        let nodes = comfyNodes.map((n) => new ComfyGridNode(n, app)).filter((n) => !this.#isIgnoreNode(n));
-        nodes = ComfyGridNode.sortNodesByPosition(nodes);
+        const nodes = ComfyGridNode.sortNodesByPosition(comfyNodes.map((n) => new ComfyGridNode(n, app)));
 
         const expandedMap = this.#collectExpandedState(appState.workspaceState.groups);
 
@@ -185,16 +184,6 @@ class WorkflowManager {
                 });
         });
         return floatingPositions;
-    }
-
-    #isIgnoreNode(node: ComfyGridNode) {
-        if (node.type.endsWith('Note')) {
-            return true;
-        }
-        if (node.type === 'Reroute') {
-            return true;
-        }
-        return false;
     }
 
     exportLayout() {

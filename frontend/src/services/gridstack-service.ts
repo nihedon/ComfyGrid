@@ -52,6 +52,7 @@ function makeEptyLayout(graph_id: string): LayoutType {
         negativePromptWidgetId: null,
         showControlLessNodes: false,
         showCollapsedNodes: false,
+        showNoteNodes: false,
         sortOrder: 'default',
     };
 }
@@ -92,6 +93,7 @@ export function loadLayout(graphId: string): LayoutType {
         negativePromptWidgetId: null,
         showControlLessNodes: false,
         showCollapsedNodes: false,
+        showNoteNodes: false,
         sortOrder: 'default',
     };
 }

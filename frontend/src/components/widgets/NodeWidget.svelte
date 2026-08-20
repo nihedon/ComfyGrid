@@ -25,6 +25,7 @@
   const workspaceState = appState.workspaceState;
   const showControlLessNodes = $derived(workspaceState.layout.showControlLessNodes);
   const showCollapsedNodes = $derived(workspaceState.layout.showCollapsedNodes);
+  const showNoteNodes = $derived(workspaceState.layout.showNoteNodes);
 
   const containsWidgets = $derived.by(() => {
     if (widget) {
@@ -64,6 +65,9 @@
       return false;
     }
     if (!showCollapsedNodes && node.collapsed) {
+      return false;
+    }
+    if (!showNoteNodes && node.isNote) {
       return false;
     }
     return true;

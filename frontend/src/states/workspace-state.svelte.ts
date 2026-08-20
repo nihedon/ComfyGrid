@@ -18,6 +18,7 @@ export class Layout {
     #negativePromptWidgetId = $state<string | null>(null);
     #showControlLessNodes = $state<boolean>(false);
     #showCollapsedNodes = $state<boolean>(false);
+    #showNoteNodes = $state<boolean>(false);
     #sortOrder = $state<'default' | 'name'>('default');
 
     get graphId() {
@@ -76,6 +77,9 @@ export class Layout {
     get showCollapsedNodes() {
         return this.#showCollapsedNodes;
     }
+    get showNoteNodes() {
+        return this.#showNoteNodes;
+    }
     get sortOrder() {
         return this.#sortOrder;
     }
@@ -118,6 +122,9 @@ export class Layout {
     }
     set showCollapsedNodes(val: boolean) {
         this.#showCollapsedNodes = val;
+    }
+    set showNoteNodes(val: boolean) {
+        this.#showNoteNodes = val;
     }
     set sortOrder(sortOrder: 'default' | 'name') {
         this.#sortOrder = sortOrder;
@@ -199,6 +206,7 @@ export class Layout {
             translateSystems: Object.fromEntries(Array.from(this.#translateSystems.entries()).filter(([, v]) => Boolean(v))),
             showControlLessNodes: this.#showControlLessNodes,
             showCollapsedNodes: this.#showCollapsedNodes,
+            showNoteNodes: this.#showNoteNodes,
             sortOrder: this.#sortOrder,
         };
     }
@@ -246,6 +254,7 @@ export class Layout {
         } else {
             this.#showCollapsedNodes = false;
         }
+        this.#showNoteNodes = layout.showNoteNodes ?? false;
         this.#sortOrder = layout.sortOrder ?? 'default';
     }
 }
@@ -367,12 +376,14 @@ class WorkspaceState {
 
         const showControlLessNodes = this.#layout.showControlLessNodes;
         const showCollapsedNodes = this.#layout.showCollapsedNodes;
+        const showNoteNodes = this.#layout.showNoteNodes;
 
         return Array.from(this.#nodes.values()).filter((node) => {
             const hasError = this.hasErrorNode(node.id);
             if (!hasError) {
                 if (!showControlLessNodes && node.widgets.length === 0) return false;
                 if (!showCollapsedNodes && node.collapsed) return false;
+                if (!showNoteNodes && node.isNote) return false;
             }
 
             const floatingBoard = this.#layout.floatingNodes.get(node.id);
