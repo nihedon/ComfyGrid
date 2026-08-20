@@ -50,8 +50,8 @@ function makeEptyLayout(graph_id: string): LayoutType {
         promptWidgetIds: [],
         positivePromptWidgetId: null,
         negativePromptWidgetId: null,
-        noControlNodes: true,
-        noCollapsedNodes: true,
+        showControlLessNodes: false,
+        showCollapsedNodes: false,
         sortOrder: 'default',
     };
 }
@@ -90,8 +90,8 @@ export function loadLayout(graphId: string): LayoutType {
         promptWidgetIds: [],
         positivePromptWidgetId: null,
         negativePromptWidgetId: null,
-        noControlNodes: true,
-        noCollapsedNodes: true,
+        showControlLessNodes: false,
+        showCollapsedNodes: false,
         sortOrder: 'default',
     };
 }

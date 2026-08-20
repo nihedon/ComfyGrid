@@ -18,7 +18,7 @@ export type LayoutType = {
     translateWidgetIds?: string[];
     translateModels?: Record<string, string>;
     translateSystems?: Record<string, string>;
-    noControlNodes: boolean;
-    noCollapsedNodes: boolean;
+    showControlLessNodes?: boolean;
+    showCollapsedNodes?: boolean;
     sortOrder: 'default' | 'name';
 };

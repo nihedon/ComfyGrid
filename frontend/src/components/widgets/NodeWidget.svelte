@@ -23,8 +23,8 @@
   let { node, widget }: { node: ComfyGridNode; widget?: ComfyGridWidget } = $props();
 
   const workspaceState = appState.workspaceState;
-  const noControlNodes = $derived(workspaceState.layout.noControlNodes);
-  const noCollapsedNodes = $derived(workspaceState.layout.noCollapsedNodes);
+  const showControlLessNodes = $derived(workspaceState.layout.showControlLessNodes);
+  const showCollapsedNodes = $derived(workspaceState.layout.showCollapsedNodes);
 
   const containsWidgets = $derived.by(() => {
     if (widget) {
@@ -60,10 +60,10 @@
     if (isFloating || isInvalid) {
       return true;
     }
-    if (noControlNodes && containsWidgets.length === 0) {
+    if (!showControlLessNodes && containsWidgets.length === 0) {
       return false;
     }
-    if (noCollapsedNodes && node.collapsed) {
+    if (!showCollapsedNodes && node.collapsed) {
       return false;
     }
     return true;

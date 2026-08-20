@@ -16,8 +16,8 @@ export class Layout {
     readonly #translateSystems = new SvelteMap<string, string>();
     #positivePromptWidgetId = $state<string | null>(null);
     #negativePromptWidgetId = $state<string | null>(null);
-    #noControlNodes = $state<boolean>(false);
-    #noCollapsedNodes = $state<boolean>(false);
+    #showControlLessNodes = $state<boolean>(false);
+    #showCollapsedNodes = $state<boolean>(false);
     #sortOrder = $state<'default' | 'name'>('default');
 
     get graphId() {
@@ -70,11 +70,11 @@ export class Layout {
     get negativePromptWidgetId(): string | null {
         return this.#negativePromptWidgetId;
     }
-    get noControlNodes() {
-        return this.#noControlNodes;
+    get showControlLessNodes() {
+        return this.#showControlLessNodes;
     }
-    get noCollapsedNodes() {
-        return this.#noCollapsedNodes;
+    get showCollapsedNodes() {
+        return this.#showCollapsedNodes;
     }
     get sortOrder() {
         return this.#sortOrder;
@@ -113,11 +113,11 @@ export class Layout {
     setNegativePromptWidgetId(negativePromptWidgetId: string | null) {
         this.#negativePromptWidgetId = negativePromptWidgetId;
     }
-    set noControlNodes(noControlNodes: boolean) {
-        this.#noControlNodes = noControlNodes;
+    set showControlLessNodes(val: boolean) {
+        this.#showControlLessNodes = val;
     }
-    set noCollapsedNodes(noCollapsedNodes: boolean) {
-        this.#noCollapsedNodes = noCollapsedNodes;
+    set showCollapsedNodes(val: boolean) {
+        this.#showCollapsedNodes = val;
     }
     set sortOrder(sortOrder: 'default' | 'name') {
         this.#sortOrder = sortOrder;
@@ -197,8 +197,8 @@ export class Layout {
             translateWidgetIds: [...this.#translateWidgetIds],
             translateModels: Object.fromEntries(Array.from(this.#translateModels.entries()).filter(([, v]) => Boolean(v))),
             translateSystems: Object.fromEntries(Array.from(this.#translateSystems.entries()).filter(([, v]) => Boolean(v))),
-            noControlNodes: this.#noControlNodes,
-            noCollapsedNodes: this.#noCollapsedNodes,
+            showControlLessNodes: this.#showControlLessNodes,
+            showCollapsedNodes: this.#showCollapsedNodes,
             sortOrder: this.#sortOrder,
         };
     }
@@ -235,8 +235,17 @@ export class Layout {
         Object.entries(layout.translateSystems ?? {}).forEach(([key, value]) => {
             this.#translateSystems.set(key, value);
         });
-        this.#noControlNodes = layout.noControlNodes ?? true;
-        this.#noCollapsedNodes = layout.noCollapsedNodes ?? true;
+        if (layout.showControlLessNodes !== undefined) {
+            this.#showControlLessNodes = layout.showControlLessNodes;
+        } else {
+            this.#showControlLessNodes = false;
+        }
+
+        if (layout.showCollapsedNodes !== undefined) {
+            this.#showCollapsedNodes = layout.showCollapsedNodes;
+        } else {
+            this.#showCollapsedNodes = false;
+        }
         this.#sortOrder = layout.sortOrder ?? 'default';
     }
 }
@@ -356,14 +365,14 @@ class WorkspaceState {
             traverseGroup(g);
         }
 
-        const noControlNodes = this.#layout.noControlNodes;
-        const noCollapsedNodes = this.#layout.noCollapsedNodes;
+        const showControlLessNodes = this.#layout.showControlLessNodes;
+        const showCollapsedNodes = this.#layout.showCollapsedNodes;
 
         return Array.from(this.#nodes.values()).filter((node) => {
             const hasError = this.hasErrorNode(node.id);
             if (!hasError) {
-                if (noControlNodes && node.widgets.length === 0) return false;
-                if (noCollapsedNodes && node.collapsed) return false;
+                if (!showControlLessNodes && node.widgets.length === 0) return false;
+                if (!showCollapsedNodes && node.collapsed) return false;
             }
 
             const floatingBoard = this.#layout.floatingNodes.get(node.id);

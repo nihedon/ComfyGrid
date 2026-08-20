@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { IconAdjustmentsHorizontal } from '@tabler/icons-svelte';
   import { t } from '@/i18n/i18n';
   import { saveLayoutObject } from '@/services/gridstack-service';
   import { appState } from '@/states/app-state.svelte';
@@ -72,33 +73,7 @@
       {#if workspaceState.layout}
         <SplitPane sizes={[70, 30]}>
           <div class="px-1">
-            <div class="d-flex gap-3 mb-1 px-1">
-              <div>
-                <input
-                  type="checkbox"
-                  class="form-check-input"
-                  id="toggle-collapsed-nodes"
-                  name="toggle_collapsed_nodes"
-                  onchange={handleOptionChanged}
-                  bind:checked={workspaceState.layout.noCollapsedNodes}
-                />
-                <label class="form-check-label" for="toggle-collapsed-nodes">
-                  {$t('group.toggle_no_collapsed_nodes.label')}
-                </label>
-              </div>
-              <div>
-                <input
-                  type="checkbox"
-                  class="form-check-input"
-                  id="toggle-no-control-nodes"
-                  name="toggle_no_control_nodes"
-                  onchange={handleOptionChanged}
-                  bind:checked={workspaceState.layout.noControlNodes}
-                />
-                <label class="form-check-label" for="toggle-no-control-nodes">
-                  {$t('group.toggle_no_control_nodes.label')}
-                </label>
-              </div>
+            <div class="d-flex gap-2 px-1">
               <div class="ms-auto">
                 <select
                   class="form-select form-select-sm"
@@ -108,6 +83,52 @@
                   <option value="default">{$t('group.sort.default')}</option>
                   <option value="name">{$t('group.sort.name')}</option>
                 </select>
+              </div>
+
+              <div class="dropdown">
+                <button
+                  class="dropdown-toggle btn btn-outline-secondary d-flex justify-content-center align-items-center p-1"
+                  type="button"
+                  data-bs-toggle="dropdown"
+                  aria-expanded="false"
+                  ><IconAdjustmentsHorizontal size={14} />
+                </button>
+                <ul class="dropdown-menu">
+                  <li>
+                    <input
+                      type="checkbox"
+                      class="btn-check"
+                      id="toggle-collapsed-nodes"
+                      name="toggle_collapsed_nodes"
+                      onchange={handleOptionChanged}
+                      bind:checked={workspaceState.layout.showCollapsedNodes}
+                    />
+                    <label
+                      class="dropdown-item"
+                      class:active={workspaceState.layout.showCollapsedNodes}
+                      for="toggle-collapsed-nodes"
+                    >
+                      {$t('group.toggle_show_collapsed_nodes.label')}
+                    </label>
+                  </li>
+                  <li>
+                    <input
+                      type="checkbox"
+                      class="btn-check"
+                      id="toggle-controlless-nodes"
+                      name="toggle_controlless_nodes"
+                      onchange={handleOptionChanged}
+                      bind:checked={workspaceState.layout.showControlLessNodes}
+                    />
+                    <label
+                      class="dropdown-item"
+                      class:active={workspaceState.layout.showControlLessNodes}
+                      for="toggle-controlless-nodes"
+                    >
+                      {$t('group.toggle_show_control_less_nodes.label')}
+                    </label>
+                  </li>
+                </ul>
               </div>
             </div>
             <ul class="nav nav-tabs sticky-top" style="background-color: var(--bs-body-bg);">

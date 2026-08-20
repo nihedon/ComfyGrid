@@ -21,8 +21,8 @@
 
   const workspaceState = appState.workspaceState;
 
-  const noControlNodes = $derived(workspaceState.layout.noControlNodes);
-  const noCollapsedNodes = $derived(workspaceState.layout.noCollapsedNodes);
+  const showControlLessNodes = $derived(workspaceState.layout.showControlLessNodes);
+  const showCollapsedNodes = $derived(workspaceState.layout.showCollapsedNodes);
 
   let isTitleEditing = $state(false);
 
@@ -167,7 +167,7 @@
       </div>
     {/if}
     {#if listNodes.length > 0}
-      <div class="list-group" style:display={noControlNodes && noCollapsedNodes ? 'none' : ''}>
+      <div class="list-group" style:display={!showControlLessNodes && !showCollapsedNodes ? 'none' : ''}>
         {#each listNodes as node, index (`${node.id}-${index}`)}
           <NodeWidget {node} />
         {/each}

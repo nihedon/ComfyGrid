@@ -84,13 +84,13 @@ export class ComfyGridGroup {
         return 0;
     });
 
-    readonly noControlNodes = $derived(appState.workspaceState.layout.noControlNodes ?? true);
-    readonly noCollapsedNodes = $derived(appState.workspaceState.layout.noCollapsedNodes ?? true);
+    readonly showControlLessNodes = $derived(appState.workspaceState.layout.showControlLessNodes ?? false);
+    readonly showCollapsedNodes = $derived(appState.workspaceState.layout.showCollapsedNodes ?? false);
     readonly hasVisibleNodes = $derived.by(() => {
         if (
             this.#nodes.some((node) => {
-                if (this.noControlNodes && node.widgets.length === 0) return false;
-                if (this.noCollapsedNodes && node.collapsed) return false;
+                if (!this.showControlLessNodes && node.widgets.length === 0) return false;
+                if (!this.showCollapsedNodes && node.collapsed) return false;
                 if (appState.workspaceState.layout.floatingNodes.get(node.id)) return false;
                 return true;
             })
