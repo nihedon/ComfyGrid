@@ -73,8 +73,29 @@
       {#if workspaceState.layout}
         <SplitPane sizes={[70, 30]}>
           <div class="px-1">
-            <div class="d-flex gap-2 px-1">
-              <div class="ms-auto">
+            <div
+              class="d-flex align-items-baseline gap-2 px-1 sticky-top"
+              style="background-color: var(--bs-body-bg);"
+            >
+              <ul class="nav nav-tabs flex-grow-1">
+                {#if workspaceState.hasTabContent('__ungrouped__')}
+                  <InnerTab
+                    id="__ungrouped__"
+                    classNames={getTabClassNames('__ungrouped__')}
+                    text="Nodes"
+                    bind:activeTabId
+                  />
+                {/if}
+                {#each sortedGroups.filter((g) => g.isTabify && workspaceState.hasTabContent(g.id)) as group (group.id)}
+                  <InnerTab
+                    id={group.id}
+                    classNames={getTabClassNames(group.id)}
+                    text={group.title}
+                    bind:activeTabId
+                  />
+                {/each}
+              </ul>
+              <div class="d-flex gap-2">
                 <select
                   class="form-select form-select-sm"
                   onchange={handleOptionChanged}
@@ -83,89 +104,71 @@
                   <option value="default">{$t('group.sort.default')}</option>
                   <option value="name">{$t('group.sort.name')}</option>
                 </select>
-              </div>
 
-              <div class="dropdown">
-                <button
-                  class="dropdown-toggle btn btn-outline-secondary d-flex justify-content-center align-items-center p-1"
-                  type="button"
-                  data-bs-toggle="dropdown"
-                  aria-expanded="false"
-                  ><IconAdjustmentsHorizontal size={14} />
-                </button>
-                <ul class="dropdown-menu">
-                  <li>
-                    <input
-                      type="checkbox"
-                      class="btn-check"
-                      id="toggle-collapsed-nodes"
-                      name="toggle_collapsed_nodes"
-                      onchange={handleOptionChanged}
-                      bind:checked={workspaceState.layout.showCollapsedNodes}
-                    />
-                    <label
-                      class="dropdown-item"
-                      class:active={workspaceState.layout.showCollapsedNodes}
-                      for="toggle-collapsed-nodes"
-                    >
-                      {$t('group.toggle_show_collapsed_nodes.label')}
-                    </label>
-                  </li>
-                  <li>
-                    <input
-                      type="checkbox"
-                      class="btn-check"
-                      id="toggle-controlless-nodes"
-                      name="toggle_controlless_nodes"
-                      onchange={handleOptionChanged}
-                      bind:checked={workspaceState.layout.showControlLessNodes}
-                    />
-                    <label
-                      class="dropdown-item"
-                      class:active={workspaceState.layout.showControlLessNodes}
-                      for="toggle-controlless-nodes"
-                    >
-                      {$t('group.toggle_show_control_less_nodes.label')}
-                    </label>
-                  </li>
-                  <li>
-                    <input
-                      type="checkbox"
-                      class="btn-check"
-                      id="toggle-note-nodes"
-                      name="toggle_note_nodes"
-                      onchange={handleOptionChanged}
-                      bind:checked={workspaceState.layout.showNoteNodes}
-                    />
-                    <label
-                      class="dropdown-item"
-                      class:active={workspaceState.layout.showNoteNodes}
-                      for="toggle-note-nodes"
-                    >
-                      {$t('group.toggle_show_note_nodes.label')}
-                    </label>
-                  </li>
-                </ul>
+                <div class="dropdown">
+                  <button
+                    class="dropdown-toggle btn btn-outline-secondary d-flex justify-content-center align-items-center p-1"
+                    type="button"
+                    data-bs-toggle="dropdown"
+                    aria-expanded="false"
+                    ><IconAdjustmentsHorizontal size={14} />
+                  </button>
+                  <ul class="dropdown-menu dropdown-menu-end">
+                    <li>
+                      <input
+                        type="checkbox"
+                        class="btn-check"
+                        id="toggle-collapsed-nodes"
+                        name="toggle_collapsed_nodes"
+                        onchange={handleOptionChanged}
+                        bind:checked={workspaceState.layout.showCollapsedNodes}
+                      />
+                      <label
+                        class="dropdown-item"
+                        class:active={workspaceState.layout.showCollapsedNodes}
+                        for="toggle-collapsed-nodes"
+                      >
+                        {$t('group.toggle_show_collapsed_nodes.label')}
+                      </label>
+                    </li>
+                    <li>
+                      <input
+                        type="checkbox"
+                        class="btn-check"
+                        id="toggle-controlless-nodes"
+                        name="toggle_controlless_nodes"
+                        onchange={handleOptionChanged}
+                        bind:checked={workspaceState.layout.showControlLessNodes}
+                      />
+                      <label
+                        class="dropdown-item"
+                        class:active={workspaceState.layout.showControlLessNodes}
+                        for="toggle-controlless-nodes"
+                      >
+                        {$t('group.toggle_show_control_less_nodes.label')}
+                      </label>
+                    </li>
+                    <li>
+                      <input
+                        type="checkbox"
+                        class="btn-check"
+                        id="toggle-note-nodes"
+                        name="toggle_note_nodes"
+                        onchange={handleOptionChanged}
+                        bind:checked={workspaceState.layout.showNoteNodes}
+                      />
+                      <label
+                        class="dropdown-item"
+                        class:active={workspaceState.layout.showNoteNodes}
+                        for="toggle-note-nodes"
+                      >
+                        {$t('group.toggle_show_note_nodes.label')}
+                      </label>
+                    </li>
+                  </ul>
+                </div>
               </div>
             </div>
-            <ul class="nav nav-tabs sticky-top" style="background-color: var(--bs-body-bg);">
-              {#if workspaceState.hasTabContent('__ungrouped__')}
-                <InnerTab
-                  id="__ungrouped__"
-                  classNames={getTabClassNames('__ungrouped__')}
-                  text="Nodes"
-                  bind:activeTabId
-                />
-              {/if}
-              {#each sortedGroups.filter((g) => g.isTabify && workspaceState.hasTabContent(g.id)) as group (group.id)}
-                <InnerTab
-                  id={group.id}
-                  classNames={getTabClassNames(group.id)}
-                  text={group.title}
-                  bind:activeTabId
-                />
-              {/each}
-            </ul>
             <div class="py-2" bind:this={tabContainer}>
               {#if workspaceState.hasTabContent('__ungrouped__')}
                 <InnerTabContainer tabId="__ungrouped__" {activeTabId}>
