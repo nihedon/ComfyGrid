@@ -7,6 +7,7 @@ import CustomtextWidget from '../CustomtextWidget.svelte';
 import DOMWidget from '../DOMWidget.svelte';
 import ImageEditorWidget from '../ImageEditorWidget.svelte';
 import ImagePreviewWidget from '../ImagePreviewWidget.svelte';
+import LabelWidget from '../LabelWidget.svelte';
 import NumberWidget from '../NumberWidget.svelte';
 import RangeWidget from '../RangeWidget.svelte';
 import TextWidget from '../TextWidget.svelte';
@@ -24,6 +25,7 @@ const widgetRegistry: Record<string, Component> = {
     button: ButtonWidget,
     customtext: CustomtextWidget,
     text: TextWidget,
+    progressText: LabelWidget,
     upload: UploadWidget,
     image: ImageEditorWidget,
     video: VideoPreviewWidget,
