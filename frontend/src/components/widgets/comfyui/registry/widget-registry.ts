@@ -8,6 +8,7 @@ import DOMWidget from '../DOMWidget.svelte';
 import ImageEditorWidget from '../ImageEditorWidget.svelte';
 import ImagePreviewWidget from '../ImagePreviewWidget.svelte';
 import LabelWidget from '../LabelWidget.svelte';
+import MarkdownWidget from '../MarkdownWidget.svelte';
 import NumberWidget from '../NumberWidget.svelte';
 import RangeWidget from '../RangeWidget.svelte';
 import TextWidget from '../TextWidget.svelte';
@@ -48,17 +49,13 @@ export const getWidgetComponentWithMeta = (node: ComfyGridNode, widget: ComfyGri
         return extensionMatch;
     }
 
-    const coreComponent = widgetRegistry[widget.type];
+    if (node.isNote) {
+        return { component: MarkdownWidget };
+    }
+
+    const coreComponent = widgetRegistry[widget.type] ?? widgetRegistry[widget.className];
     if (coreComponent) {
         return { component: coreComponent };
-    }
-
-    if (widget.className === 'ImagePreviewWidget') {
-        return { component: widgetRegistry['ImagePreviewWidget'] };
-    }
-
-    if (widget.className === 'DOMWidgetImpl') {
-        return { component: widgetRegistry['DOMWidget'] };
     }
 
     return null;
