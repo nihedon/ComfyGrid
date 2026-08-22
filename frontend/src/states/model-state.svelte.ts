@@ -138,6 +138,9 @@ export class ComfyGridGroup {
     get nodes(): ReadonlyArray<ComfyGridNode> {
         return this.#nodes;
     }
+    readonly allNodes = $derived.by<ComfyGridNode[]>(() => {
+        return [...this.#nodes, ...this.#children.flatMap((child) => child.allNodes)];
+    });
     get color() {
         return this.#color;
     }
@@ -214,9 +217,13 @@ export class ComfyGridNode {
         }
     }
 
-    static #buildWidgetConfigList(
-        comfyNode: ComfyNode,
-    ): Array<{ widget: ComfyWidget; index: number; image?: ImageInfo; overrides?: { type?: string; callback?: (value?: unknown) => void } }> {
+    #buildWidgetConfigList(): Array<{
+        widget: ComfyWidget;
+        index: number;
+        image?: ImageInfo;
+        overrides?: { type?: string; callback?: (value?: unknown) => void };
+    }> {
+        const comfyNode = this.#comfyNode;
         const images = comfyNode.images || [];
         const result: Array<{ widget: ComfyWidget; index: number; image?: ImageInfo; overrides?: { type?: string; callback?: (value?: unknown) => void } }> =
             [];
@@ -294,9 +301,9 @@ export class ComfyGridNode {
     }
 
     updateWidgets(app: ComfyApp) {
-        const configs = ComfyGridNode.#buildWidgetConfigList(this.#comfyNode);
         const unusedWidgets = [...this.#widgets];
         const newWidgets: ComfyGridWidget[] = [];
+        const configs = this.#buildWidgetConfigList();
         for (const config of configs) {
             const targetType = config.overrides?.type ?? config.widget.type;
             const existingIdx = unusedWidgets.findIndex((w) => w.comfyWidget === config.widget && w.type === targetType);
@@ -306,7 +313,7 @@ export class ComfyGridNode {
                 existing.update(app, config.index, config.image, config.overrides);
                 newWidgets.push(existing);
             } else {
-                newWidgets.push(new ComfyGridWidget(app, this as ComfyGridNode, config.widget, config.index, config.image, config.overrides));
+                newWidgets.push(new ComfyGridWidget(app, this, config.widget, config.index, config.image, config.overrides));
             }
         }
         this.#widgets.length = 0;

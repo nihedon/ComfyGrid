@@ -1,7 +1,8 @@
 <script lang="ts">
   import { type Component } from 'svelte';
   import {
-    IconArrowsUpLeft,
+    IconArrowBigDown,
+    IconArrowBigUp,
     IconFocus2,
     IconInfoCircle,
     IconLayoutDashboard,
@@ -298,6 +299,7 @@
   function focusNodeInComfyUI() {
     appState.comfyUiState.app?.canvas?.animateToBounds(node.comfyNode.boundingRect);
     appState.uiState.activePageId = 'comfyui';
+    appState.uiState.needRefresh = true;
   }
 
   $effect(() => {
@@ -409,7 +411,11 @@
             title={$t('node.move_to_other_board')}
             onclick={() => moveToBoard(otherBoardId)}
           >
-            <IconArrowsUpLeft size={14} />
+            {#if currentBoardId === 'Global'}
+              <IconArrowBigDown size={14} />
+            {:else}
+              <IconArrowBigUp size={14} />
+            {/if}
           </button>
         {/if}
         <button
@@ -427,7 +433,7 @@
       </div>
     {/if}
   </div>
-  {#if isInvalid || (!node.collapsed && containsWidgets.length > 0)}
+  {#if !node.collapsed && containsWidgets.length > 0}
     <div
       class="widget-stack {node.type} {nodeStyle}"
       class:py-1={!widget && !isTextareaOnly}

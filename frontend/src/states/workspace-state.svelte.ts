@@ -454,42 +454,8 @@ class WorkspaceState {
     }
 
     hasTabError(tabId: string): boolean {
-        const commonTabBoard = (appState.optionState.get('ComfyGrid.ui.common_tab_board') as boolean) ?? false;
-
-        if (tabId === '__ungrouped__') {
-            const effectiveNodes = this.getEffectiveNodes('default');
-            if (effectiveNodes.some((n) => this.hasErrorNode(n.id))) {
-                return true;
-            }
-
-            if (commonTabBoard) {
-                const tabBoardNodes = this.getEffectiveNodes('Tab');
-                if (tabBoardNodes.some((n) => this.hasErrorNode(n.id))) {
-                    return true;
-                }
-                for (const [widgetId, board] of this.#layout.floatingWidgets) {
-                    if (board === 'Tab') {
-                        for (const node of this.#nodes.values()) {
-                            if (node.widgets.some((w) => w.id === widgetId) && this.hasErrorNode(node.id)) {
-                                return true;
-                            }
-                        }
-                    }
-                }
-            }
-            return false;
-        }
-
-        const commonTabNodes = !commonTabBoard ? this.getEffectiveNodes('Tab', tabId) : [];
-        if (commonTabNodes.some((n) => this.hasErrorNode(n.id))) {
-            return true;
-        }
-
-        const group = this.#groups.find((g) => g.id === tabId);
-        if (!group) return false;
-
-        const nonFloatingNodes = group.nodes.filter((n) => !this.#layout.floatingNodes.get(n.id));
-        return nonFloatingNodes.some((n) => this.hasErrorNode(n.id));
+        const tabNodes = this.getTabNodes(tabId);
+        return tabNodes.some((n) => this.hasErrorNode(n.id));
     }
 
     getTabNodes(tabId: string): ComfyGridNode[] {
@@ -506,7 +472,7 @@ class WorkspaceState {
         const nodes = !commonTabBoard ? this.getEffectiveNodes('Tab', tabId) : [];
         const group = this.#groups.find((g) => g.id === tabId);
         if (group) {
-            const nonFloatingNodes = group.nodes.filter((n) => !this.#layout.floatingNodes.get(n.id));
+            const nonFloatingNodes = group.allNodes.filter((n) => !this.#layout.floatingNodes.get(n.id));
             nodes.push(...nonFloatingNodes);
         }
         return nodes;

@@ -54,8 +54,8 @@ export interface ComfyNode extends LGraphNode {
     collapsed: boolean;
     widgets: ComfyWidget[];
     inputs: ComfyInputNodeSlot[];
-    // imgs?: HTMLImageElement[];
     images?: ImageInfo[];
+    preview?: string[];
     previewMediaType?: string;
     subgraph?: ComfyGraph;
     constructor: {

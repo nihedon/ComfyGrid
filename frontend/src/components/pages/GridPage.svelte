@@ -95,7 +95,7 @@
                   />
                 {/each}
               </ul>
-              <div class="d-flex gap-2">
+              <div class="d-flex gap-2 align-items-center">
                 <select
                   class="form-select form-select-sm"
                   onchange={handleOptionChanged}
