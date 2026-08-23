@@ -464,6 +464,9 @@ export class ComfyGridWidget<V = string, O = undefined> {
     get comfyWidget() {
         return this.#comfyWidget;
     }
+    get index() {
+        return this.#index;
+    }
     get id() {
         return `${this.#node.comfyNode.id}_${this.#index}`;
     }
