@@ -103,7 +103,7 @@ export class ComfyGridGroup {
 
     readonly modeSet = $derived.by(() => {
         const modes = new SvelteSet<ComfyNodeMode>();
-        for (const node of this.#nodes) {
+        for (const node of this.allNodes) {
             modes.add(node.mode);
         }
         return modes;
