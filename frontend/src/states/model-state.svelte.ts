@@ -85,7 +85,7 @@ export class ComfyGridGroup {
     });
 
     readonly hasVisibleNodes = $derived.by(() => {
-        if (this.#nodes.some((node) => node.isVisible)) {
+        if (this.#nodes.some((node) => node.isGroupVisible)) {
             return true;
         }
         return this.#children.some((child) => child.hasVisibleNodes);
@@ -182,12 +182,13 @@ export class ComfyGridNode {
     readonly #groups: ComfyGridGroup[] = [];
     readonly #comfyGroups: ComfyGroup[] = [];
 
-    readonly isVisible = $derived.by(() => {
+    readonly isGroupVisible = $derived.by(() => {
         const layout = appState.workspaceState.layout;
-        const isFloating = Boolean(layout.floatingNodes.get(this.id));
-        const isInvalid = appState.workspaceState.hasErrorNode(this.id);
+        if (layout.floatingNodes.get(this.id)) {
+            return false;
+        }
 
-        if (isFloating || isInvalid) {
+        if (appState.workspaceState.hasErrorNode(this.id)) {
             return true;
         }
 
@@ -207,6 +208,11 @@ export class ComfyGridNode {
             return false;
         }
         return true;
+    });
+
+    readonly isVisible = $derived.by(() => {
+        const isFloating = Boolean(appState.workspaceState.layout.floatingNodes.get(this.id));
+        return isFloating || this.isGroupVisible;
     });
 
     constructor(comfyNode: ComfyNode, app: ComfyApp) {

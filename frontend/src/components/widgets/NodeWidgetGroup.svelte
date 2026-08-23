@@ -36,7 +36,7 @@
   const nodes = $derived(findChildren());
 
   const visibleNodes = $derived(
-    group.nodes.filter((n) => !workspaceState.layout.floatingNodes.get(n.id) && n.isVisible),
+    group.nodes.filter((n) => n.isGroupVisible),
   );
 
   const masonryNodes = $derived(
