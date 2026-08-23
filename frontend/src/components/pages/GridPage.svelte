@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { IconAdjustmentsHorizontal } from '@tabler/icons-svelte';
+  import { SlidersHorizontal } from '@lucide/svelte';
   import { t } from '@/i18n/i18n';
   import { saveLayoutObject } from '@/services/gridstack-service';
   import { appState } from '@/states/app-state.svelte';
@@ -111,7 +111,7 @@
                     type="button"
                     data-bs-toggle="dropdown"
                     aria-expanded="false"
-                    ><IconAdjustmentsHorizontal size={14} />
+                    ><SlidersHorizontal size={14} />
                   </button>
                   <ul class="dropdown-menu dropdown-menu-end">
                     <li>

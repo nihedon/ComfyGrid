@@ -1,10 +1,10 @@
 <script lang="ts">
   import {
-    IconAlertTriangle,
-    IconInfoCircle,
-    IconLoader2,
-    IconRefresh,
-  } from '@tabler/icons-svelte';
+    Info,
+    Loader2,
+    RotateCw,
+    TriangleAlert,
+  } from '@lucide/svelte';
   import { Modal } from 'bootstrap';
   import { appState } from '@/states/app-state.svelte';
 
@@ -68,11 +68,11 @@
         <div class="modal-header">
           <h5 class="modal-title d-flex align-items-center gap-2">
             {#if type === 'TypeInfo'}
-              <IconInfoCircle size={20} class="text-info" />
+              <Info size={20} class="text-info" />
             {:else if type === 'TypeError'}
-              <IconInfoCircle size={20} class="text-error" />
+              <Info size={20} class="text-error" />
             {:else if type === 'TypeFatal'}
-              <IconAlertTriangle size={20} class="text-fatal" />
+              <TriangleAlert size={20} class="text-fatal" />
             {/if}
             {title}
           </h5>
@@ -101,9 +101,9 @@
               disabled={reloading}
             >
               {#if reloading}
-                <IconLoader2 size={16} class="spin" />
+                <Loader2 size={16} class="spin" />
               {:else}
-                <IconRefresh size={16} />
+                <RotateCw size={16} />
               {/if}
               Reload
             </button>

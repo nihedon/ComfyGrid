@@ -1,11 +1,11 @@
 <script lang="ts">
-  import { IconCircleFilled } from '@tabler/icons-svelte';
+  import { CircleDot } from '@lucide/svelte';
   import { appState } from '@/states/app-state.svelte';
   import { ComfyGridGroup, ComfyGridNode } from '@/states/model-state.svelte';
   import type { ComfyNodeMode } from '@/types/model-shared';
   import NodeWidget from './NodeWidget.svelte';
   import Self from './NodeWidgetGroup.svelte';
-  import NodeMode from './comfyui/features/NodeModeSelector.svelte';
+  import NodeModeSelector from './comfyui/features/NodeModeSelector.svelte';
 
   let {
     group,
@@ -88,7 +88,7 @@
         class="position-relative me-2 d-inline-flex align-items-center"
         style:color={group.color ? group.color + '70' : 'transparent'}
       >
-        <IconCircleFilled size={16} />
+        <CircleDot size={16} />
         <input
           class="position-absolute top-0 end-0 w-100 h-100 opacity-0"
           type="color"
@@ -109,7 +109,7 @@
         </datalist>
       </div>
     {/if}
-    <NodeMode
+    <NodeModeSelector
       className="me-2"
       mode={group.modeSet}
       handleChange={(e, val) => handleStateChange(e, val)}

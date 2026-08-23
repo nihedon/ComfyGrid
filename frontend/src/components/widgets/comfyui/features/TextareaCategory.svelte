@@ -1,6 +1,6 @@
 <script lang="ts">
   import { tick } from 'svelte';
-  import { IconAlertTriangle, IconLanguage, IconLoader2, IconSettings } from '@tabler/icons-svelte';
+  import { Languages, Loader2, Settings, TriangleAlert } from '@lucide/svelte';
   import { t } from '@/i18n/i18n';
   import { callLayoutChangedCallbacks } from '@/services/callback-service';
   import { saveLayoutObject } from '@/services/gridstack-service';
@@ -120,12 +120,12 @@
       class="btn btn-xs btn-secondary d-inline-flex align-items-center justify-content-center p-1"
       onclick={openSettingModal}
     >
-      <IconSettings size={14} />
+      <Settings size={14} />
     </button>
   {/if}
   {#if widget.isTranslating}
     <span class="badge text-bg-primary ms-2 fs-7 d-inline-flex align-items-center gap-1">
-      <IconLoader2 size={14} class="spin" />
+      <Loader2 size={14} class="spin" />
       {$t('widget.translate.indicator')}
     </span>
   {:else if isTranslate && isManual && widget.isDirty}
@@ -139,12 +139,12 @@
         }
       }}
     >
-      <IconLanguage size={14} />
+      <Languages size={14} />
       {$t('widget.translate.manual_button')}
     </button>
   {:else if isTranslate && widget.translationFailed}
     <span class="badge text-bg-danger ms-2 fs-7 d-inline-flex align-items-center gap-1">
-      <IconAlertTriangle size={14} />
+      <TriangleAlert size={14} />
       {$t('widget.translate.failed')}
     </span>
   {/if}

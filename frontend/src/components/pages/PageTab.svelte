@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { IconLoader2, IconPower, IconReload } from '@tabler/icons-svelte';
+  import { Loader2, Power, RotateCw } from '@lucide/svelte';
   import { comfyGridApiClient } from '@/api/api-client';
   import { t } from '@/i18n/i18n';
   import { workflowManager } from '@/managers/workflow-manager';
@@ -66,7 +66,7 @@
     <ul class="dropdown-menu">
       <li>
         <button class="dropdown-item d-flex align-items-center gap-2" onclick={handleReload}>
-          <IconReload size={16} />
+          <RotateCw size={16} />
           {$t('tab.comfyui.reload')}
         </button>
       </li>
@@ -77,9 +77,9 @@
           disabled={isRestarting}
         >
           {#if isRestarting}
-            <IconLoader2 size={16} class="spin" />
+            <Loader2 size={16} class="spin" />
           {:else}
-            <IconPower size={16} />
+            <Power size={16} />
           {/if}
           {$t('tab.comfyui.restart')}
         </button>

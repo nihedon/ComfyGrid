@@ -43,8 +43,8 @@
         "vite": "^8.2.1"
     },
     "dependencies": {
+        "@lucide/svelte": "^1.33.0",
         "@popperjs/core": "^2.11.8",
-        "@tabler/icons-svelte": "^3.46.0",
         "bootstrap": "^5.3.8",
         "bootstrap-autocomplete": "^2.3.7",
         "bootstrap-contextmenu": "^1.0.0",
@@ -55,6 +55,7 @@
         "jquery-ui": "^1.14.2",
         "lit-html": "^3.3.3",
         "loglevel": "^1.9.2",
+        "lucide-static": "^1.33.0",
         "marked": "^18.0.9",
         "split.js": "^1.6.5"
     },

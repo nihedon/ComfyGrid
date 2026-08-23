@@ -34,6 +34,10 @@ default = true
 type = "checkbox"
 default = false
 
+[ComfyGrid.ui.simple_node_mode]
+type = "checkbox"
+default = false
+
 [ComfyGrid.ui.model_thumbnail_width]
 type = "slider"
 default = "160"

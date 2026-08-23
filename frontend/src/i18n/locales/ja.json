@@ -26,6 +26,8 @@
     "opts.ComfyGrid.ui.common_tab_board.hint": "各タブページ上に表示されるフローティングボードを、すべてのタブで共通のボードにします。",
     "opts.ComfyGrid.ui.always_show_node_focus_button.label": "ノードフォーカスボタンを常時表示する",
     "opts.ComfyGrid.ui.always_show_node_focus_button.hint": "エラー発生時だけでなく、常時ComfyUIフォーカスボタンを表示します。",
+    "opts.ComfyGrid.ui.simple_node_mode.label": "ノードモードセレクターを簡略化する",
+    "opts.ComfyGrid.ui.simple_node_mode.hint": "ノードモードセレクターを通常／バイパスのトグルに変更します。ミュート状態はバイパスに統合され、ミュートへの変更はできなくなります。",
     "opts.ComfyGrid.ui.model_thumbnail_width.label": "モデルサムネイルの幅",
     "opts.ComfyGrid.ui.model_thumbnail_width.hint": "モデルサムネイル画像の幅を指定します。アスペクト比は常に3:4です。",
     "opts.ComfyGrid.ui.gallery_image_max_size.label": "ギャラリー画像の最大サイズ",

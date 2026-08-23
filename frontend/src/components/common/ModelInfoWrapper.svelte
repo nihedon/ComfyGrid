@@ -4,7 +4,7 @@
   import { appState } from '@/states/app-state.svelte';
   import type { Model } from '@/states/storage-state.svelte';
   import logger from '@/utils/logger';
-  import { IconCopy, IconLink, IconInfoCircle, IconTag } from '@tabler/icons-svelte';
+  import { Copy, Info, Link, Tag } from '@lucide/svelte';
   import SelectablePopover from './SelectablePopover.svelte';
 
   let {
@@ -110,7 +110,7 @@
     <div class="d-flex px-1 menu-icon align-items-center gap-1">
       <!-- svelte-ignore a11y_invalid_attribute -->
       <a href="#" aria-label="Show description" onclick={showDescription}>
-        <IconInfoCircle size={16} class="text-white" />
+        <Info size={16} class="text-white" />
       </a>
       {#if model.url}
         <a
@@ -119,7 +119,7 @@
           aria-label="Open Civitai"
           onclick={(e) => e.stopPropagation()}
         >
-          <IconLink size={16} class="text-white" />
+          <Link size={16} class="text-white" />
         </a>
       {/if}
       {#if triggerWords.length > 0}
@@ -130,7 +130,7 @@
           onclick={(e) => e.stopPropagation()}
           bind:this={triggerWordsPopoverElement}
         >
-          <IconTag size={16} class="text-white" />
+          <Tag size={16} class="text-white" />
         </a>
 
         <div class="d-none">
@@ -145,7 +145,7 @@
                   aria-label="Copy trigger word"
                   onclick={() => navigator.clipboard.writeText(tag)}
                 >
-                  <IconCopy size={14} />
+                  <Copy size={14} />
                 </a>
               </span>
             {/each}

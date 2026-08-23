@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { IconList, IconPlayerPlay, IconPlayerStop, IconX } from '@tabler/icons-svelte';
+  import { List, Play, Square, X } from '@lucide/svelte';
   import { t } from '@/i18n/i18n';
   import { translationManager } from '@/services/translation-service.svelte';
   import { appState } from '@/states/app-state.svelte';
@@ -47,7 +47,7 @@
       title={$t('action.execute')}
       onclick={handleExecute}
     >
-      <IconPlayerPlay size={18} class="pe-1" />{$t('action.execute')}
+      <Play size={18} class="pe-1" />{$t('action.execute')}
       {#if translationManager.pendingQueueCount > 0}
         <span
           class="top-0 start-100 d-flex align-items-center justify-content-center translate-middle badge rounded-pill bg-danger"
@@ -75,7 +75,7 @@
     type="button"
     class="btn btn-danger btn-square d-flex justify-content-center align-items-center p-0"
     title={$t('action.cancel')}
-    onclick={handleCancel}><IconX size={18} /></button
+    onclick={handleCancel}><X size={18} /></button
   >
 
   <button
@@ -83,14 +83,14 @@
     class="btn btn-light btn-square position-relative d-flex justify-content-center align-items-center"
     title={$t('action.clear')}
     onclick={handleClearQueue}
-    ><IconPlayerStop size={18} />
+    ><Square size={18} />
   </button>
 
   <button
     type="button"
     class="btn btn-light btn-square position-relative d-flex justify-content-center align-items-center"
     bind:this={jobListElement}
-    ><IconList size={18} />
+    ><List size={18} />
     {#if executionState.queueJobIds.size > 0}
       <span
         class="top-0 start-100 d-flex align-items-center justify-content-center translate-middle badge rounded-pill bg-danger"
@@ -126,7 +126,7 @@
               onclick={(e: Event) => {
                 e.stopPropagation();
                 handleDeleteJob(jobId);
-              }}><IconX size={14} /></button
+              }}><X size={14} /></button
             >
           </div>
         {/each}

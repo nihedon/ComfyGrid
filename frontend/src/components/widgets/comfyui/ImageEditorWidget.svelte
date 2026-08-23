@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { IconBrush } from '@tabler/icons-svelte';
+  import { Paintbrush } from '@lucide/svelte';
   import { comfyUiApiClient } from '@/api/api-client';
   import { refreshModels } from '@/services/models-service';
   import { appState } from '@/states/app-state.svelte';
@@ -119,12 +119,12 @@
   >
     <div class="vstack position-absolute gap-1 top-0 end-0 me-1 mt-1 z-1">
       <button
-        class="btn btn-primary btn-sm d-flex align-items-center justify-content-center p-1"
+        class="btn btn-primary btn-sm btn-icon"
         onclick={openPaintModal}
         data-bs-toggle="modal"
         data-bs-target="#models-modal-paint"
       >
-        <IconBrush size={16} />
+        <Paintbrush size={16} />
       </button>
     </div>
 

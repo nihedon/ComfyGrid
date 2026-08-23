@@ -1,15 +1,15 @@
 <script lang="ts">
   import {
-    IconArrowLeft,
-    IconArrowRight,
-    IconDeviceFloppy,
-    IconEraser,
-    IconMaximize,
-    IconRefresh,
-    IconReload,
-    IconZoomIn,
-    IconZoomOut,
-  } from '@tabler/icons-svelte';
+    BrushCleaning,
+    Eraser,
+    Maximize,
+    Redo,
+    RotateCw,
+    Save,
+    Undo,
+    ZoomIn,
+    ZoomOut,
+  } from '@lucide/svelte';
   import logger from '@/utils/logger';
 
   let {
@@ -635,33 +635,55 @@
   <ul class="navbar-nav d-flex flex-row p-2 align-items-center gap-2">
     <li class="nav-item d-flex align-items-center gap-2 flex-grow-1">
       <div class="btn-group">
-        <button class="btn btn-secondary btn-sm d-flex align-items-center gap-1" onclick={undo} disabled={!canUndo} title="Undo">
-          <IconArrowLeft size={16} />
+        <button
+          class="btn btn-secondary btn-sm d-flex align-items-center gap-1"
+          onclick={undo}
+          disabled={!canUndo}
+          title="Undo"
+        >
+          <Undo size={16} />
           Undo
         </button>
-        <button class="btn btn-secondary btn-sm d-flex align-items-center gap-1" onclick={redo} disabled={!canRedo} title="Redo">
-          <IconArrowRight size={16} />
+        <button
+          class="btn btn-secondary btn-sm d-flex align-items-center gap-1"
+          onclick={redo}
+          disabled={!canRedo}
+          title="Redo"
+        >
+          <Redo size={16} />
           Redo
         </button>
       </div>
-      <button class="btn btn-outline-secondary btn-sm d-flex align-items-center gap-1" onclick={clearCanvas} title="Clear">
-        <IconRefresh size={16} />
+      <button
+        class="btn btn-outline-secondary btn-sm d-flex align-items-center gap-1"
+        onclick={clearCanvas}
+        title="Clear"
+      >
+        <BrushCleaning size={16} />
         Clear
       </button>
       <div class="btn-group">
-        <button class="btn btn-outline-secondary btn-sm d-flex align-items-center justify-content-center" onclick={zoomOut} title="Zoom Out">
-          <IconZoomOut size={16} />
+        <button
+          class="btn btn-outline-secondary btn-sm d-flex align-items-center justify-content-center"
+          onclick={zoomOut}
+          title="Zoom Out"
+        >
+          <ZoomOut size={16} />
         </button>
         <button
           class="btn btn-outline-secondary btn-sm d-flex align-items-center gap-1"
           onclick={resetView}
           title="Reset View (100%)"
         >
-          <IconReload size={16} />
+          <RotateCw size={16} />
           {Math.round(scale * 100)}%
         </button>
-        <button class="btn btn-outline-secondary btn-sm d-flex align-items-center justify-content-center" onclick={zoomIn} title="Zoom In">
-          <IconZoomIn size={16} />
+        <button
+          class="btn btn-outline-secondary btn-sm d-flex align-items-center justify-content-center"
+          onclick={zoomIn}
+          title="Zoom In"
+        >
+          <ZoomIn size={16} />
         </button>
       </div>
       <div class="d-flex flex-row align-items-center gap-2">
@@ -684,14 +706,14 @@
         onclick={toggleEraser}
         title="Eraser"
       >
-        <IconEraser size={16} />
+        <Eraser size={16} />
       </button>
       <button
         class="btn btn-outline-secondary btn-sm d-flex align-items-center gap-1"
         onclick={openResizeModal}
         title="Resize Canvas"
       >
-        <IconMaximize size={16} />
+        <Maximize size={16} />
         {originalWidth} x {originalHeight}
       </button>
     </li>
@@ -702,7 +724,7 @@
         onclick={exportMask}
         title="Export"
       >
-        <IconDeviceFloppy size={16} />
+        <Save size={16} />
         Export
       </button>
     </li>

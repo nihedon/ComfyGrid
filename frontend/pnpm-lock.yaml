@@ -8,12 +8,12 @@ importers:
 
   .:
     dependencies:
+      '@lucide/svelte':
+        specifier: ^1.33.0
+        version: 1.33.0(svelte@5.56.9(@typescript-eslint/types@8.67.0))
       '@popperjs/core':
         specifier: ^2.11.8
         version: 2.11.8
-      '@tabler/icons-svelte':
-        specifier: ^3.46.0
-        version: 3.46.0(svelte@5.56.9(@typescript-eslint/types@8.67.0))
       bootstrap:
         specifier: ^5.3.8
         version: 5.3.8(@popperjs/core@2.11.8)
@@ -44,6 +44,9 @@ importers:
       loglevel:
         specifier: ^1.9.2
         version: 1.9.2
+      lucide-static:
+        specifier: ^1.33.0
+        version: 1.33.0
       marked:
         specifier: ^18.0.9
         version: 18.0.9
@@ -256,6 +259,11 @@ packages:
 
   '@jridgewell/trace-mapping@0.3.31':
     resolution: {integrity: sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw==}
+
+  '@lucide/svelte@1.33.0':
+    resolution: {integrity: sha512-b+osTYG2V4dge5Lr7tnaTaahhy/4vH7Xb8zcqVjmctjwgkpXS0NNOJPkGzHHZoxtw/OO+2YAU28omeMfYCaawg==}
+    peerDependencies:
+      svelte: ^5
 
   '@napi-rs/lzma-linux-x64-gnu@1.5.1':
     resolution: {integrity: sha512-oTXEIha4SsuXdTA4Iyskj0kpdx2yVXdhd75c2v3xGrHFfVMsbhTPZU/nMPL4sWKo4pBHm3aucLaqGlF696dTyQ==}
@@ -851,14 +859,6 @@ packages:
     peerDependencies:
       svelte: ^5.46.4
       vite: ^8.0.0-beta.7 || ^8.0.0
-
-  '@tabler/icons-svelte@3.46.0':
-    resolution: {integrity: sha512-p9wY/5OW8UYw/wChefYlmzPi16dPC8EvwH53PRVar9HeCL7TVKRH1L7Wd5Zgic+wv+AlJdNRXlnq81zKDye0Nw==}
-    peerDependencies:
-      svelte: '>=3 <6 || >=5.0.0-next.0'
-
-  '@tabler/icons@3.46.0':
-    resolution: {integrity: sha512-f2RYFl3fzPwj5WO82x6en0dmkjefxEfOm16D1ByM6cj/McNiwOkL4VaPUoP9VVIrXAD9WnTSVFr70px703b//A==}
 
   '@trivago/prettier-plugin-sort-imports@6.0.2':
     resolution: {integrity: sha512-3DgfkukFyC/sE/VuYjaUUWoFfuVjPK55vOFDsxD56XXynFMCZDYFogH2l/hDfOsQAm1myoU/1xByJ3tWqtulXA==}
@@ -1460,6 +1460,9 @@ packages:
   loglevel@1.9.2:
     resolution: {integrity: sha512-HgMmCqIJSAKqo68l0rS2AanEWfkxaZ5wNiEFb5ggm08lDs9Xl2KxBlX3PTcaD2chBM1gXAYf491/M2Rv8Jwayg==}
     engines: {node: '>= 0.6.0'}
+
+  lucide-static@1.33.0:
+    resolution: {integrity: sha512-jNGgvTNcLUfVRX4N9PH9pVVTJzoph/BmYmgU838bYBQodkUJL4nAThkuymFz1x3OUYMhJxPndC7rdg1sxOPYKg==}
 
   magic-string@0.30.21:
     resolution: {integrity: sha512-vd2F4YUyEXKGcLHoq+TEyCjxueSeHnFxyyjNp80yg0XV4vUhnDer/lvvlqM/arB5bXQN5K2/3oinyCRyx8T2CQ==}
@@ -2173,6 +2176,10 @@ snapshots:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.5
 
+  '@lucide/svelte@1.33.0(svelte@5.56.9(@typescript-eslint/types@8.67.0))':
+    dependencies:
+      svelte: 5.56.9(@typescript-eslint/types@8.67.0)
+
   '@napi-rs/lzma-linux-x64-gnu@1.5.1':
     optional: true
 
@@ -2513,13 +2520,6 @@ snapshots:
       svelte: 5.56.9(@typescript-eslint/types@8.67.0)
       vite: 8.2.1(jiti@2.7.0)(sass-embedded@1.102.0)(sass@1.102.0)(yaml@2.9.0)
       vitefu: 1.1.3(vite@8.2.1(jiti@2.7.0)(sass-embedded@1.102.0)(sass@1.102.0)(yaml@2.9.0))
-
-  '@tabler/icons-svelte@3.46.0(svelte@5.56.9(@typescript-eslint/types@8.67.0))':
-    dependencies:
-      '@tabler/icons': 3.46.0
-      svelte: 5.56.9(@typescript-eslint/types@8.67.0)
-
-  '@tabler/icons@3.46.0': {}
 
   '@trivago/prettier-plugin-sort-imports@6.0.2(prettier-plugin-svelte@4.1.1(prettier@3.9.6)(svelte@5.56.9(@typescript-eslint/types@8.67.0)))(prettier@3.9.6)(svelte@5.56.9(@typescript-eslint/types@8.67.0))':
     dependencies:
@@ -3076,6 +3076,8 @@ snapshots:
   lodash@4.18.1: {}
 
   loglevel@1.9.2: {}
+
+  lucide-static@1.33.0: {}
 
   magic-string@0.30.21:
     dependencies:

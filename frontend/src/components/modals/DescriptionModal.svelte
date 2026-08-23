@@ -1,17 +1,15 @@
 <script lang="ts">
   import {
-    IconChevronLeft,
-    IconChevronRight,
-    IconEdit,
-    IconHeart,
-    IconHeartFilled,
-    IconLink,
-    IconPlus,
-    IconRefresh,
-    IconStar,
-    IconStarFilled,
-    IconX,
-  } from '@tabler/icons-svelte';
+    ChevronLeft,
+    ChevronRight,
+    Heart,
+    Link,
+    Pencil,
+    Plus,
+    RotateCw,
+    Star,
+    X,
+  } from '@lucide/svelte';
   import { Modal } from 'bootstrap';
   import DOMPurify from 'dompurify';
   import { marked } from 'marked';
@@ -229,26 +227,23 @@
         <div class="modal-header">
           <h5 class="modal-title d-flex align-items-center gap-2">
             <!-- svelte-ignore a11y_click_events_have_key_events -->
-            <!-- svelte-ignore a11y_role_has_required_aria_props -->
+            <!-- svelte-ignore a11y_no_static_element_interactions -->
             <span
+              class="d-flex"
               style="cursor: pointer;"
-              role="switch"
-              tabindex="0"
               onclick={() => (tempFavorite = !tempFavorite)}
             >
               {#if tempFavorite}
-                <IconHeartFilled size={20} class="text-warning" />
+                <Heart size={18} class="text-warning" fill="currentColor" />
               {:else}
-                <IconHeart size={20} />
+                <Heart size={18} />
               {/if}
             </span>
             {model.name}
             {#if tempUrl}
-              <!-- svelte-ignore a11y_click_events_have_key_events -->
-              <!-- svelte-ignore a11y_no_static_element_interactions -->
-              <span style="cursor: pointer;" onclick={() => window.open(tempUrl, '_blank')}>
-                <IconLink size={18} />
-              </span>
+              <a href={tempUrl} target="_blank" style="cursor: pointer;">
+                <Link size={14} />
+              </a>
             {/if}
           </h5>
           <button type="button" class="btn-close" aria-label="Close" onclick={handleClose}></button>
@@ -278,9 +273,9 @@
                       onclick={() => (tempRate = tempRate === star ? undefined : star)}
                     >
                       {#if tempRate && tempRate >= star}
-                        <IconStarFilled size={20} class="text-warning" />
+                        <Star size={20} class="text-warning" fill="currentColor" />
                       {:else}
-                        <IconStar size={20} />
+                        <Star size={20} />
                       {/if}
                     </span>
                   {/each}
@@ -295,15 +290,14 @@
                     style="cursor: pointer;"
                     onclick={() => (isEditingDescription = !isEditingDescription)}
                   >
-                    <IconEdit size={18} class="text-secondary" />
+                    <Pencil size={14} class="text-secondary" />
                   </span>
                 </label>
                 {#if isEditingDescription}
                   <textarea
                     class="form-control flex-grow-1 font-monospace"
                     rows="10"
-                    bind:value={tempDescription}
-                  ></textarea>
+                    bind:value={tempDescription}></textarea>
                 {:else}
                   <div class="form-control flex-grow-1 mb-0">
                     <!-- eslint-disable-next-line svelte/no-at-html-tags -->
@@ -320,13 +314,13 @@
                       <div class="input-group input-group-sm mb-1">
                         <input type="text" class="form-control" bind:value={tempTrainedWords[i]} />
                         <button
-                          class="btn btn-secondary d-flex align-items-center justify-content-center"
+                          class="btn btn-danger d-flex align-items-center justify-content-center"
                           type="button"
                           onclick={() => {
                             tempTrainedWords.splice(i, 1);
                           }}
                         >
-                          <IconX size={14} />
+                          <X size={14} />
                         </button>
                       </div>
                     {/each}
@@ -337,7 +331,7 @@
                       tempTrainedWords.push('');
                     }}
                   >
-                    <IconPlus size={16} />Add Word
+                    <Plus size={16} />Add Word
                   </button>
                 </div>
               {/if}
@@ -400,7 +394,7 @@
                       tempPreviewUrl = fetchedImages[selectedImageIndex];
                     }}
                   >
-                    <IconChevronLeft size={16} /> Prev
+                    <ChevronLeft size={16} /> Prev
                   </button>
                   <span class="text-muted small fw-bold">
                     {selectedImageIndex + 1} / {fetchedImages.length}
@@ -413,7 +407,7 @@
                       tempPreviewUrl = fetchedImages[selectedImageIndex];
                     }}
                   >
-                    Next <IconChevronRight size={16} />
+                    Next <ChevronRight size={16} />
                   </button>
                 </div>
               {/if}
@@ -432,7 +426,7 @@
                 <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
                 <span class="visually-hidden" role="status">Loading...</span>
               {:else}
-                <IconRefresh size={16} />Fetch Info
+                <RotateCw size={16} />Fetch Info
               {/if}
             </button>
             {#if tempUrl}
@@ -442,7 +436,7 @@
                 onclick={handleEditUrl}
                 disabled={isFetching || isSaving}
               >
-                <IconLink size={16} />Edit URL
+                <Link size={16} />Edit URL
               </button>
             {/if}
           </div>

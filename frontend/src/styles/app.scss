@@ -1,5 +1,6 @@
 @use 'bootstrap/dist/css/bootstrap.min.css';
 @use 'gridstack/dist/gridstack.min.css';
+@use 'lucide-static/font/lucide.css';
 
 @layer base, utilities, components;
 
@@ -42,6 +43,12 @@
 @layer utilities {
     .fs-7 {
         font-size: 0.75rem !important;
+    }
+    .btn-icon {
+        @extend .d-flex;
+        @extend .align-items-center;
+        @extend .justify-content-center;
+        @extend .p-1;
     }
 
     .nav.nav-tabs {

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { IconAppWindow } from '@tabler/icons-svelte';
+  import { AppWindow } from '@lucide/svelte';
   import { appState } from '@/states/app-state.svelte';
   import { ComfyGridWidget } from '@/states/model-state.svelte';
   import type { Model, ModelTypes } from '@/states/storage-state.svelte';
@@ -32,9 +32,9 @@
 <button
   id={widget.id}
   type="button"
-  class="btn btn-sm btn-secondary d-flex align-items-center justify-content-center p-1"
+  class="btn btn-sm btn-secondary btn-icon"
   onclick={() => openModelModal()}
   aria-label="Select model"
 >
-  <IconAppWindow size={16} stroke={1.25} />
+  <AppWindow size={16} strokeWidth={1.25} />
 </button>

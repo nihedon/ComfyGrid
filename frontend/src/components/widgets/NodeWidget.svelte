@@ -1,14 +1,14 @@
 <script lang="ts">
   import { type Component } from 'svelte';
   import {
-    IconArrowBigDown,
-    IconArrowBigUp,
-    IconFocus2,
-    IconInfoCircle,
-    IconLayoutDashboard,
-    IconPlayerPlay,
-    IconWindowMinimize,
-  } from '@tabler/icons-svelte';
+    ArrowBigDown,
+    ArrowBigUp,
+    Info,
+    LayoutDashboard,
+    Locate,
+    PictureInPicture,
+    Play,
+  } from '@lucide/svelte';
   import { t } from '@/i18n/i18n';
   import { notifyNodeChanged } from '@/services/custom-node-service.svelte';
   import { updateBoardFloatingState } from '@/services/gridstack-service';
@@ -17,7 +17,7 @@
   import type { BoardId } from '@/types/board';
   import { COMFY_NODE_MODE, type ComfyNodeMode } from '@/types/model-shared';
   import logger from '@/utils/logger';
-  import NodeMode from './comfyui/features/NodeModeSelector.svelte';
+  import NodeModeSelector from './comfyui/features/NodeModeSelector.svelte';
   import TextareaCategory from './comfyui/features/TextareaCategory.svelte';
   import { getWidgetComponentWithMeta } from './comfyui/registry/widget-registry';
 
@@ -324,7 +324,7 @@
       <div class="d-flex align-items-center gap-2">
         {#if !widget}
           {#if !node.isNote}
-            <NodeMode
+            <NodeModeSelector
               mode={new Set([node.mode])}
               handleChange={(e, val) => handleStateChange(e, val)}
             />
@@ -332,11 +332,11 @@
           {#if alwaysShowFocusButton || isInvalid}
             <button
               type="button"
-              class={`btn btn-xs btn-${isInvalid ? 'danger' : 'outline-secondary'} d-flex align-items-center justify-content-center p-1`}
+              class={`btn btn-xs btn-${isInvalid ? 'danger' : 'secondary'} btn-icon`}
               title={$t('node.focus')}
               onclick={focusNodeInComfyUI}
             >
-              <IconFocus2 size={14} />
+              <Locate size={12} />
             </button>
           {/if}
           {#if node.hasOutputNode}
@@ -345,13 +345,13 @@
               class="btn btn-xs btn-primary d-flex align-items-center p-1"
               onclick={handleExecuteNode}
             >
-              <IconPlayerPlay size={14} />
+              <Play size={12} />
             </button>
           {/if}
           {#if appState.isDebugMode}
             <button
               type="button"
-              class="btn btn-xs btn-outline-secondary d-flex align-items-center justify-content-center p-1"
+              class="btn btn-xs btn-outline-secondary btn-icon"
               title={node.id}
               onclick={(e) => {
                 e.stopPropagation();
@@ -364,7 +364,7 @@
                 });
               }}
             >
-              <IconInfoCircle size={14} />
+              <Info size={12} />
             </button>
           {/if}
         {/if}
@@ -407,27 +407,27 @@
         {#if isFloating && otherBoardId}
           <button
             type="button"
-            class="btn btn-xs d-flex align-items-center justify-content-center"
+            class="btn btn-xs btn-icon"
             title={$t('node.move_to_other_board')}
             onclick={() => moveToBoard(otherBoardId)}
           >
             {#if currentBoardId === 'Global'}
-              <IconArrowBigDown size={14} />
+              <ArrowBigDown size={12} />
             {:else}
-              <IconArrowBigUp size={14} />
+              <ArrowBigUp size={12} />
             {/if}
           </button>
         {/if}
         <button
           type="button"
-          class="btn btn-xs d-flex align-items-center justify-content-center"
+          class="btn btn-xs btn-icon"
           title={$t(floatingButtonTitle)}
           onclick={toggleFloating}
         >
           {#if isFloating}
-            <IconWindowMinimize size={14} />
+            <PictureInPicture size={12} />
           {:else}
-            <IconLayoutDashboard size={14} />
+            <LayoutDashboard size={12} />
           {/if}
         </button>
       </div>

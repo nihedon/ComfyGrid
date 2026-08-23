@@ -1,13 +1,13 @@
 <script lang="ts">
   import { SvelteMap } from 'svelte/reactivity';
   import {
-    IconDeviceFloppy,
-    IconDownload,
-    IconEye,
-    IconInfoCircle,
-    IconTrash,
-    IconUpload,
-  } from '@tabler/icons-svelte';
+    Download,
+    Eye,
+    Info,
+    Save,
+    Trash2,
+    Upload,
+  } from '@lucide/svelte';
   import { t } from '@/i18n/i18n';
   import { galleryManager } from '@/managers/gallery-manager';
   import { appState } from '@/states/app-state.svelte';
@@ -320,7 +320,7 @@
               <button
                 class="delete-button btn btn-danger position-absolute d-flex justify-content-center align-items-center fs-6 z-1 p-1"
                 aria-label="delete"
-                onclick={deleteJob}><IconTrash size={16} /></button
+                onclick={deleteJob}><Trash2 size={16} /></button
               >
             {/if}
             {#if galleryState.currentGalleryNode?.assets}
@@ -451,25 +451,25 @@
           class="btn btn-primary flex-grow-1 d-flex align-items-center justify-content-center gap-1 p-1"
           aria-label="Save (ctrl + s)"
           onclick={() => galleryManager.saveImage(getMetadata())}
-          ><IconDeviceFloppy size={16} /> (ctrl + s)</button
+          ><Save size={16} /> (ctrl + s)</button
         >
         <button
           class="btn btn-primary d-flex align-items-center justify-content-center"
           aria-label="Download"
           onclick={() => galleryManager.downloadImage(getMetadata())}
-          ><IconDownload size={16} /></button
+          ><Download size={16} /></button
         >
         <button
           class="btn btn-secondary d-flex align-items-center justify-content-center"
           aria-label="Send to input"
           title={$t('gallery.send_to_input')}
-          onclick={() => galleryManager.uploadToInput()}><IconUpload size={16} /></button
+          onclick={() => galleryManager.uploadToInput()}><Upload size={16} /></button
         >
         <button
           class="btn btn-secondary d-flex align-items-center justify-content-center"
           aria-label="Send to Image Info"
           title={$t('gallery.send_to_image_info')}
-          onclick={() => galleryManager.sendToImageInfo()}><IconInfoCircle size={16} /></button
+          onclick={() => galleryManager.sendToImageInfo()}><Info size={16} /></button
         >
       {:else}
         <div class="flex-grow-1"></div>
@@ -482,7 +482,7 @@
           aria-expanded="false"
           title={$t('gallery.clear')}
         >
-          <IconTrash size={16} />
+          <Trash2 size={16} />
         </button>
         <ul class="dropdown-menu dropdown-menu-end">
           <li>
@@ -492,7 +492,7 @@
               onclick={clearSavedImages}
               disabled={!hasSavedImages}
             >
-              <IconDeviceFloppy size={16} />{$t('gallery.clear_saved')}
+              <Save size={16} />{$t('gallery.clear_saved')}
             </button>
           </li>
           <li>
@@ -502,12 +502,12 @@
               onclick={clearViewedImages}
               disabled={!hasViewedImages}
             >
-              <IconEye size={16} />{$t('gallery.clear_viewed')}
+              <Eye size={16} />{$t('gallery.clear_viewed')}
             </button>
           </li>
           <li>
             <button class="dropdown-item text-danger d-flex align-items-center gap-2" type="button" onclick={clearAllImages}>
-              <IconTrash size={16} />{$t('gallery.clear_all')}
+              <Trash2 size={16} />{$t('gallery.clear_all')}
             </button>
           </li>
         </ul>

@@ -1,36 +1,36 @@
 <script lang="ts">
   import { untrack } from 'svelte';
   import {
-    IconCalendarPlus,
-    IconCalendarTime,
-    IconChevronDown,
-    IconChevronLeft,
-    IconChevronRight,
-    IconChevronsLeft,
-    IconChevronsRight,
-    IconFolder,
-    IconFolderOpen,
-    IconListTree,
-    IconReload,
-    IconSortAZ,
-    IconSortAscending,
-    IconSortDescending,
-    IconStar,
-    IconTrash,
-  } from '@tabler/icons-svelte';
+    ArrowDownAZ,
+    ArrowDownWideNarrow,
+    ArrowUpNarrowWide,
+    CalendarClock,
+    CalendarPlus,
+    ChevronDown,
+    ChevronLeft,
+    ChevronRight,
+    ChevronsLeft,
+    ChevronsRight,
+    Folder,
+    FolderOpen,
+    FolderTree,
+    RotateCw,
+    Star,
+    Trash2,
+  } from '@lucide/svelte';
   import { sortBy } from 'es-toolkit/array';
   import { comfyGridApiClient } from '@/api/api-client';
   import { t } from '@/i18n/i18n';
   import { workflowManager } from '@/managers/workflow-manager';
   import { refreshModels } from '@/services/models-service';
   import { saveOptsWithCallback } from '@/services/options-service';
-
-  type ModelSortType = 'path' | 'name' | 'modified' | 'created' | 'rate';
   import { appState } from '@/states/app-state.svelte';
   import type { Model, ModelTypes } from '@/states/storage-state.svelte';
   import logger from '@/utils/logger';
   import ModelInfoWrapper from './ModelInfoWrapper.svelte';
   import Thumbnail from './Thumbnail.svelte';
+
+  type ModelSortType = 'path' | 'name' | 'modified' | 'created' | 'rate';
 
   type SortType = 'path' | 'name' | 'modified' | 'created' | 'rate';
 
@@ -372,11 +372,8 @@
       {/if}
       <li class="nav-item">
         <input class="btn-check" type="checkbox" id="useTreeView" bind:checked={modelTreeView} />
-        <label
-          class="btn btn-sm btn-outline-primary d-flex align-items-center justify-content-center p-1"
-          for="useTreeView"
-        >
-          <IconListTree size={16} />
+        <label class="btn btn-sm btn-outline-primary btn-icon" for="useTreeView">
+          <FolderTree size={16} />
         </label>
       </li>
       {#if !modelTreeView}
@@ -408,17 +405,17 @@
           {#snippet sortButton(type: ModelSortType, iconName: string)}
             <button
               type="button"
-              class="btn btn-sm btn-outline-primary d-flex align-items-center justify-content-center p-1"
+              class="btn btn-sm btn-outline-primary btn-icon"
               name="{dir}_sort-method"
               value={type}
               onclick={() => changeSortType(type)}
               class:active={sortMethod === type}
             >
-              {#if iconName === 'folder'}<IconFolder size={16} />{/if}
-              {#if iconName === 'alpha'}<IconSortAZ size={16} />{/if}
-              {#if iconName === 'clock'}<IconCalendarTime size={16} />{/if}
-              {#if iconName === 'plus'}<IconCalendarPlus size={16} />{/if}
-              {#if iconName === 'star'}<IconStar size={16} />{/if}
+              {#if iconName === 'folder'}<Folder size={16} />{/if}
+              {#if iconName === 'alpha'}<ArrowDownAZ size={16} />{/if}
+              {#if iconName === 'clock'}<CalendarClock size={16} />{/if}
+              {#if iconName === 'plus'}<CalendarPlus size={16} />{/if}
+              {#if iconName === 'star'}<Star size={16} />{/if}
             </button>
           {/snippet}
           {@render sortButton('path', 'folder')}
@@ -431,24 +428,24 @@
       <li class="nav-item">
         <button
           type="button"
-          class="btn btn-sm btn-outline-primary d-flex align-items-center justify-content-center p-1"
+          class="btn btn-sm btn-outline-primary btn-icon"
           aria-label="Sort order"
           onclick={toggleSortOrder}
         >
           {#if sortAsc}
-            <IconSortAscending size={16} />
+            <ArrowUpNarrowWide size={16} />
           {:else}
-            <IconSortDescending size={16} />
+            <ArrowDownWideNarrow size={16} />
           {/if}
         </button>
       </li>
       <li class="nav-item">
         <button
           type="button"
-          class="btn btn-sm btn-primary d-flex align-items-center justify-content-center p-1"
+          class="btn btn-sm btn-primary btn-icon"
           aria-label="Reload models"
           disabled={isReloading}
-          onclick={reloadModels}><IconReload size={16} class={isReloading ? 'spin' : ''} /></button
+          onclick={reloadModels}><RotateCw size={16} class={isReloading ? 'spin' : ''} /></button
         >
       </li>
     </ul>
@@ -470,9 +467,9 @@
                 onclick={(e) => toggleFolder(node.path, e)}
               >
                 {#if expandedFolders.has(node.path)}
-                  <IconChevronDown size={14} />
+                  <ChevronDown size={14} />
                 {:else}
-                  <IconChevronRight size={14} />
+                  <ChevronRight size={14} />
                 {/if}
               </a>
             {:else}
@@ -491,9 +488,9 @@
               title={node.path || 'All Folders'}
             >
               {#if expandedFolders.has(node.path)}
-                <IconFolderOpen size={16} class="text-secondary" />
+                <FolderOpen size={16} class="text-secondary" />
               {:else}
-                <IconFolder size={16} class="text-secondary" />
+                <Folder size={16} class="text-secondary" />
               {/if}
               <span class="text-body">{node.name}</span>
             </a>
@@ -543,7 +540,7 @@
                   aria-label="Delete image"
                   onclick={(e) => deleteImage(e, model)}
                 >
-                  <IconTrash size={16} />
+                  <Trash2 size={16} />
                 </button>
               {/if}
               <ModelInfoWrapper {model} {subdirs}>
@@ -558,21 +555,17 @@
       <nav aria-label="Model list pagination">
         <ul class="pagination pagination-sm justify-content-center align-items-center mb-0 py-2">
           <li class="page-item" class:disabled={currentPage === 0}>
-            <button
-              class="page-link d-flex align-items-center justify-content-center"
-              onclick={() => goToPage(0)}
-              aria-label="First"
-            >
-              <IconChevronsLeft size={16} />
+            <button class="page-link" onclick={() => goToPage(0)} aria-label="First">
+              <ChevronsLeft size={16} />
             </button>
           </li>
           <li class="page-item" class:disabled={currentPage === 0}>
             <button
-              class="page-link d-flex align-items-center justify-content-center"
+              class="page-link"
               onclick={() => goToPage(currentPage - 1)}
               aria-label="Previous"
             >
-              <IconChevronLeft size={16} />
+              <ChevronLeft size={16} />
             </button>
           </li>
 
@@ -603,21 +596,13 @@
           {/if}
 
           <li class="page-item" class:disabled={currentPage >= totalPages - 1}>
-            <button
-              class="page-link d-flex align-items-center justify-content-center"
-              onclick={() => goToPage(currentPage + 1)}
-              aria-label="Next"
-            >
-              <IconChevronRight size={16} />
+            <button class="page-link" onclick={() => goToPage(currentPage + 1)} aria-label="Next">
+              <ChevronRight size={16} />
             </button>
           </li>
           <li class="page-item" class:disabled={currentPage >= totalPages - 1}>
-            <button
-              class="page-link d-flex align-items-center justify-content-center"
-              onclick={() => goToPage(totalPages - 1)}
-              aria-label="Last"
-            >
-              <IconChevronsRight size={16} />
+            <button class="page-link" onclick={() => goToPage(totalPages - 1)} aria-label="Last">
+              <ChevronsRight size={16} />
             </button>
           </li>
           <li class="page-item disabled ms-2">

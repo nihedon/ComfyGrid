@@ -20,7 +20,7 @@
 
 <div
   id="comfyui-page"
-  class="position-aboslute w-100 h-100 top-0 start-0"
+  class="position-absolute w-100 h-100 top-0 start-0"
   class:active={uiState.activePageId === 'comfyui'}
 >
   <iframe

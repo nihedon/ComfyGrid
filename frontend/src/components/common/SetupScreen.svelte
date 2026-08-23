@@ -1,14 +1,14 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import {
-    IconBriefcase,
-    IconCirclePlus,
-    IconFolderOpen,
-    IconGridDots,
-    IconLink,
-    IconPlayerPlay,
-    IconSparkles,
-  } from '@tabler/icons-svelte';
+    Briefcase,
+    FolderOpen,
+    Grid,
+    Link,
+    Play,
+    PlusCircle,
+    Sparkles,
+  } from '@lucide/svelte';
   import { comfyGridApiClient } from '@/api/api-client';
   import type { SetupConfig, WorkspaceInfo } from '@/types/setup';
   import logger from '@/utils/logger';
@@ -194,7 +194,7 @@
 >
   <div class="setup-card card shadow-lg">
     <div class="card-header d-flex align-items-center gap-2 py-3">
-      <IconGridDots class="text-primary fs-5" />
+      <Grid class="text-primary fs-5" />
       <span class="fw-bold fs-5">ComfyGrid Setup</span>
     </div>
 
@@ -209,7 +209,7 @@
         {#if updateInfo?.has_update && updateInfo.download_url}
           <div class="alert alert-info mb-4 shadow-sm border-0 bg-info-subtle">
             <h6 class="mb-1">
-              <IconSparkles size={18} class="me-1 text-primary" />New Update Available:
+              <Sparkles size={18} class="me-1 text-primary" />New Update Available:
               <strong>{updateInfo.latest_version}</strong>
             </h6>
             <p class="mb-0 small opacity-75">A newer version of ComfyGrid is ready to download.</p>
@@ -231,7 +231,7 @@
               class="btn btn-outline-primary d-flex align-items-center justify-content-center gap-1"
               for="mode-launch"
             >
-              <IconPlayerPlay size={16} />Launch ComfyUI
+              <Play size={16} />Launch ComfyUI
             </label>
             <input
               type="radio"
@@ -245,7 +245,7 @@
               class="btn btn-outline-primary d-flex align-items-center justify-content-center gap-1"
               for="mode-connect"
             >
-              <IconLink size={16} />Attach to existing
+              <Link size={16} />Attach to existing
             </label>
           </div>
         </div>
@@ -263,7 +263,7 @@
                   class:active={selectedWorkspaceName === ws.name && !isNewWorkspace}
                   onclick={() => handleWorkspaceSelect(ws.name)}
                 >
-                  <IconBriefcase size={16} />{ws.name}
+                  <Briefcase size={16} />{ws.name}
                 </button>
               {/each}
               <button
@@ -272,7 +272,7 @@
                 class:active={isNewWorkspace}
                 onclick={handleAddWorkspace}
               >
-                <IconCirclePlus size={16} />New workspace
+                <PlusCircle size={16} />New workspace
               </button>
             </div>
           </div>
@@ -304,7 +304,7 @@
                   <button
                     class="btn btn-primary d-flex align-items-center justify-content-center"
                     type="button"
-                    onclick={pickMainScriptFile}><IconFolderOpen size={16} /></button
+                    onclick={pickMainScriptFile}><FolderOpen size={16} /></button
                   >
                 </div>
                 <div class="invalid-feedback">Please specify the ComfyUI main script path.</div>
@@ -323,7 +323,7 @@
                   <button
                     class="btn btn-primary d-flex align-items-center justify-content-center"
                     type="button"
-                    onclick={pickPythonFile}><IconFolderOpen size={16} /></button
+                    onclick={pickPythonFile}><FolderOpen size={16} /></button
                   >
                 </div>
                 <div class="invalid-feedback">Please specify the Python executable path.</div>

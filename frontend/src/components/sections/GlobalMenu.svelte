@@ -1,11 +1,11 @@
 <script lang="ts">
   import {
-    IconFileExport,
-    IconFileImport,
-    IconMenu2,
-    IconReload,
-    IconSettings,
-  } from '@tabler/icons-svelte';
+    FileDown,
+    FileUp,
+    Menu,
+    RotateCw,
+    Settings,
+  } from '@lucide/svelte';
   import { t } from '@/i18n/i18n';
   import { workflowManager } from '@/managers/workflow-manager';
   import { openLayout } from '@/services/gridstack-service';
@@ -69,13 +69,13 @@
     data-bs-toggle="dropdown"
     aria-expanded="false"
     style="width: 2.2rem; height: 2.2rem;"
-    ><IconMenu2 size={18} />
+    ><Menu size={18} />
   </button>
 
   <ul class="dropdown-menu">
     <li>
       <button class="dropdown-item d-flex align-items-center gap-2" onclick={handleClickOpenSetup}>
-        <IconSettings size={16} />{$t('menu.setup')}
+        <Settings size={16} />{$t('menu.setup')}
       </button>
     </li>
     <li><hr class="dropdown-divider" /></li>
@@ -84,7 +84,7 @@
         class="dropdown-item d-flex align-items-center gap-2"
         onclick={handleClickReloadGraph}
       >
-        <IconReload size={16} />{$t('menu.reload')}
+        <RotateCw size={16} />{$t('menu.reload')}
       </button>
     </li>
     <li><hr class="dropdown-divider" /></li>
@@ -99,7 +99,7 @@
     <li>
       <button
         class="dropdown-item d-flex align-items-center gap-2"
-        onclick={handleClickImportLayout}><IconFileImport size={16} />{$t('menu.import')}</button
+        onclick={handleClickImportLayout}><FileDown size={16} />{$t('menu.import')}</button
       >
     </li>
     <li>
@@ -119,7 +119,7 @@
     </li>
     <li>
       <button class="dropdown-item d-flex align-items-center gap-2" onclick={handleClickExportAll}
-        ><IconFileExport size={16} />{$t('menu.export.all')}</button
+        ><FileUp size={16} />{$t('menu.export.all')}</button
       >
     </li>
   </ul>

@@ -1,10 +1,10 @@
 <script lang="ts">
   import {
-    IconAlertTriangle,
-    IconCheck,
-    IconInfoCircle,
-    IconX,
-  } from '@tabler/icons-svelte';
+    Check,
+    Info,
+    TriangleAlert,
+    X,
+  } from '@lucide/svelte';
   import { SvelteMap } from 'svelte/reactivity';
   import { appState } from '@/states/app-state.svelte';
 
@@ -63,13 +63,13 @@
     >
       <div class="toast-header {getToastClass(toast.type)} d-flex align-items-center gap-1">
         {#if toast.type === 'success'}
-          <IconCheck size={16} />
+          <Check size={16} />
         {:else if toast.type === 'error'}
-          <IconX size={16} />
+          <X size={16} />
         {:else if toast.type === 'warning'}
-          <IconAlertTriangle size={16} />
+          <TriangleAlert size={16} />
         {:else}
-          <IconInfoCircle size={16} />
+          <Info size={16} />
         {/if}
         <strong class="me-auto">{toast.title}</strong>
         <small>{new Date(toast.timestamp).toLocaleTimeString()}</small>

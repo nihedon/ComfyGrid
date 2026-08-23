@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onDestroy, untrack } from 'svelte';
-  import { IconLayoutDashboard } from '@tabler/icons-svelte';
+  import { LayoutDashboard } from '@lucide/svelte';
   import { comfyGridApiClient } from '@/api/api-client';
   import { t } from '@/i18n/i18n';
   import { saveLayoutObject, updateBoardFloatingState } from '@/services/gridstack-service';
@@ -292,7 +292,7 @@
           style="background: var(--background-fill-primary);"
           onclick={toggleFloating}
         >
-          <IconLayoutDashboard size={14} />
+          <LayoutDashboard size={14} />
         </button>
       </div>
       <div class="d-flex flex-grow-1 overflow-y-hidden">

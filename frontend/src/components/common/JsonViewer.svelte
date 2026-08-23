@@ -1,10 +1,12 @@
 <script lang="ts">
   import {
-    IconCheck,
-    IconChevronDown,
-    IconChevronRight,
-    IconCopy,
-  } from '@tabler/icons-svelte';
+    Check,
+    ChevronDown,
+    ChevronRight,
+    ChevronsDownUp,
+    ChevronsUpDown,
+    Copy,
+  } from '@lucide/svelte';
   import { SvelteSet } from 'svelte/reactivity';
 
   let { value }: { value: unknown } = $props();
@@ -70,24 +72,37 @@
         class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1"
         onclick={() => expandAll(value)}
       >
-        <IconChevronDown size={16} />Expand All
+        <ChevronsUpDown size={16} />Expand
       </button>
-      <button type="button" class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1" onclick={collapseAll}>
-        <IconChevronRight size={16} />Collapse All
+      <button
+        type="button"
+        class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1"
+        onclick={collapseAll}
+      >
+        <ChevronsDownUp size={16} />Collapse
       </button>
     </div>
-    <button type="button" class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1" onclick={copyJson}>
+    <button
+      type="button"
+      class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1"
+      onclick={copyJson}
+    >
       {#if copySuccess}
-        <IconCheck size={16} class="text-success" />
+        <Check size={16} class="text-success" />
       {:else}
-        <IconCopy size={16} />
+        <Copy size={16} />
       {/if}
       {copySuccess ? 'Copied!' : 'Copy JSON'}
     </button>
   </div>
 
   <div class="json-viewer-content flex-grow-1 p-3 overflow-auto font-monospace small">
-    {#snippet node(val: unknown, keyName: string | undefined = undefined, path = 'root', isLast = true)}
+    {#snippet node(
+      val: unknown,
+      keyName: string | undefined = undefined,
+      path = 'root',
+      isLast = true,
+    )}
       <div class="json-node-line">
         {#if isObject(val)}
           {@const keys = Object.keys(val)}
@@ -104,9 +119,9 @@
             onkeydown={(e) => e.key === 'Enter' && togglePath(path)}
           >
             {#if isExpanded}
-              <IconChevronDown size={14} />
+              <ChevronDown size={14} />
             {:else}
-              <IconChevronRight size={14} />
+              <ChevronRight size={14} />
             {/if}
           </span>
 

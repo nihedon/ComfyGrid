@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { IconInfoCircle } from '@tabler/icons-svelte';
+  import { Info } from '@lucide/svelte';
   import { t } from '@/i18n/i18n';
   import { saveOptsWithCallback } from '@/services/options-service';
   import { appState } from '@/states/app-state.svelte';
@@ -67,7 +67,7 @@
       {label}
       {#if hint}
         <span title={hint} class="ms-1 d-inline-flex align-items-center"
-          ><IconInfoCircle size={14} /></span
+          ><Info size={14} /></span
         >
       {/if}
     </label>
