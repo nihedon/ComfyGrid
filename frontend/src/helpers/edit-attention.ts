@@ -186,9 +186,7 @@ export function keyupEditAttention(event: KeyboardEvent, target: HTMLTextAreaEle
     let selection: Selection = { start: target.selectionStart, end: target.selectionEnd };
 
     if (selection.start === selection.end) {
-        let newSelection: Selection | null = null;
-
-        newSelection = findAttentionBlock(text, selection, '<', '>');
+        let newSelection = findAttentionBlock(text, selection, '<', '>');
         if (!newSelection) newSelection = findAttentionBlock(text, selection, '(', ')');
         if (!newSelection) newSelection = findAttentionBlock(text, selection, '[', ']');
 
