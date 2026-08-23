@@ -78,7 +78,7 @@
       style="overflow: hidden; resize: vertical;"
       rows={Math.max(3, editValue.split('\n').length)}></textarea>
   {:else}
-    <div>
+    <div class="p-2">
       <!-- eslint-disable-next-line svelte/no-at-html-tags -->
       {@html renderedHtml}
     </div>

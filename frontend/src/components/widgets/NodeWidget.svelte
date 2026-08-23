@@ -347,7 +347,7 @@
             </button>
           {/if}
         {/if}
-        {#if widget || isTextareaOnly}
+        {#if widget || (isTextareaOnly && !node.isNote)}
           <TextareaCategory widget={widget ?? node.widgets[0]} />
         {/if}
       </div>
