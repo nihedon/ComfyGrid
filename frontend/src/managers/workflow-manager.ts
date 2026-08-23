@@ -139,6 +139,7 @@ class WorkflowManager {
             sortOrder: loadedLayout.sortOrder ?? 'default',
         };
 
+        appState.workspaceState.clearErrorWidgets();
         appState.workspaceState.setGroups(rootGroups);
         appState.workspaceState.setNodes(nodes);
         appState.workspaceState.layout.import(layout);
