@@ -24,10 +24,6 @@
   let { node, widget }: { node: ComfyGridNode; widget?: ComfyGridWidget } = $props();
 
   const workspaceState = appState.workspaceState;
-  const showControlLessNodes = $derived(workspaceState.layout.showControlLessNodes);
-  const showCollapsedNodes = $derived(workspaceState.layout.showCollapsedNodes);
-  const showNoteNodes = $derived(workspaceState.layout.showNoteNodes);
-
   const containsWidgets = $derived.by(() => {
     if (widget) {
       return [widget];
@@ -57,22 +53,6 @@
   const alwaysShowFocusButton = $derived(
     (appState.optionState.get('ComfyGrid.ui.always_show_node_focus_button') as boolean) ?? false,
   );
-
-  const showNode = $derived.by(() => {
-    if (isFloating || isInvalid) {
-      return true;
-    }
-    if (!showControlLessNodes && containsWidgets.length === 0) {
-      return false;
-    }
-    if (!showCollapsedNodes && node.collapsed) {
-      return false;
-    }
-    if (!showNoteNodes && node.isNote) {
-      return false;
-    }
-    return true;
-  });
 
   let isTitleEditing = $state(false);
   let title = $derived.by(() => {
@@ -315,7 +295,6 @@
   class:bypass={node.mode === COMFY_NODE_MODE.BYPASS}
   class:is-invalid={isInvalid}
   style:background-color={bgColor}
-  style:display={showNode ? '' : 'none'}
   data-id={node.id}
   data-name={node.title}
 >

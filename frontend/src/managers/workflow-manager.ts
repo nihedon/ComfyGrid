@@ -14,10 +14,14 @@ function isGroupInGroup(child: ComfyGroup, parent: ComfyGroup): boolean {
     const [cx, cy, cw, ch] = child.boundingRect;
     const [px, py, pw, ph] = parent.boundingRect;
     const childArea = cw * ch;
-    if (childArea <= 0) return false;
+    const parentArea = pw * ph;
+    if (childArea <= 0 || parentArea <= childArea) return false;
+
     const overlapWidth = Math.max(0, Math.min(cx + cw, px + pw) - Math.max(cx, px));
     const overlapHeight = Math.max(0, Math.min(cy + ch, py + ph) - Math.max(cy, py));
-    return overlapWidth * overlapHeight >= childArea / 2;
+    const overlapArea = overlapWidth * overlapHeight;
+
+    return overlapArea >= childArea * 0.7;
 }
 
 function findParentGroup(child: ComfyGroup, allGroups: ComfyGroup[]): ComfyGroup | undefined {

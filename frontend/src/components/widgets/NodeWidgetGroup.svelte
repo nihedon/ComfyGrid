@@ -21,9 +21,6 @@
 
   const workspaceState = appState.workspaceState;
 
-  const showControlLessNodes = $derived(workspaceState.layout.showControlLessNodes);
-  const showCollapsedNodes = $derived(workspaceState.layout.showCollapsedNodes);
-
   let isTitleEditing = $state(false);
 
   function findChildren(g: ComfyGridGroup | undefined = undefined): ComfyGridNode[] {
@@ -38,19 +35,19 @@
 
   const nodes = $derived(findChildren());
 
-  const floatingNodes = $derived(
-    group.nodes.filter((n) => !workspaceState.layout.floatingNodes.get(n.id)),
+  const visibleNodes = $derived(
+    group.nodes.filter((n) => !workspaceState.layout.floatingNodes.get(n.id) && n.isVisible),
   );
 
   const masonryNodes = $derived(
-    floatingNodes.filter(
+    visibleNodes.filter(
       (node) =>
         workspaceState.hasErrorNode(node.id) || (!node.collapsed && node.widgets.length > 0),
     ),
   );
 
   const listNodes = $derived(
-    floatingNodes.filter(
+    visibleNodes.filter(
       (node) =>
         !(workspaceState.hasErrorNode(node.id) || (!node.collapsed && node.widgets.length > 0)),
     ),
@@ -116,7 +113,13 @@
     />
     {#if !isTitleEditing}
       <!-- svelte-ignore a11y_no_static_element_interactions -->
-      <span ondblclick={() => (isTitleEditing = true)}>{group.title?.trim()}</span>
+      <span
+        ondblclick={() => {
+          if (group.id !== undefined) {
+            isTitleEditing = true;
+          }
+        }}>{group.title?.trim()}</span
+      >
     {:else}
       <input
         type="text"
@@ -167,10 +170,7 @@
       </div>
     {/if}
     {#if listNodes.length > 0}
-      <div
-        class="list-group"
-        style:display={!showControlLessNodes && !showCollapsedNodes ? 'none' : ''}
-      >
+      <div class="list-group">
         {#each listNodes as node, index (`${node.id}-${index}`)}
           <NodeWidget {node} />
         {/each}

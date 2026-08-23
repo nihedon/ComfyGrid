@@ -84,19 +84,8 @@ export class ComfyGridGroup {
         return 0;
     });
 
-    readonly showControlLessNodes = $derived(appState.workspaceState.layout.showControlLessNodes ?? false);
-    readonly showCollapsedNodes = $derived(appState.workspaceState.layout.showCollapsedNodes ?? false);
-    readonly showNoteNodes = $derived(appState.workspaceState.layout.showNoteNodes ?? false);
     readonly hasVisibleNodes = $derived.by(() => {
-        if (
-            this.#nodes.some((node) => {
-                if (!this.showControlLessNodes && node.widgets.length === 0) return false;
-                if (!this.showCollapsedNodes && node.collapsed) return false;
-                if (!this.showNoteNodes && node.isNote) return false;
-                if (appState.workspaceState.layout.floatingNodes.get(node.id)) return false;
-                return true;
-            })
-        ) {
+        if (this.#nodes.some((node) => node.isVisible)) {
             return true;
         }
         return this.#children.some((child) => child.hasVisibleNodes);
@@ -192,6 +181,33 @@ export class ComfyGridNode {
     readonly #widgets: ComfyGridWidget[] = $state([]);
     readonly #groups: ComfyGridGroup[] = [];
     readonly #comfyGroups: ComfyGroup[] = [];
+
+    readonly isVisible = $derived.by(() => {
+        const layout = appState.workspaceState.layout;
+        const isFloating = Boolean(layout.floatingNodes.get(this.id));
+        const isInvalid = appState.workspaceState.hasErrorNode(this.id);
+
+        if (isFloating || isInvalid) {
+            return true;
+        }
+
+        const showControlLessNodes = layout.showControlLessNodes ?? false;
+        const showCollapsedNodes = layout.showCollapsedNodes ?? false;
+        const showNoteNodes = layout.showNoteNodes ?? false;
+
+        const containsWidgets = this.#widgets.filter((w) => !layout.floatingWidgets.get(w.id));
+
+        if (!showControlLessNodes && containsWidgets.length === 0) {
+            return false;
+        }
+        if (!showCollapsedNodes && this.#collapsed) {
+            return false;
+        }
+        if (!showNoteNodes && this.isNote) {
+            return false;
+        }
+        return true;
+    });
 
     constructor(comfyNode: ComfyNode, app: ComfyApp) {
         this.#comfyNode = comfyNode;

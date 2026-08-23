@@ -374,17 +374,8 @@ class WorkspaceState {
             traverseGroup(g);
         }
 
-        const showControlLessNodes = this.#layout.showControlLessNodes;
-        const showCollapsedNodes = this.#layout.showCollapsedNodes;
-        const showNoteNodes = this.#layout.showNoteNodes;
-
         return Array.from(this.#nodes.values()).filter((node) => {
-            const hasError = this.hasErrorNode(node.id);
-            if (!hasError) {
-                if (!showControlLessNodes && node.widgets.length === 0) return false;
-                if (!showCollapsedNodes && node.collapsed) return false;
-                if (!showNoteNodes && node.isNote) return false;
-            }
+            if (!node.isVisible) return false;
 
             const floatingBoard = this.#layout.floatingNodes.get(node.id);
             const parentGroup = nodeGroupMap.get(node.id);
