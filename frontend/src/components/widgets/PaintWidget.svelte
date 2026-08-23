@@ -435,7 +435,10 @@
     const rect = containerEl.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
-    brushCursorEl.style.transform = `translate(${x - brushSize / 2}px, ${y - brushSize / 2}px)`;
+    const displayBrushSize = brushSize * scale;
+    brushCursorEl.style.width = `${displayBrushSize}px`;
+    brushCursorEl.style.height = `${displayBrushSize}px`;
+    brushCursorEl.style.transform = `translate(${x - displayBrushSize / 2}px, ${y - displayBrushSize / 2}px)`;
   }
 
   function handleMouseMove(e: MouseEvent) {
@@ -768,6 +771,8 @@
           class:pan-cursor={spacePressed || isPanning}
           width={canvasWidth}
           height={canvasHeight}
+          style:width="{canvasWidth}px"
+          style:height="{canvasHeight}px"
           onmousedown={startDrawing}
           onmousemove={handleMouseMove}
           onmouseup={() => {
@@ -787,8 +792,8 @@
           bind:this={brushCursorEl}
           class="brush-cursor"
           class:eraser-mode={isEraser}
-          style:width="{brushSize}px"
-          style:height="{brushSize}px"
+          style:width="{brushSize * scale}px"
+          style:height="{brushSize * scale}px"
           style:display="none"
         ></div>
       </div>
@@ -887,7 +892,8 @@
 
   .drawing-canvas {
     position: absolute;
-    inset: 0;
+    top: 0;
+    left: 0;
     cursor: none; /* Hide default cursor */
     touch-action: none;
   }
