@@ -1,6 +1,6 @@
 import inject from '@rollup/plugin-inject';
 import { svelte, vitePreprocess } from '@sveltejs/vite-plugin-svelte';
-import path, { resolve } from 'path';
+import path, { resolve } from 'node:path';
 import license from 'rollup-plugin-license';
 import { visualizer } from 'rollup-plugin-visualizer';
 import { defineConfig } from 'vite';
