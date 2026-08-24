@@ -6,10 +6,10 @@
   import type { Model, ModelTypes } from '@/states/storage-state.svelte';
 
   type ComboWidget = ComfyGridWidget<
-    string,
+    string | number,
     {
-      values: string[];
-      fixed_values: string[];
+      values: (string | number)[];
+      fixed_values: (string | number)[];
     }
   >;
 
@@ -22,11 +22,15 @@
     handleInput,
   }: {
     widget: ComboWidget;
-    select: string[];
+    select: (string | number)[];
     modelDir?: ModelTypes;
     modelSubdirs?: string[];
     isValidOverride?: boolean;
-    handleInput: (e: CustomEvent, widget: ComfyGridWidget<string, unknown>, model?: Model) => void;
+    handleInput: (
+      e: CustomEvent,
+      widget: ComfyGridWidget<string | number, unknown>,
+      model?: Model,
+    ) => void;
   } = $props();
 
   let inputDomEl = $state<HTMLInputElement>()!;
@@ -38,16 +42,18 @@
   const workspaceState = appState.workspaceState;
 
   const showNsfw = $derived(appState.optionState.get('ComfyGrid.ui.show_nsfw'));
-  const strValue = $derived(typeof widget.value === 'number' ? String(widget.value) : widget.value);
+
+  const selectStr = $derived(select.map((v) => String(v)));
+  const fixedValuesStr = $derived((widget.options?.fixed_values ?? []).map((v) => String(v)));
 
   const isValid = $derived.by(() => {
     if (isValidOverride !== undefined) return isValidOverride;
-    const fixedValues = widget.options?.fixed_values ?? [];
+    const strValue = String(widget.value);
     return (
-      select.includes(strValue) ||
+      selectStr.includes(strValue) ||
       strValue.toLocaleLowerCase() === 'none' ||
       strValue.indexOf('Select ') === 0 ||
-      fixedValues.includes(strValue)
+      fixedValuesStr.includes(strValue)
     );
   });
 
@@ -82,10 +88,10 @@
         search: function (query: string, callback: (results: string[]) => void) {
           if (showAllOnNextSearch) {
             showAllOnNextSearch = false;
-            callback(select);
+            callback(selectStr);
           } else {
             const lowerQuery = query.toLowerCase();
-            const filtered = select.filter((v) => v.toLowerCase().includes(lowerQuery));
+            const filtered = selectStr.filter((v) => v.toLowerCase().includes(lowerQuery));
             callback(filtered);
           }
         },
@@ -134,7 +140,7 @@
     };
   });
 
-  let originalValue = '';
+  let originalValue: string | number = '';
 
   function handleFocus() {
     originalValue = widget.value;
@@ -150,7 +156,7 @@
       e.preventDefault();
       e.stopPropagation();
       widget.value = originalValue;
-      if (inputDomEl) inputDomEl.value = originalValue;
+      if (inputDomEl) inputDomEl.value = String(originalValue);
       jQuery(inputDomEl).autoComplete('hide');
       inputDomEl.blur();
     }
