@@ -238,13 +238,16 @@ export function applyFloatingPositions(boardId?: string, initSettings?: Record<s
 
 export function syncAndSaveLayout() {
     if (!appState.workspaceState.layout) return;
+    logger.debug('[LAYOUT_LOG] syncAndSaveLayout triggered');
     saveLayoutObject(appState.workspaceState.layout);
     callLayoutChangedCallbacks();
 }
 
 export async function updateBoardFloatingState() {
+    logger.debug('[LAYOUT_LOG] updateBoardFloatingState start');
     await waitForDom();
     applyFloatingPositions();
-    await waitForDom(); // Allow GridStack to process newly created elements
+    await waitForDom();
     syncAndSaveLayout();
+    logger.debug('[LAYOUT_LOG] updateBoardFloatingState finish');
 }

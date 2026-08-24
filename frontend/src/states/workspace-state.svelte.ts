@@ -2,6 +2,7 @@ import type { GridStack, GridStackWidget } from 'gridstack';
 import { SvelteMap, SvelteSet } from 'svelte/reactivity';
 import type { BoardId } from '@/types/board';
 import type { FloatingPosition, LayoutType } from '@/types/layout';
+import logger from '@/utils/logger';
 import { appState } from './app-state.svelte';
 import type { ComfyGridGroup, ComfyGridNode } from './model-state.svelte';
 
@@ -88,16 +89,37 @@ export class Layout {
         this.#graphId = graphId;
     }
     setFloatingNodes(nodeId: string, boardId: BoardId) {
-        this.#floatingNodes.set(nodeId, boardId);
+        logger.debug(`[LAYOUT_LOG] setFloatingNodes: nodeId=${nodeId}, boardId="${boardId}"`);
+        if (boardId) {
+            this.#floatingNodes.set(nodeId, boardId);
+        } else {
+            this.#floatingNodes.delete(nodeId);
+        }
     }
     deleteFloatingNode(nodeId: string) {
+        logger.debug(`[LAYOUT_LOG] deleteFloatingNode: nodeId=${nodeId}`);
         this.#floatingNodes.delete(nodeId);
     }
     setFloatingWidgets(widgetId: string, boardId: BoardId) {
-        this.#floatingWidgets.set(widgetId, boardId);
+        logger.debug(`[LAYOUT_LOG] setFloatingWidgets: widgetId=${widgetId}, boardId="${boardId}"`);
+        if (boardId) {
+            this.#floatingWidgets.set(widgetId, boardId);
+        } else {
+            this.#floatingWidgets.delete(widgetId);
+        }
     }
     deleteFloatingWidget(widgetId: string) {
+        logger.debug(`[LAYOUT_LOG] deleteFloatingWidget: widgetId=${widgetId}`);
         this.#floatingWidgets.delete(widgetId);
+    }
+    updateFloatingPosition(boardId: string, id: string, pos: FloatingPosition) {
+        let boardMap = this.#floatingPositions.get(boardId);
+        if (!boardMap) {
+            boardMap = {};
+            this.#floatingPositions.set(boardId, boardMap);
+        }
+        boardMap[id] = { ...boardMap[id], ...pos };
+        logger.debug(`[LAYOUT_LOG] updateFloatingPosition: board="${boardId}", id="${id}"`, boardMap[id]);
     }
     addPromptWidgetId(widgetId: string) {
         this.#promptWidgetIds.add(widgetId);
@@ -193,7 +215,7 @@ export class Layout {
             allBoardLayouts[key] = { ...allBoardLayouts[key], ...idKeyLayout };
         }
 
-        return {
+        const exported = {
             graphId: this.#graphId,
             floatingPositions: allBoardLayouts,
             floatingNodes: Object.fromEntries(Array.from(this.#floatingNodes.entries()).filter(([, boardId]) => Boolean(boardId))),
@@ -209,9 +231,12 @@ export class Layout {
             showNoteNodes: this.#showNoteNodes,
             sortOrder: this.#sortOrder,
         };
+        logger.debug('[LAYOUT_LOG] Layout.export result:', exported);
+        return exported;
     }
 
     import(layout: LayoutType) {
+        logger.debug('[LAYOUT_LOG] Layout.import payload:', layout);
         this.#graphId = layout.graphId;
         this.#floatingNodes.clear();
         Object.entries(layout.floatingNodes).forEach(([key, value]) => {

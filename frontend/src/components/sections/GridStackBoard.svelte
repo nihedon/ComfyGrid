@@ -118,14 +118,45 @@
     workspaceState.setGridStackBoard(gridKey, grid);
     applyFloatingPositions(gridKey);
 
-    const handleGridChange = () => {
+    const handleGridChange = (event: Event, items?: unknown) => {
+      logger.debug(`[LAYOUT_LOG] GridStack event: type="${event.type}", board="${gridKey}"`, items);
+
+      const logicalKey = gridKey.split('-')[0];
+      const savedNodes = (grid.save(false) ?? []) as Array<{
+        id?: string;
+        x?: number;
+        y?: number;
+        w?: number;
+        h?: number;
+      }>;
+      for (const nodeItem of savedNodes) {
+        if (nodeItem.id && nodeItem.x !== undefined && nodeItem.y !== undefined) {
+          workspaceState.layout.updateFloatingPosition(logicalKey, nodeItem.id, {
+            x: nodeItem.x,
+            y: nodeItem.y,
+            w: nodeItem.w ?? 1,
+            h: nodeItem.h ?? 1,
+          });
+        }
+      }
+
       updateAttribute(grid);
       saveLayoutDebounced();
     };
 
-    grid.on('change', handleGridChange);
-    grid.on('resizestop', handleGridChange);
-    grid.on('dragstop', handleGridChange);
+    grid.on('change', (e, items) => handleGridChange(e, items));
+    grid.on('resizestop', (e, el) => {
+      logger.debug(
+        `[LAYOUT_LOG] GridStack resizestop: board="${gridKey}", gs-id="${el?.getAttribute('gs-id')}"`,
+      );
+      handleGridChange(e, el);
+    });
+    grid.on('dragstop', (e, el) => {
+      logger.debug(
+        `[LAYOUT_LOG] GridStack dragstop: board="${gridKey}", gs-id="${el?.getAttribute('gs-id')}"`,
+      );
+      handleGridChange(e, el);
+    });
 
     return () => {
       grid.off('change');
