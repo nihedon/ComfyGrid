@@ -227,6 +227,12 @@ export function applyFloatingPositions(boardId?: string, initSettings?: Record<s
         grid.batchUpdate();
         grid.removeAll(false);
         children.forEach((child) => {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const anyChild = child as any;
+            if (anyChild.gridstackNode && anyChild.gridstackNode.grid !== grid) {
+                delete anyChild.gridstackNode;
+            }
+            child.querySelectorAll('.ui-resizable-handle').forEach((h) => h.remove());
             grid.makeWidget(child);
         });
         grid.commit();

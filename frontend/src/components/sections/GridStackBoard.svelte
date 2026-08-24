@@ -162,6 +162,11 @@
       grid.off('change');
       grid.off('resizestop');
       grid.off('dragstop');
+      try {
+        grid.destroy(false);
+      } catch (err) {
+        logger.error('Error destroying GridStack instance:', err);
+      }
       gridInstance = null;
       workspaceState.deleteGridStackBoard(gridKey);
     };
