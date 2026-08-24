@@ -11,12 +11,24 @@ function safeClone<T>(obj: T): T {
 }
 
 function isNodeInGroup(node: ComfyNode, group: ComfyGroup): boolean {
-    const [nx, ny, nw, nh] = node.getBounding();
-    const [gx, gy, gw, gh] = group.boundingRect;
+    if (!node || !group?.boundingRect) return false;
+
+    let [nx, ny, nw, nh] = typeof node.getBounding === 'function' ? node.getBounding() : [0, 0, 0, 0];
+    if (nw <= 0 || nh <= 0) {
+        nx = node.pos ? node.pos[0] : nx;
+        ny = node.pos ? node.pos[1] : ny;
+        nw = node.size ? node.size[0] : 100;
+        nh = node.size ? node.size[1] : 100;
+    }
     const nodeArea = nw * nh;
+    if (nodeArea <= 0) return false;
+
+    const [gx, gy, gw, gh] = group.boundingRect;
     const overlapWidth = Math.max(0, Math.min(nx + nw, gx + gw) - Math.max(nx, gx));
     const overlapHeight = Math.max(0, Math.min(ny + nh, gy + gh) - Math.max(ny, gy));
-    return overlapWidth * overlapHeight >= nodeArea / 2;
+    const overlapArea = overlapWidth * overlapHeight;
+
+    return overlapArea >= nodeArea / 2;
 }
 
 /**

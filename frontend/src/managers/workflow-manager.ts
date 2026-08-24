@@ -45,6 +45,7 @@ class WorkflowManager {
 
     async handleWorkflow(payload: { graphId: string; name: string; nodes: ComfyNode[]; layout?: LayoutType }) {
         const { graphId, nodes: comfyNodes, name, layout: customLayout } = payload;
+        logger.info(`[WORKFLOW_LOG] handleWorkflow start: graphId=${graphId}, name="${name}", nodeCount=${comfyNodes?.length ?? 0}`);
 
         const app = appState.comfyUiState.app;
         if (app?.rootGraph) {
@@ -114,10 +115,22 @@ class WorkflowManager {
             }
         }
 
+        logger.trace('[WORKFLOW_LOG] groups:', {
+            allComfyGroups: allComfyGroups.map((g) => ({ id: g.id, title: g.title })),
+            rootGroups: rootGroups.map((rg) => ({
+                id: rg.id,
+                title: rg.title,
+                nodeCount: rg.nodes.length,
+                childGroupCount: rg.children.length,
+            })),
+        });
+
         const loadedLayout = customLayout ?? loadLayout(graphId);
         if (customLayout) {
             saveLayout(customLayout);
         }
+        logger.trace('[WORKFLOW_LOG] loadedLayout:', loadedLayout);
+
         const { floatingPositions: orgFloatingPositions, floatingNodes: orgFloatingNodes, floatingWidgets: orgFloatingWidgets } = loadedLayout;
 
         const floatingNodes: Record<string, BoardId> = {};
@@ -150,6 +163,7 @@ class WorkflowManager {
         applyFloatingPositions(undefined, this.#rearrangeFloatingPositions(orgFloatingPositions, nodes));
         await tick();
         callLayoutChangedCallbacks();
+        logger.info(`[WORKFLOW_LOG] handleWorkflow finish: graphId=${graphId}`);
     }
 
     async handleUpdateNode(payload: { nodeId: string }) {
