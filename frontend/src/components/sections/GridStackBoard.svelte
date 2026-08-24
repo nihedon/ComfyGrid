@@ -5,7 +5,6 @@
     applyFloatingPositions,
     gs,
     syncAndSaveLayout,
-    updateAttribute,
   } from '@/services/gridstack-service';
   import { appState } from '@/states/app-state.svelte';
   import { ComfyGridGroup, ComfyGridNode } from '@/states/model-state.svelte';
@@ -140,7 +139,6 @@
         }
       }
 
-      updateAttribute(grid);
       saveLayoutDebounced();
     };
 
