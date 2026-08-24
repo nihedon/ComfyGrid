@@ -225,6 +225,7 @@
   });
 
   async function toggleFloating() {
+    const targetId = widget ? widget.id : node.id;
     if (widget) {
       const current = workspaceState.layout.floatingWidgets.get(widget.id);
       const next = current ? '' : 'Global';
@@ -240,10 +241,11 @@
       );
       workspaceState.layout.setFloatingNodes(node.id, next);
     }
-    await updateBoardFloatingState();
+    await updateBoardFloatingState(targetId);
   }
 
   async function moveToBoard(targetBoardId: BoardId) {
+    const targetId = widget ? widget.id : node.id;
     if (widget) {
       const current = workspaceState.layout.floatingWidgets.get(widget.id);
       logger.trace(
@@ -257,7 +259,7 @@
       );
       workspaceState.layout.setFloatingNodes(node.id, targetBoardId);
     }
-    await updateBoardFloatingState();
+    await updateBoardFloatingState(targetId);
   }
 
   function handleStateChange(e: Event, mode: ComfyNodeMode) {

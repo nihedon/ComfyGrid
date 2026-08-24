@@ -140,7 +140,11 @@ export async function importLayout(strLayout: string) {
     }
 }
 
-export function applyFloatingPositions(boardId?: string, initSettings?: Record<string, Record<string, FloatingPosition>>) {
+export function applyFloatingPositions(
+    boardId?: string,
+    initSettings?: Record<string, Record<string, FloatingPosition>>,
+    priorityId?: string,
+) {
     const activeKeys = Array.from(appState.workspaceState.gridStackBoards.keys());
     const boardIds = boardId ? activeKeys.filter((k) => k === boardId || k.startsWith(boardId + '-')) : activeKeys;
 
@@ -172,8 +176,16 @@ export function applyFloatingPositions(boardId?: string, initSettings?: Record<s
             });
         }
 
-        // 3. Stable rebuild from sorted DOM
+        // 3. Stable rebuild from sorted DOM (with priorityId placed first if matched)
         children.sort((a, b) => {
+            const aId = a.getAttribute('gs-id');
+            const bId = b.getAttribute('gs-id');
+
+            if (priorityId) {
+                if (aId === priorityId && bId !== priorityId) return -1;
+                if (bId === priorityId && aId !== priorityId) return 1;
+            }
+
             const ay = Number(a.getAttribute('gs-y') ?? '9999');
             const ax = Number(a.getAttribute('gs-x') ?? '0');
             const by = Number(b.getAttribute('gs-y') ?? '9999');
@@ -198,6 +210,9 @@ export function applyFloatingPositions(boardId?: string, initSettings?: Record<s
         // 4. Restore auto-packing (float: false)
         grid.float(false);
 
+        if (children.length === 0 && grid.el) {
+            grid.el.style.removeProperty('height');
+        }
     }
 }
 
@@ -208,10 +223,10 @@ export function syncAndSaveLayout() {
     callLayoutChangedCallbacks();
 }
 
-export async function updateBoardFloatingState() {
-    logger.trace('[LAYOUT_LOG] updateBoardFloatingState start');
+export async function updateBoardFloatingState(priorityId?: string) {
+    logger.trace(`[LAYOUT_LOG] updateBoardFloatingState start (priorityId="${priorityId ?? ''}")`);
     await waitForDom();
-    applyFloatingPositions();
+    applyFloatingPositions(undefined, undefined, priorityId);
     await waitForDom();
     syncAndSaveLayout();
     logger.trace('[LAYOUT_LOG] updateBoardFloatingState finish');
