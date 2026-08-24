@@ -2,20 +2,40 @@
   import {
     FileDown,
     FileUp,
+    ListRestart,
     Menu,
+    Power,
     RotateCw,
     Settings,
+    Workflow,
   } from '@lucide/svelte';
+  import { comfyGridApiClient } from '@/api/api-client';
   import { t } from '@/i18n/i18n';
   import { workflowManager } from '@/managers/workflow-manager';
   import { openLayout } from '@/services/gridstack-service';
   import { refreshModels } from '@/services/models-service';
   import { appState } from '@/states/app-state.svelte';
+  import logger from '@/utils/logger';
 
   const workspaceState = appState.workspaceState;
 
   function handleClickReloadGraph() {
     workflowManager.loadCurrentWorkflow();
+  }
+
+  function handleReload() {
+    if (appState.comfyUiState.iframe) {
+      appState.comfyUiState.iframe.src = appState.comfyUiState.iframe.src;
+    }
+  }
+
+  let isRestarting = $state(false);
+  async function handleRestart() {
+    isRestarting = true;
+    if (!(await comfyGridApiClient.postRestart())) {
+      logger.error('Failed to restart ComfyUI');
+    }
+    isRestarting = false;
   }
 
   function handleRefreshComboInNodes() {
@@ -74,32 +94,39 @@
 
   <ul class="dropdown-menu">
     <li>
-      <button class="dropdown-item d-flex align-items-center gap-2" onclick={handleClickOpenSetup}>
-        <Settings size={16} />{$t('menu.setup')}
-      </button>
-    </li>
-    <li><hr class="dropdown-divider" /></li>
-    <li>
       <button
         class="dropdown-item d-flex align-items-center gap-2"
         onclick={handleClickReloadGraph}
       >
-        <RotateCw size={16} />{$t('menu.reload')}
+        <Workflow size={14} />{$t('menu.reload_workflow')}
+      </button>
+    </li>
+    <li>
+      <button
+        class="dropdown-item d-flex align-items-center gap-2"
+        onclick={handleRefreshComboInNodes}
+        ><ListRestart size={14} />{$t('menu.update_request')}</button
+      >
+    </li>
+    <li>
+      <button class="dropdown-item d-flex align-items-center gap-2" onclick={handleReload}>
+        <RotateCw size={14} />{$t('menu.comfyui.reload')}
+      </button>
+    </li>
+    <li>
+      <button
+        class="dropdown-item d-flex align-items-center gap-2"
+        onclick={handleRestart}
+        disabled={isRestarting}
+      >
+        <Power size={14} />{$t('menu.comfyui.restart')}
       </button>
     </li>
     <li><hr class="dropdown-divider" /></li>
     <li>
       <button
         class="dropdown-item d-flex align-items-center gap-2"
-        onclick={handleRefreshComboInNodes}
-        ><span class="ps-4">{$t('menu.update_request')}</span></button
-      >
-    </li>
-    <li><hr class="dropdown-divider" /></li>
-    <li>
-      <button
-        class="dropdown-item d-flex align-items-center gap-2"
-        onclick={handleClickImportLayout}><FileDown size={16} />{$t('menu.import')}</button
+        onclick={handleClickImportLayout}><FileDown size={14} />{$t('menu.import')}</button
       >
     </li>
     <li>
@@ -119,8 +146,14 @@
     </li>
     <li>
       <button class="dropdown-item d-flex align-items-center gap-2" onclick={handleClickExportAll}
-        ><FileUp size={16} />{$t('menu.export.all')}</button
+        ><FileUp size={14} />{$t('menu.export.all')}</button
       >
+    </li>
+    <li><hr class="dropdown-divider" /></li>
+    <li>
+      <button class="dropdown-item d-flex align-items-center gap-2" onclick={handleClickOpenSetup}>
+        <Settings size={14} />{$t('menu.setup')}
+      </button>
     </li>
   </ul>
 </div>

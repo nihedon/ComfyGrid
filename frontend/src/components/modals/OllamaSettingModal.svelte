@@ -179,7 +179,7 @@
                 type="button"
                 onclick={fetchModels}
                 disabled={loadingModels}
-                title={$t('tab.comfyui.reload') ?? 'Reload'}
+                title={$t('menu.reload') ?? 'Reload'}
               >
                 <RotateCw size={16} class={loadingModels ? 'spin' : ''} />
               </button>

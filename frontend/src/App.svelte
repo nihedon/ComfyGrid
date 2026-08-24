@@ -1,6 +1,7 @@
 <script lang="ts">
   import { untrack } from 'svelte';
   import { onDestroy, onMount } from 'svelte';
+  import { RefreshCw, RotateCw, TriangleAlert } from '@lucide/svelte';
   import LoadingScreen from '@/components/common/LoadingScreen.svelte';
   import SetupScreen from '@/components/common/SetupScreen.svelte';
   import SharedThumbnailPopover from '@/components/common/SharedThumbnailPopover.svelte';
@@ -25,10 +26,8 @@
   import logger from '@/utils/logger';
   import Body from './Body.svelte';
   import Header from './Header.svelte';
-  import { RotateCw, RefreshCw, TriangleAlert } from '@lucide/svelte';
   import { comfyGridApiClient } from './api/api-client';
   import { bindKeyboardShortcuts } from './helpers/keybind.svelte';
-  import { workflowManager } from './managers/workflow-manager';
 
   let initialized = false;
 
@@ -100,9 +99,9 @@
       callUiLoadedCallbacks();
 
       // !!! Waiting for ComfyUI's data structure to be organized as the execution is too early. !!!
-      setTimeout(() => {
-        workflowManager.loadCurrentWorkflow();
-      }, 1000);
+      // setTimeout(() => {
+      //   workflowManager.loadCurrentWorkflow();
+      // }, 1000);
     }
   });
 

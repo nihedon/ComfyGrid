@@ -1,10 +1,9 @@
 <script lang="ts">
-  import { Loader2, Power, RotateCw } from '@lucide/svelte';
-  import { comfyGridApiClient } from '@/api/api-client';
-  import { t } from '@/i18n/i18n';
+  import { Workflow } from '@lucide/svelte';
+  import { Check } from '@lucide/svelte';
   import { workflowManager } from '@/managers/workflow-manager';
   import { appState } from '@/states/app-state.svelte';
-  import logger from '@/utils/logger';
+  import type { WorkflowTabItem } from '@/states/comfyui-bridge.svelte';
 
   let {
     id,
@@ -21,7 +20,13 @@
   const isActive = $derived(uiState.activePageId === id);
   const hasSubmenu = $derived(id === 'comfyui');
 
-  const comfyUiState = appState.comfyUiState;
+  let workflowTabs = $state<WorkflowTabItem[]>([]);
+
+  function refreshWorkflowTabs() {
+    if (appState.bridge) {
+      workflowTabs = appState.bridge.getWorkflowTabs();
+    }
+  }
 
   function changeActiveTab() {
     uiState.activePageId = id;
@@ -33,18 +38,10 @@
     }
   }
 
-  let isRestarting = $state(false);
-  async function handleRestart() {
-    isRestarting = true;
-    if (!(await comfyGridApiClient.postRestart())) {
-      logger.error('Failed to restart ComfyUI');
-    }
-    isRestarting = false;
-  }
-
-  function handleReload() {
-    if (comfyUiState.iframe) {
-      comfyUiState.iframe.src = comfyUiState.iframe.src;
+  function handleSelectTab(item: WorkflowTabItem) {
+    item.tab.click();
+    if (id !== 'grid' && id !== 'comfyui') {
+      uiState.needRefresh = true;
     }
   }
 </script>
@@ -61,29 +58,30 @@
     {text}
   </button>
   {#if hasSubmenu}
-    <!-- svelte-ignore a11y_consider_explicit_label -->
-    <button class="dropdown-toggle-btn" data-bs-toggle="dropdown" aria-expanded="false"></button>
+    <button
+      class="dropdown-toggle-btn"
+      data-bs-toggle="dropdown"
+      aria-expanded="false"
+      onclick={refreshWorkflowTabs}
+      onpointerenter={refreshWorkflowTabs}
+    >
+      <Workflow size={14} />
+    </button>
     <ul class="dropdown-menu">
-      <li>
-        <button class="dropdown-item d-flex align-items-center gap-2" onclick={handleReload}>
-          <RotateCw size={16} />
-          {$t('tab.comfyui.reload')}
-        </button>
-      </li>
-      <li>
-        <button
-          class="dropdown-item d-flex align-items-center gap-2"
-          onclick={handleRestart}
-          disabled={isRestarting}
-        >
-          {#if isRestarting}
-            <Loader2 size={16} class="spin" />
-          {:else}
-            <Power size={16} />
-          {/if}
-          {$t('tab.comfyui.restart')}
-        </button>
-      </li>
+      {#each workflowTabs as item, index (`${item.label}-${index}`)}
+        <li>
+          <button
+            class="dropdown-item d-flex align-items-center justify-content-between gap-2"
+            class:active={item.selected}
+            onclick={() => handleSelectTab(item)}
+          >
+            <span class="text-truncate">{item.label}</span>
+            {#if item.selected}
+              <Check size={14} />
+            {/if}
+          </button>
+        </li>
+      {/each}
     </ul>
   {/if}
 </li>
@@ -96,7 +94,7 @@
   }
 
   .nav-link.has-submenu {
-    padding-right: 1.5rem;
+    padding-right: 2rem;
   }
 
   .dropdown-toggle-btn {
@@ -104,22 +102,13 @@
     right: 0;
     top: 0;
     height: 100%;
-    width: 1.5rem;
+    width: 2rem;
     border: none;
     background: none;
     padding: 0;
     color: inherit;
     opacity: 0.6;
     cursor: pointer;
-
-    &::after {
-      display: inline-block;
-      content: '';
-      border-top: 0.3em solid;
-      border-right: 0.3em solid transparent;
-      border-left: 0.3em solid transparent;
-      vertical-align: middle;
-    }
 
     &:hover {
       opacity: 1;

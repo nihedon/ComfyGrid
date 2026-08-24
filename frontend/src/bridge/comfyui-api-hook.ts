@@ -35,6 +35,15 @@ export class ComfyUiApiHook {
         app.loadGraphData = function (...args: any[]) {
             const orgRet = orgLoadGraphData.apply(this, args);
             appState.comfyUiState.graphReady = true;
+
+            if (appState.uiState.activePageId === 'grid') {
+                setTimeout(() => {
+                    workflowManager.loadCurrentWorkflow();
+                }, 1000);
+            } else {
+                appState.uiState.needRefresh = true;
+            }
+
             return orgRet;
         };
         anyApp.loadGraphData.__comfygrid__is_hooked__ = true;
