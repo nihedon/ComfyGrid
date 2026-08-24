@@ -1,11 +1,12 @@
 <script lang="ts">
-  import Page from '@/components/pages/PageTab.svelte';
   import { Download } from '@lucide/svelte';
+  import Page from '@/components/pages/PageTab.svelte';
   import ActionForm from '@/components/sections/ActionPanel.svelte';
   import GlobalMenu from '@/components/sections/GlobalMenu.svelte';
   import ProgressBar from '@/components/sections/ProgressBar.svelte';
   import { fileManager } from '@/managers/file-manager';
   import { appState } from '@/states/app-state.svelte';
+  import WorkflowMenu from './components/sections/WorkflowMenu.svelte';
   import SystemMonitorGroup from './components/widgets/SystemMonitorGroup.svelte';
 
   const workspaceState = appState.workspaceState;
@@ -19,8 +20,9 @@
   <div class="flex-column position-relative">
     <ProgressBar />
     <div class="d-flex align-items-center pt-2 gap-2">
-      <div class="ps-2" style="z-index: 1030;">
+      <div class="ps-2 d-flex gap-2">
         <GlobalMenu />
+        <WorkflowMenu />
       </div>
       <ul class="nav nav-tabs navbar-expand-lg flex-row flex-grow-1">
         <Page id="grid" text="Grid" title={workspaceState.layout?.graphId} />
