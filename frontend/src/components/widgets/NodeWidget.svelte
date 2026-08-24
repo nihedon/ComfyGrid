@@ -228,14 +228,14 @@
     if (widget) {
       const current = workspaceState.layout.floatingWidgets.get(widget.id);
       const next = current ? '' : 'Global';
-      logger.debug(
+      logger.trace(
         `[LAYOUT_LOG] toggleFloating Widget: widgetId=${widget.id}, from="${current}" to="${next}"`,
       );
       workspaceState.layout.setFloatingWidgets(widget.id, next);
     } else {
       const current = workspaceState.layout.floatingNodes.get(node.id);
       const next = current ? '' : 'Global';
-      logger.debug(
+      logger.trace(
         `[LAYOUT_LOG] toggleFloating Node: nodeId=${node.id}, from="${current}" to="${next}"`,
       );
       workspaceState.layout.setFloatingNodes(node.id, next);
@@ -246,13 +246,13 @@
   async function moveToBoard(targetBoardId: BoardId) {
     if (widget) {
       const current = workspaceState.layout.floatingWidgets.get(widget.id);
-      logger.debug(
+      logger.trace(
         `[LAYOUT_LOG] moveToBoard Widget: widgetId=${widget.id}, from="${current}" to="${targetBoardId}"`,
       );
       workspaceState.layout.setFloatingWidgets(widget.id, targetBoardId);
     } else {
       const current = workspaceState.layout.floatingNodes.get(node.id);
-      logger.debug(
+      logger.trace(
         `[LAYOUT_LOG] moveToBoard Node: nodeId=${node.id}, from="${current}" to="${targetBoardId}"`,
       );
       workspaceState.layout.setFloatingNodes(node.id, targetBoardId);

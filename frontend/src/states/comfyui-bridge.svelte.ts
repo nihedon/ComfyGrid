@@ -14,7 +14,7 @@ async function waitOnDrawBackgroundAll(graph: ComfyGraph) {
         try {
             node.onDrawBackground?.();
         } catch (error) {
-            logger.debug('Error in onDrawBackground for node', node, error);
+            logger.error('Error in onDrawBackground for node', node, error);
         }
     }
     await new Promise((resolve) => requestAnimationFrame(resolve));

@@ -119,7 +119,7 @@
     applyFloatingPositions(gridKey);
 
     const handleGridChange = (event: Event, items?: unknown) => {
-      logger.debug(`[LAYOUT_LOG] GridStack event: type="${event.type}", board="${gridKey}"`, items);
+      logger.trace(`[LAYOUT_LOG] GridStack event: type="${event.type}", board="${gridKey}"`, items);
 
       const logicalKey = gridKey.split('-')[0];
       const savedNodes = (grid.save(false) ?? []) as Array<{
@@ -146,13 +146,13 @@
 
     grid.on('change', (e, items) => handleGridChange(e, items));
     grid.on('resizestop', (e, el) => {
-      logger.debug(
+      logger.trace(
         `[LAYOUT_LOG] GridStack resizestop: board="${gridKey}", gs-id="${el?.getAttribute('gs-id')}"`,
       );
       handleGridChange(e, el);
     });
     grid.on('dragstop', (e, el) => {
-      logger.debug(
+      logger.trace(
         `[LAYOUT_LOG] GridStack dragstop: board="${gridKey}", gs-id="${el?.getAttribute('gs-id')}"`,
       );
       handleGridChange(e, el);

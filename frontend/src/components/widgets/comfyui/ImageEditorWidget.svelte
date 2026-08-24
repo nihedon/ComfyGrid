@@ -64,7 +64,7 @@
       try {
         widget.callback(files);
       } catch (err) {
-        logger.debug('Widget callback error ignored', err);
+        logger.error('Widget callback error ignored', err);
       }
 
       widget.image = {

@@ -89,7 +89,7 @@ export class Layout {
         this.#graphId = graphId;
     }
     setFloatingNodes(nodeId: string, boardId: BoardId) {
-        logger.debug(`[LAYOUT_LOG] setFloatingNodes: nodeId=${nodeId}, boardId="${boardId}"`);
+        logger.trace(`[LAYOUT_LOG] setFloatingNodes: nodeId=${nodeId}, boardId="${boardId}"`);
         if (boardId) {
             this.#floatingNodes.set(nodeId, boardId);
         } else {
@@ -97,11 +97,11 @@ export class Layout {
         }
     }
     deleteFloatingNode(nodeId: string) {
-        logger.debug(`[LAYOUT_LOG] deleteFloatingNode: nodeId=${nodeId}`);
+        logger.trace(`[LAYOUT_LOG] deleteFloatingNode: nodeId=${nodeId}`);
         this.#floatingNodes.delete(nodeId);
     }
     setFloatingWidgets(widgetId: string, boardId: BoardId) {
-        logger.debug(`[LAYOUT_LOG] setFloatingWidgets: widgetId=${widgetId}, boardId="${boardId}"`);
+        logger.trace(`[LAYOUT_LOG] setFloatingWidgets: widgetId=${widgetId}, boardId="${boardId}"`);
         if (boardId) {
             this.#floatingWidgets.set(widgetId, boardId);
         } else {
@@ -109,7 +109,7 @@ export class Layout {
         }
     }
     deleteFloatingWidget(widgetId: string) {
-        logger.debug(`[LAYOUT_LOG] deleteFloatingWidget: widgetId=${widgetId}`);
+        logger.trace(`[LAYOUT_LOG] deleteFloatingWidget: widgetId=${widgetId}`);
         this.#floatingWidgets.delete(widgetId);
     }
     updateFloatingPosition(boardId: string, id: string, pos: FloatingPosition) {
@@ -119,7 +119,7 @@ export class Layout {
             this.#floatingPositions.set(boardId, boardMap);
         }
         boardMap[id] = { ...boardMap[id], ...pos };
-        logger.debug(`[LAYOUT_LOG] updateFloatingPosition: board="${boardId}", id="${id}"`, boardMap[id]);
+        logger.trace(`[LAYOUT_LOG] updateFloatingPosition: board="${boardId}", id="${id}"`, boardMap[id]);
     }
     addPromptWidgetId(widgetId: string) {
         this.#promptWidgetIds.add(widgetId);
@@ -231,12 +231,12 @@ export class Layout {
             showNoteNodes: this.#showNoteNodes,
             sortOrder: this.#sortOrder,
         };
-        logger.debug('[LAYOUT_LOG] Layout.export result:', exported);
+        logger.trace('[LAYOUT_LOG] Layout.export result:', exported);
         return exported;
     }
 
     import(layout: LayoutType) {
-        logger.debug('[LAYOUT_LOG] Layout.import payload:', layout);
+        logger.trace('[LAYOUT_LOG] Layout.import payload:', layout);
         this.#graphId = layout.graphId;
         this.#floatingNodes.clear();
         Object.entries(layout.floatingNodes).forEach(([key, value]) => {

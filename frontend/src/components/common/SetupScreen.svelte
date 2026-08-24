@@ -1,14 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import {
-    Briefcase,
-    FolderOpen,
-    Grid,
-    Link,
-    Play,
-    PlusCircle,
-    Sparkles,
-  } from '@lucide/svelte';
+  import { Briefcase, FolderOpen, Grid, Link, Play, PlusCircle, Sparkles } from '@lucide/svelte';
   import { comfyGridApiClient } from '@/api/api-client';
   import type { SetupConfig, WorkspaceInfo } from '@/types/setup';
   import logger from '@/utils/logger';
@@ -79,7 +71,7 @@
           }
           break;
         } else {
-          logger.debug('Waiting for backend...');
+          logger.trace('Waiting for backend...');
         }
 
         // Wait 1 second before retrying
@@ -357,8 +349,7 @@
                   class="form-control font-monospace"
                   rows="3"
                   bind:value={editingWorkspace.comfyui_args}
-                  placeholder="e.g. --disable-dynamic-vram --enable-manager"
-                ></textarea>
+                  placeholder="e.g. --disable-dynamic-vram --enable-manager"></textarea>
                 <div class="form-text">Command-line arguments passed to ComfyUI on launch.</div>
               </div>
             </div>
