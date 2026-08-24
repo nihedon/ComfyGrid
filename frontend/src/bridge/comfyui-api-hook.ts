@@ -32,14 +32,12 @@ export class ComfyUiApiHook {
         }
         const orgLoadGraphData = app.loadGraphData;
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        app.loadGraphData = function (...args: any[]) {
-            const orgRet = orgLoadGraphData.apply(this, args);
+        app.loadGraphData = async function (...args: any[]) {
+            const orgRet = await orgLoadGraphData.apply(this, args);
             appState.comfyUiState.graphReady = true;
 
             if (appState.uiState.activePageId === 'grid') {
-                setTimeout(() => {
-                    workflowManager.loadCurrentWorkflow();
-                }, 1000);
+                workflowManager.loadCurrentWorkflow();
             } else {
                 appState.uiState.needRefresh = true;
             }
