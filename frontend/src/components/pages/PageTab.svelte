@@ -2,6 +2,7 @@
   import { Workflow } from '@lucide/svelte';
   import { Check } from '@lucide/svelte';
   import { workflowManager } from '@/managers/workflow-manager';
+  import { updateBoardFloatingState } from '@/services/gridstack-service';
   import { appState } from '@/states/app-state.svelte';
   import type { WorkflowTabItem } from '@/states/comfyui-bridge.svelte';
 
@@ -32,9 +33,13 @@
     uiState.activePageId = id;
     if (id === 'comfyui') {
       uiState.needRefresh = true;
-    } else if (id === 'grid' && uiState.needRefresh) {
-      uiState.needRefresh = false;
-      workflowManager.loadCurrentWorkflow();
+    } else if (id === 'grid') {
+      if (uiState.needRefresh) {
+        uiState.needRefresh = false;
+        workflowManager.loadCurrentWorkflow();
+      } else {
+        updateBoardFloatingState();
+      }
     }
   }
 

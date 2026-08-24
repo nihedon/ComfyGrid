@@ -183,13 +183,11 @@
     const currentNodeIdsKey = nodesInBoard.map((n) => n.node.id).join(',');
     if (currentNodeIdsKey !== prevNodeIdsKey) {
       prevNodeIdsKey = currentNodeIdsKey;
-      if (nodesInBoard.length > 0) {
-        if (gridInstance) {
-          workspaceState.setGridStackBoard(gridKey, gridInstance);
-        }
-        logger.log(`Nodes layout in board "${gridKey}" changed`);
-        applyFloatingPositions(gridKey);
+      if (gridInstance) {
+        workspaceState.setGridStackBoard(gridKey, gridInstance);
       }
+      logger.log(`Nodes layout in board "${gridKey}" changed`);
+      applyFloatingPositions(gridKey);
     }
   });
 </script>
