@@ -218,7 +218,6 @@ class GalleryState {
                 ...partial,
             });
             this.#jobs.set(jobId, stateJob);
-            this.#trimJobsIfNeeded();
         }
     }
 
@@ -307,20 +306,6 @@ class GalleryState {
     // -----------------------------------------------------------------------
     // Private helpers
     // -----------------------------------------------------------------------
-
-    readonly MAX_GALLERY_JOBS = 50;
-
-    #trimJobsIfNeeded(): void {
-        if (this.#jobs.size <= this.MAX_GALLERY_JOBS) return;
-
-        const sortedJobs = [...this.#jobs.values()].sort((a, b) => a.createdAt - b.createdAt);
-        const candidates = sortedJobs.filter((r) => r.completed && !r.nodes.some((n) => n.saved));
-        const toDeleteCount = this.#jobs.size - this.MAX_GALLERY_JOBS;
-
-        for (let i = 0; i < Math.min(toDeleteCount, candidates.length); i++) {
-            this.#revokeAndDelete(candidates[i].jobId);
-        }
-    }
 
     #findNode(jobId: string, nodeId: string, batchJobIndex: number): GalleryNodeRecord | undefined {
         return this.#jobs.get(jobId)?.nodes.find((n) => n.nodeId === nodeId && n.batchJobIndex === batchJobIndex);
