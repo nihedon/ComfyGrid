@@ -1,6 +1,14 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { Briefcase, FolderOpen, Grid, Link, Play, PlusCircle, Sparkles } from '@lucide/svelte';
+  import {
+    CirclePlus,
+    FolderOpen,
+    Grid3x3,
+    Link,
+    Play,
+    Sparkles,
+    SquareChartGantt,
+  } from '@lucide/svelte';
   import { comfyGridApiClient } from '@/api/api-client';
   import type { SetupConfig, WorkspaceInfo } from '@/types/setup';
   import logger from '@/utils/logger';
@@ -186,7 +194,7 @@
 >
   <div class="setup-card card shadow-lg">
     <div class="card-header d-flex align-items-center gap-2 py-3">
-      <Grid class="text-primary fs-5" />
+      <Grid3x3 class="text-primary fs-5" />
       <span class="fw-bold fs-5">ComfyGrid Setup</span>
     </div>
 
@@ -255,7 +263,7 @@
                   class:active={selectedWorkspaceName === ws.name && !isNewWorkspace}
                   onclick={() => handleWorkspaceSelect(ws.name)}
                 >
-                  <Briefcase size={16} />{ws.name}
+                  <SquareChartGantt size={16} />{ws.name}
                 </button>
               {/each}
               <button
@@ -264,7 +272,7 @@
                 class:active={isNewWorkspace}
                 onclick={handleAddWorkspace}
               >
-                <PlusCircle size={16} />New workspace
+                <CirclePlus size={16} />New workspace
               </button>
             </div>
           </div>

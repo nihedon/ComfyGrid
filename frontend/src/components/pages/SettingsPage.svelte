@@ -120,13 +120,13 @@
     >
       {#snippet optionContents(id: string, name: string, forms: ReadonlyMap<string, FormInfo>)}
         <div id="opt_{id}">
-          <h2>{name}</h2>
+          <h2 class="mt-1">{name}</h2>
           <div class="vstack gap-3 ps-4">
             {#each getSections(forms) as group, i (i)}
               {#if group.isSection}
                 <div class="card">
                   {#if group.label}
-                    <div class="card-header fw-bold text-uppercase">
+                    <div class="card-header fw-bold text-capitalize">
                       {group.label.replaceAll('_', ' ')}
                     </div>
                   {/if}
