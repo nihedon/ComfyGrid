@@ -83,6 +83,34 @@
     return flattenNodes(groups).filter((entry) => nodeSet.has(entry.node.id));
   });
 
+  const floatingWidgetsInBoard = $derived.by(() => {
+    const result: Array<{
+      group: ComfyGridGroup;
+      node: ComfyGridNode;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      widget: any;
+    }> = [];
+    const allEntries = flattenNodes(workspaceState.groups);
+
+    for (const entry of allEntries) {
+      for (const widget of entry.node.widgets) {
+        if (widget.type === 'customtext') {
+          const targetBoard = workspaceState.layout?.floatingWidgets?.get(widget.id);
+          if (!targetBoard) continue;
+
+          if (boardId === 'Global' && targetBoard === 'Global') {
+            result.push({ group: entry.group, node: entry.node, widget });
+          } else if (boardId === 'Tab' && targetBoard === 'Tab') {
+            if (commonTabBoard || groupId === undefined || entry.group.id === groupId) {
+              result.push({ group: entry.group, node: entry.node, widget });
+            }
+          }
+        }
+      }
+    }
+    return result;
+  });
+
   function getGSParams(id: string, node: ComfyGridNode) {
     const saved = workspaceState.layout?.floatingPositions?.get(boardId)?.[String(id)];
     return {
@@ -178,7 +206,10 @@
 
   let prevNodeIdsKey = '';
   $effect(() => {
-    const currentNodeIdsKey = nodesInBoard.map((n) => n.node.id).join(',');
+    const currentNodeIdsKey = [
+      ...nodesInBoard.map((n) => n.node.id),
+      ...floatingWidgetsInBoard.map((w) => w.widget.id),
+    ].join(',');
     if (currentNodeIdsKey !== prevNodeIdsKey) {
       prevNodeIdsKey = currentNodeIdsKey;
       if (gridInstance) {
@@ -191,19 +222,17 @@
 </script>
 
 <div id="grid-stack-{gridKey}" class="grid-stack w-100" bind:this={container}>
-  {#each nodesInBoard as { group, node } (`${group.id}-${node.id}`)}
+  {#each nodesInBoard as { group, node } (`node-${group.id}-${node.id}`)}
     {#if workspaceState.layout.floatingNodes.get(node.id) === boardId}
       <div class="grid-stack-item" use:gs={getGSParams(node.id, node)} data-id={node.id}>
         <NodeWidget {node} />
       </div>
     {/if}
-    {#each node.widgets as widget, widgetIndex (`${widget.id}-${widgetIndex}`)}
-      {#if widget.type === 'customtext' && workspaceState.layout.floatingWidgets.get(widget.id) === boardId}
-        <div class="grid-stack-item" use:gs={getGSParams(widget.id, node)} data-id={widget.id}>
-          <NodeWidget {node} {widget} />
-        </div>
-      {/if}
-    {/each}
+  {/each}
+  {#each floatingWidgetsInBoard as { node, widget } (`widget-${widget.id}`)}
+    <div class="grid-stack-item" use:gs={getGSParams(widget.id, node)} data-id={widget.id}>
+      <NodeWidget {node} {widget} />
+    </div>
   {/each}
 </div>
 
