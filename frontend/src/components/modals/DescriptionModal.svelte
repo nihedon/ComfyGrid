@@ -186,10 +186,13 @@
         throw new Error('Failed to save model info');
       }
       if (tempPreviewUrl) {
-        const parts = model.full_path.split(/[/\\]/);
-        parts.shift();
         const ext = isVideoFile(tempPreviewUrl) ? '.preview.mp4' : '.preview.png';
-        model.preview = parts.join('/').replace(model.extension, ext);
+        let relPath = model.full_path.replace(/^models[/\\]/i, '');
+        const lastDotIndex = relPath.lastIndexOf('.');
+        if (lastDotIndex !== -1) {
+          relPath = relPath.substring(0, lastDotIndex);
+        }
+        model.preview = relPath + ext;
       }
       model.description = tempDescription;
       model.url = tempUrl;
@@ -383,7 +386,7 @@
                 {/if}
               </div>
 
-              {#if fetchedImages.length > 1 && fetchedImages.includes(tempPreviewUrl || '')}
+              {#if fetchedImages.length > 1}
                 <div class="d-flex align-items-center justify-content-between px-1">
                   <button
                     class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1"
