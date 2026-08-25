@@ -57,6 +57,26 @@ type = "radio"
 default = "top"
 choices = ["none", "top", "left"]
 
+[ComfyGrid.system_monitor.cpu]
+type = "checkbox"
+default = true
+
+[ComfyGrid.system_monitor.ram]
+type = "checkbox"
+default = true
+
+[ComfyGrid.system_monitor.gpu]
+type = "checkbox"
+default = true
+
+[ComfyGrid.system_monitor.vram]
+type = "checkbox"
+default = true
+
+[ComfyGrid.system_monitor.temp]
+type = "checkbox"
+default = true
+
 [ComfyGrid.save.directory]
 type = "text"
 default = "save"

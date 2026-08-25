@@ -126,7 +126,9 @@
               {#if group.isSection}
                 <div class="card">
                   {#if group.label}
-                    <div class="card-header fw-bold text-uppercase">{group.label}</div>
+                    <div class="card-header fw-bold text-uppercase">
+                      {group.label.replaceAll('_', ' ')}
+                    </div>
                   {/if}
                   <div class="card-body vstack gap-3">
                     {#each group.items as [key, formInfo] (key)}
