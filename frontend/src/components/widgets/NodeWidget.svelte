@@ -30,6 +30,9 @@
     }
     return node.widgets.filter((w) => !workspaceState.layout.floatingWidgets.get(w.id));
   });
+  const containsDrawableWidget = $derived.by(() => {
+    return containsWidgets.some((w) => getWidgetComponentWithMeta(node, w));
+  });
 
   const nodeStyle = $derived.by(() => {
     if (node.mode === COMFY_NODE_MODE.BYPASS) {
@@ -430,7 +433,7 @@
       </div>
     {/if}
   </div>
-  {#if !node.collapsed && containsWidgets.length > 0}
+  {#if !node.collapsed && containsWidgets.length > 0 && containsDrawableWidget}
     <div
       class="widget-stack {node.type} {nodeStyle}"
       class:py-1={!widget && !isTextareaOnly}

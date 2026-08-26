@@ -18,6 +18,7 @@ export type LayoutType = {
     translateWidgetIds?: string[];
     translateModels?: Record<string, string>;
     translateSystems?: Record<string, string>;
+    showRenderableLessNodes?: boolean;
     showControlLessNodes?: boolean;
     showCollapsedNodes?: boolean;
     showNoteNodes?: boolean;

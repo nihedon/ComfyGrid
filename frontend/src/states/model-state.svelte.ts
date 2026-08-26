@@ -1,4 +1,5 @@
 import { SvelteSet } from 'svelte/reactivity';
+import { getWidgetComponentWithMeta } from '@/components/widgets/comfyui/registry/widget-registry';
 import { workflowManager } from '@/managers/workflow-manager';
 import type { ComfyApp, ComfyGroup, ComfyNode, ComfyWidget } from '@/types/comfy-model';
 import type { ComfyNodeMode, ImageInfo, WidgetContext } from '@/types/model-shared';
@@ -204,14 +205,22 @@ export class ComfyGridNode {
             return true;
         }
 
+        const showRenderableLessNodes = layout.showRenderableLessNodes ?? false;
         const showControlLessNodes = layout.showControlLessNodes ?? false;
         const showCollapsedNodes = layout.showCollapsedNodes ?? false;
         const showNoteNodes = layout.showNoteNodes ?? false;
 
-        const containsWidgets = this.#widgets.filter((w) => !layout.floatingWidgets.get(w.id));
-
-        if (!showControlLessNodes && containsWidgets.length === 0) {
-            return false;
+        if (!showRenderableLessNodes) {
+            const renderable = this.widgets.some((w) => getWidgetComponentWithMeta(this, w));
+            if (!renderable) {
+                return false;
+            }
+        }
+        if (!showControlLessNodes) {
+            const containsWidgets = this.#widgets.filter((w) => !layout.floatingWidgets.get(w.id));
+            if (containsWidgets.length === 0) {
+                return false;
+            }
         }
         if (!showCollapsedNodes && this.#collapsed) {
             return false;
@@ -347,7 +356,8 @@ export class ComfyGridNode {
                 existing.update(app, config.index, config.image, config.overrides);
                 newWidgets.push(existing);
             } else {
-                newWidgets.push(new ComfyGridWidget(app, this, config.widget, config.index, config.image, config.overrides));
+                const newWidget = new ComfyGridWidget(app, this, config.widget, config.index, config.image, config.overrides);
+                newWidgets.push(newWidget);
             }
         }
         this.#widgets.length = 0;

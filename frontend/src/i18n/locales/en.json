@@ -92,6 +92,7 @@
     "node.move_to_grid.title": "Move Node to GridStack Board",
     "node.move_to_other_board": "Move to other board",
     "node.focus": "Focus node in ComfyUI",
+    "group.toggle_show_renderable_less_nodes.label": "Show Nodes that cannot render",
     "group.toggle_show_collapsed_nodes.label": "Show Collapsed Nodes",
     "group.toggle_show_control_less_nodes.label": "Show Nodes without Controls",
     "group.toggle_show_note_nodes.label": "Show Note Nodes",

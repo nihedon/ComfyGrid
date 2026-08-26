@@ -118,6 +118,23 @@
                       <input
                         type="checkbox"
                         class="btn-check"
+                        id="toggle-note-nodes"
+                        name="toggle_note_nodes"
+                        onchange={handleOptionChanged}
+                        bind:checked={workspaceState.layout.showNoteNodes}
+                      />
+                      <label
+                        class="dropdown-item"
+                        class:active={workspaceState.layout.showNoteNodes}
+                        for="toggle-note-nodes"
+                      >
+                        {$t('group.toggle_show_note_nodes.label')}
+                      </label>
+                    </li>
+                    <li>
+                      <input
+                        type="checkbox"
+                        class="btn-check"
                         id="toggle-collapsed-nodes"
                         name="toggle_collapsed_nodes"
                         onchange={handleOptionChanged}
@@ -152,17 +169,17 @@
                       <input
                         type="checkbox"
                         class="btn-check"
-                        id="toggle-note-nodes"
-                        name="toggle_note_nodes"
+                        id="toggle-renderable-less-nodes"
+                        name="toggle_renderable_less_nodes"
                         onchange={handleOptionChanged}
-                        bind:checked={workspaceState.layout.showNoteNodes}
+                        bind:checked={workspaceState.layout.showRenderableLessNodes}
                       />
                       <label
                         class="dropdown-item"
-                        class:active={workspaceState.layout.showNoteNodes}
-                        for="toggle-note-nodes"
+                        class:active={workspaceState.layout.showRenderableLessNodes}
+                        for="toggle-renderable-less-nodes"
                       >
-                        {$t('group.toggle_show_note_nodes.label')}
+                        {$t('group.toggle_show_renderable_less_nodes.label')}
                       </label>
                     </li>
                   </ul>

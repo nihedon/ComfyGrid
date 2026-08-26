@@ -56,7 +56,6 @@ class WorkflowManager {
             }
             logger.log('Injected extra.comfygrid:', app.rootGraph.extra.comfygrid);
         }
-
         const nodes = ComfyGridNode.sortNodesByPosition(comfyNodes.map((n) => new ComfyGridNode(n, app)));
 
         const expandedMap = this.#collectExpandedState(appState.workspaceState.groups);

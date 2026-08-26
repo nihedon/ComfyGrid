@@ -92,6 +92,7 @@
     "node.move_to_grid.title": "ノードをGridStackボードに移動",
     "node.move_to_other_board": "他のボードに移動",
     "node.focus": "ComfyUI上でノードにフォーカス",
+    "group.toggle_show_renderable_less_nodes.label": "レンダリングできないノードを表示する",
     "group.toggle_show_collapsed_nodes.label": "折りたたまれたノードを表示する",
     "group.toggle_show_control_less_nodes.label": "コントロールのないノードを表示する",
     "group.toggle_show_note_nodes.label": "ノートを表示する",

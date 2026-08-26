@@ -22,8 +22,6 @@ const loadedOnce: Record<ModelTypes, boolean> = {
     videos: false,
 };
 
-const storageState = appState.storageState;
-
 async function fetchModels(key: ModelTypes, forceRefresh: boolean = false): Promise<void> {
     if (loading[key]) {
         return;
@@ -35,9 +33,9 @@ async function fetchModels(key: ModelTypes, forceRefresh: boolean = false): Prom
         const res = await comfyGridApiClient.getList(config.dir, config.extensions, forceRefresh);
         if (!res.ok) throw new Error(`${key} ${res.status}`);
         const models = res.json;
-        storageState.clearFor(key);
+        appState.storageState.clearFor(key);
         models.forEach((model: Model) => {
-            storageState.setFor(key, model);
+            appState.storageState.setFor(key, model);
         });
         loadedOnce[key] = true;
     } catch (e) {

@@ -49,6 +49,7 @@ function makeEptyLayout(graph_id: string): LayoutType {
         promptWidgetIds: [],
         positivePromptWidgetId: null,
         negativePromptWidgetId: null,
+        showRenderableLessNodes: false,
         showControlLessNodes: false,
         showCollapsedNodes: false,
         showNoteNodes: false,
@@ -90,6 +91,7 @@ export function loadLayout(graphId: string): LayoutType {
         promptWidgetIds: [],
         positivePromptWidgetId: null,
         negativePromptWidgetId: null,
+        showRenderableLessNodes: false,
         showControlLessNodes: false,
         showCollapsedNodes: false,
         showNoteNodes: false,
@@ -140,11 +142,7 @@ export async function importLayout(strLayout: string) {
     }
 }
 
-export function applyFloatingPositions(
-    boardId?: string,
-    initSettings?: Record<string, Record<string, FloatingPosition>>,
-    priorityId?: string,
-) {
+export function applyFloatingPositions(boardId?: string, initSettings?: Record<string, Record<string, FloatingPosition>>, priorityId?: string) {
     const activeKeys = Array.from(appState.workspaceState.gridStackBoards.keys());
     const boardIds = boardId ? activeKeys.filter((k) => k === boardId || k.startsWith(boardId + '-')) : activeKeys;
 

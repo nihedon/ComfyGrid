@@ -33,6 +33,7 @@ const widgetRegistry: Record<string, Component> = {
     audio: AudioPlayerWidget,
     ImagePreviewWidget: ImagePreviewWidget,
     DOMWidget: DOMWidget,
+    DOMWidgetImpl: DOMWidget,
 };
 
 /**

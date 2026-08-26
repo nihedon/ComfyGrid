@@ -17,6 +17,7 @@ export class Layout {
     readonly #translateSystems = new SvelteMap<string, string>();
     #positivePromptWidgetId = $state<string | null>(null);
     #negativePromptWidgetId = $state<string | null>(null);
+    #showRenderableLessNodes = $state<boolean>(false);
     #showControlLessNodes = $state<boolean>(false);
     #showCollapsedNodes = $state<boolean>(false);
     #showNoteNodes = $state<boolean>(false);
@@ -71,6 +72,9 @@ export class Layout {
     }
     get negativePromptWidgetId(): string | null {
         return this.#negativePromptWidgetId;
+    }
+    get showRenderableLessNodes() {
+        return this.#showRenderableLessNodes;
     }
     get showControlLessNodes() {
         return this.#showControlLessNodes;
@@ -138,6 +142,9 @@ export class Layout {
     }
     setNegativePromptWidgetId(negativePromptWidgetId: string | null) {
         this.#negativePromptWidgetId = negativePromptWidgetId;
+    }
+    set showRenderableLessNodes(val: boolean) {
+        this.#showRenderableLessNodes = val;
     }
     set showControlLessNodes(val: boolean) {
         this.#showControlLessNodes = val;
@@ -226,6 +233,7 @@ export class Layout {
             translateWidgetIds: [...this.#translateWidgetIds],
             translateModels: Object.fromEntries(Array.from(this.#translateModels.entries()).filter(([, v]) => Boolean(v))),
             translateSystems: Object.fromEntries(Array.from(this.#translateSystems.entries()).filter(([, v]) => Boolean(v))),
+            showRenderableLessNodes: this.#showRenderableLessNodes,
             showControlLessNodes: this.#showControlLessNodes,
             showCollapsedNodes: this.#showCollapsedNodes,
             showNoteNodes: this.#showNoteNodes,
@@ -268,6 +276,12 @@ export class Layout {
         Object.entries(layout.translateSystems ?? {}).forEach(([key, value]) => {
             this.#translateSystems.set(key, value);
         });
+        if (layout.showRenderableLessNodes !== undefined) {
+            this.#showRenderableLessNodes = layout.showRenderableLessNodes;
+        } else {
+            this.#showRenderableLessNodes = false;
+        }
+
         if (layout.showControlLessNodes !== undefined) {
             this.#showControlLessNodes = layout.showControlLessNodes;
         } else {
