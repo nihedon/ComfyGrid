@@ -21,7 +21,6 @@
     "opts.ComfyGrid.ui.group_tabify.hint": "グループのタブ化方法を指定します。",
     "opts.ComfyGrid.ui.group_tabify.choice.none": "タブ化しない",
     "opts.ComfyGrid.ui.group_tabify.choice.all_top_groups": "トップレベルのグループを全てタブ化",
-    "opts.ComfyGrid.ui.group_tabify.choice.tab_groups_only": "グループ名が'[Tab]'で始まるグループのみタブ化",
     "opts.ComfyGrid.ui.common_tab_board.label": "各タブのボードを共通化する",
     "opts.ComfyGrid.ui.common_tab_board.hint": "各タブページ上に表示されるフローティングボードを、すべてのタブで共通のボードにします。",
     "opts.ComfyGrid.ui.always_show_node_focus_button.label": "ノードフォーカスボタンを常時表示する",

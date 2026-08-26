@@ -23,7 +23,7 @@ choices = ["none", "node", "group", "node_priority"]
 
 [ComfyGrid.ui.group_tabify]
 type = "dropdown"
-choices = ["none", "all_top_groups", "tab_groups_only"]
+choices = ["none", "all_top_groups"]
 default = "all_top_groups"
 
 [ComfyGrid.ui.common_tab_board]

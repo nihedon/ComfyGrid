@@ -81,12 +81,9 @@ export class ComfyGridGroup {
     }
 
     readonly isTabify = $derived.by(() => {
-        const groupTabify = appState.optionState.get('group_tabify') || 'all_top_groups';
+        const groupTabify = appState.optionState.get('ComfyGrid.ui.group_tabify') ?? 'all_top_groups';
         if (groupTabify === 'all_top_groups') {
-            return this.#id;
-        }
-        if (groupTabify === 'tab_groups_only') {
-            return this.#id && this.#title.startsWith('[Tab]');
+            return Boolean(this.#id);
         }
         return false;
     });
