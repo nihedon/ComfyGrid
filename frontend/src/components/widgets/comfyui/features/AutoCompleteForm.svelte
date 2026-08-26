@@ -43,7 +43,11 @@
 
   const showNsfw = $derived(appState.optionState.get('ComfyGrid.ui.show_nsfw'));
 
-  const selectStr = $derived(select.map((v) => String(v)));
+  const selectStr = $derived(
+    select
+      .map((v) => String(v))
+      .sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' })),
+  );
   const fixedValuesStr = $derived((widget.options?.fixed_values ?? []).map((v) => String(v)));
 
   const isValid = $derived.by(() => {
@@ -147,7 +151,13 @@
   }
 
   function handleClick() {
-    showAllOnNextSearch = isValid;
+    if (isValid) {
+      showAllOnNextSearch = true;
+    } else {
+      const lowerQuery = String(inputDomEl?.value ?? '').toLowerCase();
+      const hasPartialMatch = selectStr.some((v) => v.toLowerCase().includes(lowerQuery));
+      showAllOnNextSearch = !hasPartialMatch;
+    }
     jQuery(inputDomEl).autoComplete('show');
   }
 
