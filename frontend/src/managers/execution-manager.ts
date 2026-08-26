@@ -50,7 +50,7 @@ class ExecutionManager {
         appState.executionState.addQueueJobId(jobId, owner);
 
         if (gallerySession.beginQueuedPrompt()) {
-            logger.debug('All jobs finished — clearing gallery for new batch');
+            logger.info('All jobs finished — clearing gallery for new batch');
             appState.galleryState.clearViewedJobs();
         }
         gallerySession.trackQueued(jobId);
@@ -503,7 +503,7 @@ class ExecutionManager {
     #cleanupOrphanedIncompleteJobs() {
         for (const jobId of appState.galleryState.getIncompleteJobIds()) {
             if (!appState.executionState.queueJobIds.has(jobId)) {
-                logger.debug(`Removing orphaned incomplete job ${jobId} (not in queue or history)`);
+                logger.trace(`Removing orphaned incomplete job ${jobId} (not in queue or history)`);
                 this.#removeJob(jobId);
             }
         }

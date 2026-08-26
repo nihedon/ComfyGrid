@@ -182,7 +182,7 @@ async def save_model_info(request: Request, path: str, comfy_service: ComfyUISer
                 )
                 with urllib.request.urlopen(req) as response, open(preview_path, 'wb') as out_file:
                     out_file.write(response.read())
-                delete_thumbnail_cache(str(preview_path))
+                delete_thumbnail_cache(str(preview_path.resolve()))
             except Exception as e:
                 logger.error("Error downloading preview image: %s", e)
 

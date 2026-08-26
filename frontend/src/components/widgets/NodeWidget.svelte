@@ -1,5 +1,14 @@
 <script lang="ts">
   import { type Component } from 'svelte';
+  import {
+    ArrowBigDown,
+    ArrowBigUp,
+    Info,
+    LayoutDashboard,
+    Locate,
+    PictureInPicture,
+    Play,
+  } from '@lucide/svelte';
   import { t } from '@/i18n/i18n';
   import { notifyNodeChanged } from '@/services/custom-node-service.svelte';
   import { updateBoardFloatingState } from '@/services/gridstack-service';
@@ -8,21 +17,21 @@
   import type { BoardId } from '@/types/board';
   import { COMFY_NODE_MODE, type ComfyNodeMode } from '@/types/model-shared';
   import logger from '@/utils/logger';
-  import NodeMode from './comfyui/features/NodeModeSelector.svelte';
+  import NodeModeSelector from './comfyui/features/NodeModeSelector.svelte';
   import TextareaCategory from './comfyui/features/TextareaCategory.svelte';
   import { getWidgetComponentWithMeta } from './comfyui/registry/widget-registry';
 
   let { node, widget }: { node: ComfyGridNode; widget?: ComfyGridWidget } = $props();
 
   const workspaceState = appState.workspaceState;
-  const noControlNodes = $derived(workspaceState.layout.noControlNodes);
-  const noCollapsedNodes = $derived(workspaceState.layout.noCollapsedNodes);
-
   const containsWidgets = $derived.by(() => {
     if (widget) {
       return [widget];
     }
     return node.widgets.filter((w) => !workspaceState.layout.floatingWidgets.get(w.id));
+  });
+  const containsDrawableWidget = $derived.by(() => {
+    return containsWidgets.some((w) => getWidgetComponentWithMeta(node, w));
   });
 
   const nodeStyle = $derived.by(() => {
@@ -42,18 +51,15 @@
     return Boolean(workspaceState.layout.floatingNodes.get(node.id));
   });
 
-  const showNode = $derived.by(() => {
-    if (isFloating || workspaceState.hasErrorNode(node.id)) {
-      return true;
-    }
-    if (noControlNodes && containsWidgets.length === 0) {
-      return false;
-    }
-    if (noCollapsedNodes && node.collapsed) {
-      return false;
-    }
-    return true;
-  });
+  const isInvalid = $derived(
+    widget
+      ? workspaceState.hasErrorWidget(node.id, widget.id)
+      : workspaceState.hasErrorNode(node.id),
+  );
+
+  const alwaysShowFocusButton = $derived(
+    (appState.optionState.get('ComfyGrid.ui.always_show_node_focus_button') as boolean) ?? false,
+  );
 
   let isTitleEditing = $state(false);
   let title = $derived.by(() => {
@@ -74,13 +80,9 @@
   });
 
   const otherBoardId = $derived.by(() => {
-    if (!isFloating) return '';
-    return (
-      [...workspaceState.gridStackBoards.keys()]
-        .map((id) => id.split('-')[0])
-        .find((id) => id !== currentBoardId) || ''
-    );
-  }) as BoardId;
+    if (!isFloating) return '' as BoardId;
+    return (currentBoardId === 'Global' ? 'Tab' : 'Global') as BoardId;
+  });
 
   const isTextareaOnly = $derived.by(() => {
     if (node.widgets.length === 1 && node.widgets[0].type === 'customtext') {
@@ -230,28 +232,45 @@
   });
 
   async function toggleFloating() {
+    const targetId = widget ? widget.id : node.id;
     if (widget) {
       const current = workspaceState.layout.floatingWidgets.get(widget.id);
-      workspaceState.layout.setFloatingWidgets(widget.id, current ? '' : 'Global');
+      const next = current ? '' : 'Global';
+      logger.trace(
+        `[LAYOUT_LOG] toggleFloating Widget: widgetId=${widget.id}, from="${current}" to="${next}"`,
+      );
+      workspaceState.layout.setFloatingWidgets(widget.id, next);
     } else {
       const current = workspaceState.layout.floatingNodes.get(node.id);
-      workspaceState.layout.setFloatingNodes(node.id, current ? '' : 'Global');
+      const next = current ? '' : 'Global';
+      logger.trace(
+        `[LAYOUT_LOG] toggleFloating Node: nodeId=${node.id}, from="${current}" to="${next}"`,
+      );
+      workspaceState.layout.setFloatingNodes(node.id, next);
     }
-    await updateBoardFloatingState();
+    await updateBoardFloatingState(targetId);
   }
 
   async function moveToBoard(targetBoardId: BoardId) {
+    const targetId = widget ? widget.id : node.id;
     if (widget) {
+      const current = workspaceState.layout.floatingWidgets.get(widget.id);
+      logger.trace(
+        `[LAYOUT_LOG] moveToBoard Widget: widgetId=${widget.id}, from="${current}" to="${targetBoardId}"`,
+      );
       workspaceState.layout.setFloatingWidgets(widget.id, targetBoardId);
     } else {
+      const current = workspaceState.layout.floatingNodes.get(node.id);
+      logger.trace(
+        `[LAYOUT_LOG] moveToBoard Node: nodeId=${node.id}, from="${current}" to="${targetBoardId}"`,
+      );
       workspaceState.layout.setFloatingNodes(node.id, targetBoardId);
     }
-    await updateBoardFloatingState();
+    await updateBoardFloatingState(targetId);
   }
 
   function handleStateChange(e: Event, mode: ComfyNodeMode) {
     node.mode = mode;
-    node.setComfyUiProperty('mode', node.mode);
     e.stopPropagation();
   }
 
@@ -261,7 +280,6 @@
 
   function handleChangeTitle() {
     node.title = node.title.trim();
-    node.setComfyUiProperty('title', node.title);
   }
 
   function focusOnMount(e: HTMLInputElement) {
@@ -283,6 +301,12 @@
     };
   }
 
+  function focusNodeInComfyUI() {
+    appState.comfyUiState.app?.canvas?.animateToBounds(node.comfyNode.boundingRect);
+    appState.uiState.activePageId = 'comfyui';
+    appState.uiState.needRefresh = true;
+  }
+
   $effect(() => {
     notifyNodeChanged(node.id, node);
   });
@@ -294,34 +318,44 @@
   class:normal={node.mode === COMFY_NODE_MODE.NORMAL}
   class:mute={node.mode === COMFY_NODE_MODE.MUTE}
   class:bypass={node.mode === COMFY_NODE_MODE.BYPASS}
-  class:is-invalid={workspaceState.hasErrorNode(node.id)}
+  class:is-invalid={isInvalid}
   style:background-color={bgColor}
-  style:display={showNode ? '' : 'none'}
   data-id={node.id}
   data-name={node.title}
 >
-  <div class="card-header" class:mute={node.mode === 2}>
+  <div class="card-header" class:mute={node.mode === COMFY_NODE_MODE.MUTE}>
     {#if !isTitleEditing}
       <div class="d-flex align-items-center gap-2">
         {#if !widget}
-          <NodeMode
-            mode={new Set([node.mode])}
-            handleChange={(e, val) => handleStateChange(e, val)}
-          />
-          {#if node.hasOutputNode}
-            <!-- svelte-ignore a11y_consider_explicit_label -->
+          {#if !node.isNote}
+            <NodeModeSelector
+              mode={new Set([node.mode])}
+              handleChange={(e, val) => handleStateChange(e, val)}
+            />
+          {/if}
+          {#if alwaysShowFocusButton || isInvalid}
             <button
               type="button"
-              class="d-flex align-items-center btn btn-sm btn-primary"
+              class={`btn btn-xs btn-${isInvalid ? 'danger' : 'secondary'} btn-icon`}
+              title={$t('node.focus')}
+              onclick={focusNodeInComfyUI}
+            >
+              <Locate size={12} />
+            </button>
+          {/if}
+          {#if node.hasOutputNode}
+            <button
+              type="button"
+              class="btn btn-xs btn-primary d-flex align-items-center p-1"
               onclick={handleExecuteNode}
             >
-              <i class="pi pi-caret-right"></i>
+              <Play size={12} />
             </button>
           {/if}
           {#if appState.isDebugMode}
             <button
               type="button"
-              class="btn btn-xs"
+              class="btn btn-xs btn-outline-secondary btn-icon"
               title={node.id}
               onclick={(e) => {
                 e.stopPropagation();
@@ -334,11 +368,11 @@
                 });
               }}
             >
-              <i class="pi pi-info-circle"></i>
+              <Info size={12} />
             </button>
           {/if}
         {/if}
-        {#if widget || isTextareaOnly}
+        {#if widget || (isTextareaOnly && !node.isNote)}
           <TextareaCategory widget={widget ?? node.widgets[0]} />
         {/if}
       </div>
@@ -373,35 +407,37 @@
       />
     {/if}
     {#if !isTitleEditing}
-      <div class="d-flex align-items-center">
+      <div class="d-flex align-items-center gap-1">
         {#if isFloating && otherBoardId}
           <button
             type="button"
-            class="btn btn-xs"
+            class="btn btn-xs btn-icon"
             title={$t('node.move_to_other_board')}
             onclick={() => moveToBoard(otherBoardId)}
           >
-            <i class="pi pi-arrow-right-arrow-left"></i>
-          </button>
-        {/if}
-        <div>
-          <button
-            type="button"
-            class="btn btn-xs"
-            title={$t(floatingButtonTitle)}
-            onclick={toggleFloating}
-          >
-            {#if isFloating}
-              <i class="pi pi-window-minimize"></i>
+            {#if currentBoardId === 'Global'}
+              <ArrowBigDown size={12} />
             {:else}
-              <i class="pi pi-objects-column"></i>
+              <ArrowBigUp size={12} />
             {/if}
           </button>
-        </div>
+        {/if}
+        <button
+          type="button"
+          class="btn btn-xs btn-icon"
+          title={$t(floatingButtonTitle)}
+          onclick={toggleFloating}
+        >
+          {#if isFloating}
+            <PictureInPicture size={12} />
+          {:else}
+            <LayoutDashboard size={12} />
+          {/if}
+        </button>
       </div>
     {/if}
   </div>
-  {#if workspaceState.hasErrorNode(node.id) || (!node.collapsed && containsWidgets.length > 0)}
+  {#if !node.collapsed && containsWidgets.length > 0 && containsDrawableWidget}
     <div
       class="widget-stack {node.type} {nodeStyle}"
       class:py-1={!widget && !isTextareaOnly}

@@ -32,7 +32,7 @@
             "$utils/*": ["src/utils/*"],
             "$i18n/*": ["src/i18n/*"]
         },
-        "types": ["vite/client", "svelte", "jquery"]
+        "types": ["svelte", "jquery"]
     },
     "include": ["src/**/*", "src/**/*.svelte", "src/**/*.svelte.ts"],
     "exclude": ["node_modules"]

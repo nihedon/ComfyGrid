@@ -5,11 +5,15 @@ interface ComfyInputNodeSlot extends INodeInputSlot {
     widget?: ComfyWidget;
 }
 
+export interface ComfyCanvas extends LGraphCanvas {
+    animateToBounds: (rectangle: number[]) => void;
+}
+
 export interface ComfyApp {
     /** @deprecated use rootGraph instead */
     graph: ComfyGraph;
     rootGraph: ComfyGraph;
-    canvas: LGraphCanvas;
+    canvas: ComfyCanvas;
     loadGraphData(
         json: unknown,
         arg1: boolean,
@@ -46,11 +50,12 @@ export interface ComfyGroup extends LGraphGroup {
 }
 
 export interface ComfyNode extends LGraphNode {
+    boundingRect: number[];
     collapsed: boolean;
     widgets: ComfyWidget[];
     inputs: ComfyInputNodeSlot[];
-    // imgs?: HTMLImageElement[];
     images?: ImageInfo[];
+    preview?: string[];
     previewMediaType?: string;
     subgraph?: ComfyGraph;
     constructor: {

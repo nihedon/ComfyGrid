@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { List, Play, Square, X } from '@lucide/svelte';
   import { t } from '@/i18n/i18n';
   import { translationManager } from '@/services/translation-service.svelte';
   import { appState } from '@/states/app-state.svelte';
@@ -42,11 +43,11 @@
   <div class="input-group d-flex flex-nowrap align-items-center">
     <button
       type="button"
-      class="btn btn-primary btn-exec text-nowrap position-relative"
+      class="btn btn-primary btn-exec text-nowrap d-flex justify-content-center align-items-center position-relative"
       title={$t('action.execute')}
       onclick={handleExecute}
     >
-      <i class="pi pi-caret-right pe-1"></i>{$t('action.execute')}
+      <Play size={18} class="pe-1" />{$t('action.execute')}
       {#if translationManager.pendingQueueCount > 0}
         <span
           class="top-0 start-100 d-flex align-items-center justify-content-center translate-middle badge rounded-pill bg-danger"
@@ -72,9 +73,9 @@
 
   <button
     type="button"
-    class="btn btn-danger btn-square d-flex justify-content-center align-items-center"
+    class="btn btn-danger btn-square d-flex justify-content-center align-items-center p-0"
     title={$t('action.cancel')}
-    onclick={handleCancel}><i class="pi pi-times"></i></button
+    onclick={handleCancel}><X size={18} /></button
   >
 
   <button
@@ -82,14 +83,14 @@
     class="btn btn-light btn-square position-relative d-flex justify-content-center align-items-center"
     title={$t('action.clear')}
     onclick={handleClearQueue}
-    ><i class="pi pi-stop"></i>
+    ><Square size={18} />
   </button>
 
   <button
     type="button"
     class="btn btn-light btn-square position-relative d-flex justify-content-center align-items-center"
     bind:this={jobListElement}
-    ><i class="pi pi-bars"></i>
+    ><List size={18} />
     {#if executionState.queueJobIds.size > 0}
       <span
         class="top-0 start-100 d-flex align-items-center justify-content-center translate-middle badge rounded-pill bg-danger"
@@ -109,14 +110,9 @@
       {#if executionState.queueJobIds.size > 0}
         {#each executionState.queueJobIds as [jobId] (jobId)}
           <div
-            class="list-group-item d-flex gap-2 align-items-center px-2 py-1 text-truncate flex-shrink-0"
-            title={jobId}
+            class="list-group-item list-group-item-action d-flex align-items-center gap-2 py-1 px-2"
           >
-            <span class="vstack justify-content-center" style="min-width: 1.2rem;"
-              >{#if executionState.processingJobId === jobId}<i class="spinner-grow spinner-grow-sm"
-                ></i>{/if}</span
-            >
-            <div class="vstack justify-content-center">
+            <div class="flex-grow-1 overflow-hidden text-truncate small">
               <span>{jobId}</span>
               <div class="w-100 progress" style="height: 4px;" role="progressbar">
                 {#if executionState.processingJobId === jobId}
@@ -125,12 +121,12 @@
               </div>
             </div>
             <button
-              class="btn btn-sm btn-danger"
+              class="btn btn-xs btn-danger d-flex justify-content-center align-items-center p-1"
               aria-label={$t('action.remove')}
               onclick={(e: Event) => {
                 e.stopPropagation();
                 handleDeleteJob(jobId);
-              }}><i class="pi pi-times"></i></button
+              }}><X size={14} /></button
             >
           </div>
         {/each}
@@ -167,9 +163,11 @@
   }
 
   .btn-square {
-    width: 2.2rem !important;
-    height: 2.2rem !important;
-    padding: 1rem !important;
+    min-width: 2.2rem !important;
+    max-width: 2.2rem !important;
+    min-height: 2.2rem !important;
+    max-height: 2.2rem !important;
+    padding: 0;
   }
 
   .badge {

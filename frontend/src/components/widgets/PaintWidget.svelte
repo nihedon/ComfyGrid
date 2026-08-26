@@ -1,4 +1,15 @@
 <script lang="ts">
+  import {
+    BrushCleaning,
+    Eraser,
+    Maximize,
+    Redo,
+    RotateCw,
+    Save,
+    Undo,
+    ZoomIn,
+    ZoomOut,
+  } from '@lucide/svelte';
   import logger from '@/utils/logger';
 
   let {
@@ -424,7 +435,10 @@
     const rect = containerEl.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
-    brushCursorEl.style.transform = `translate(${x - brushSize / 2}px, ${y - brushSize / 2}px)`;
+    const displayBrushSize = brushSize * scale;
+    brushCursorEl.style.width = `${displayBrushSize}px`;
+    brushCursorEl.style.height = `${displayBrushSize}px`;
+    brushCursorEl.style.transform = `translate(${x - displayBrushSize / 2}px, ${y - displayBrushSize / 2}px)`;
   }
 
   function handleMouseMove(e: MouseEvent) {
@@ -624,33 +638,55 @@
   <ul class="navbar-nav d-flex flex-row p-2 align-items-center gap-2">
     <li class="nav-item d-flex align-items-center gap-2 flex-grow-1">
       <div class="btn-group">
-        <button class="btn btn-secondary btn-sm" onclick={undo} disabled={!canUndo} title="Undo">
-          <i class="pi pi-arrow-circle-left"></i>
+        <button
+          class="btn btn-secondary btn-sm d-flex align-items-center gap-1"
+          onclick={undo}
+          disabled={!canUndo}
+          title="Undo"
+        >
+          <Undo size={16} />
           Undo
         </button>
-        <button class="btn btn-secondary btn-sm" onclick={redo} disabled={!canRedo} title="Redo">
-          <i class="pi pi-arrow-circle-right"></i>
+        <button
+          class="btn btn-secondary btn-sm d-flex align-items-center gap-1"
+          onclick={redo}
+          disabled={!canRedo}
+          title="Redo"
+        >
+          <Redo size={16} />
           Redo
         </button>
       </div>
-      <button class="btn btn-outline-secondary btn-sm" onclick={clearCanvas} title="Clear">
-        <i class="pi pi-refresh"></i>
+      <button
+        class="btn btn-outline-secondary btn-sm d-flex align-items-center gap-1"
+        onclick={clearCanvas}
+        title="Clear"
+      >
+        <BrushCleaning size={16} />
         Clear
       </button>
       <div class="btn-group">
-        <button class="btn btn-outline-secondary btn-sm" onclick={zoomOut} title="Zoom Out">
-          <i class="pi pi-search-minus"></i>
+        <button
+          class="btn btn-outline-secondary btn-sm d-flex align-items-center justify-content-center"
+          onclick={zoomOut}
+          title="Zoom Out"
+        >
+          <ZoomOut size={16} />
         </button>
         <button
-          class="btn btn-outline-secondary btn-sm"
+          class="btn btn-outline-secondary btn-sm d-flex align-items-center gap-1"
           onclick={resetView}
           title="Reset View (100%)"
         >
-          <i class="pi pi-sync"></i>
+          <RotateCw size={16} />
           {Math.round(scale * 100)}%
         </button>
-        <button class="btn btn-outline-secondary btn-sm" onclick={zoomIn} title="Zoom In">
-          <i class="pi pi-search-plus"></i>
+        <button
+          class="btn btn-outline-secondary btn-sm d-flex align-items-center justify-content-center"
+          onclick={zoomIn}
+          title="Zoom In"
+        >
+          <ZoomIn size={16} />
         </button>
       </div>
       <div class="d-flex flex-row align-items-center gap-2">
@@ -667,31 +703,31 @@
         />
       </div>
       <button
-        class="btn btn-sm"
+        class="btn btn-sm d-flex align-items-center justify-content-center"
         class:btn-secondary={isEraser}
         class:btn-outline-secondary={!isEraser}
         onclick={toggleEraser}
         title="Eraser"
       >
-        <i class="pi pi-eraser"></i>
+        <Eraser size={16} />
       </button>
       <button
-        class="btn btn-outline-secondary btn-sm"
+        class="btn btn-outline-secondary btn-sm d-flex align-items-center gap-1"
         onclick={openResizeModal}
         title="Resize Canvas"
       >
-        <i class="pi pi-expand"></i>
+        <Maximize size={16} />
         {originalWidth} x {originalHeight}
       </button>
     </li>
     <li class="nav-item">
       <button
-        class="btn btn-primary btn-sm"
+        class="btn btn-primary btn-sm d-flex align-items-center gap-1"
         data-bs-dismiss="modal"
         onclick={exportMask}
         title="Export"
       >
-        <i class="pi pi-save"></i>
+        <Save size={16} />
         Export
       </button>
     </li>
@@ -735,6 +771,8 @@
           class:pan-cursor={spacePressed || isPanning}
           width={canvasWidth}
           height={canvasHeight}
+          style:width="{canvasWidth}px"
+          style:height="{canvasHeight}px"
           onmousedown={startDrawing}
           onmousemove={handleMouseMove}
           onmouseup={() => {
@@ -754,8 +792,8 @@
           bind:this={brushCursorEl}
           class="brush-cursor"
           class:eraser-mode={isEraser}
-          style:width="{brushSize}px"
-          style:height="{brushSize}px"
+          style:width="{brushSize * scale}px"
+          style:height="{brushSize * scale}px"
           style:display="none"
         ></div>
       </div>
@@ -854,7 +892,8 @@
 
   .drawing-canvas {
     position: absolute;
-    inset: 0;
+    top: 0;
+    left: 0;
     cursor: none; /* Hide default cursor */
     touch-action: none;
   }

@@ -6,10 +6,10 @@
   import ModelListButton from './ModelListButton.svelte';
 
   type ComboWidget = ComfyGridWidget<
-    string,
+    string | number,
     {
-      values: string[];
-      fixed_values: string[];
+      values: (string | number)[];
+      fixed_values: (string | number)[];
     }
   >;
 
@@ -24,7 +24,7 @@
     modelDir: ModelTypes;
     modelSubdirs: string[];
     isValidOverride?: boolean;
-    handleInput: (e: CustomEvent, widget: ComfyGridWidget<string, unknown>, model?: Model) => void;
+    handleInput: (e: CustomEvent, widget: ComfyGridWidget<string | number, unknown>, model?: Model) => void;
   } = $props();
 
   let element = $state<HTMLElement>();
@@ -34,7 +34,7 @@
 
   const showNsfw = $derived(appState.optionState.get('ComfyGrid.ui.show_nsfw'));
 
-  const select = $derived(widget.options?.values ?? []);
+  const select = $derived((widget.options?.values ?? []).map((v) => String(v)));
 
   const filteredSelect = $derived.by(() => {
     if (showNsfw || !modelDir || !modelSubdirs) {
@@ -51,7 +51,7 @@
     if (modelDir !== 'models') {
       return;
     }
-    const model = storageState.findModel(modelDir, modelSubdirs, widget.value);
+    const model = storageState.findModel(modelDir, modelSubdirs, String(widget.value ?? ''));
     if (model && element && (showNsfw || !model.nsfw)) {
       popoverState.showModelPopover(element, model, modelDir);
     }

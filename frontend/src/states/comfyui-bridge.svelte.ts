@@ -14,11 +14,17 @@ async function waitOnDrawBackgroundAll(graph: ComfyGraph) {
         try {
             node.onDrawBackground?.();
         } catch (error) {
-            logger.debug('Error in onDrawBackground for node', node, error);
+            logger.error('Error in onDrawBackground for node', node, error);
         }
     }
     await new Promise((resolve) => requestAnimationFrame(resolve));
 }
+
+export type WorkflowTabItem = {
+    label: string;
+    tab: HTMLButtonElement;
+    selected: boolean;
+};
 
 export class ComfyUiBridge {
     static #instance: ComfyUiBridge;
@@ -33,6 +39,24 @@ export class ComfyUiBridge {
     }
 
     private constructor() {}
+
+    /**
+     * Get list of all workflow tab items in ComfyUI.
+     */
+    getWorkflowTabs(): WorkflowTabItem[] {
+        const doc = appState.comfyUiState.window?.document || appState.comfyUiState.iframe?.contentDocument || document;
+        const buttons = doc.querySelectorAll<HTMLButtonElement>('.workflow-tabs > button');
+        const items: WorkflowTabItem[] = [];
+
+        buttons.forEach((btn) => {
+            const labelEl = btn.querySelector('.workflow-label');
+            const label = labelEl?.textContent?.trim() || 'Untitled';
+            const selected = btn.classList.contains('p-togglebutton-checked');
+            items.push({ label, tab: btn, selected });
+        });
+
+        return items;
+    }
 
     async getWorkflow(): Promise<{
         graphId: string;
@@ -51,8 +75,9 @@ export class ComfyUiBridge {
             ComfyUiApiHook.hookForNodeSetDirtyCanvas(topNode);
         }
 
-        const workflowLabel = document.querySelector('.workflow-tabs > .p-togglebutton-checked .workflow-label');
-        const title = workflowLabel?.textContent?.trim() || 'Untitled';
+        const tabs = this.getWorkflowTabs();
+        const activeTab = tabs.find((t) => t.selected);
+        const title = activeTab?.label || 'Untitled';
 
         return {
             graphId: app.rootGraph.id,

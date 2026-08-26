@@ -5,7 +5,6 @@
     applyFloatingPositions,
     gs,
     syncAndSaveLayout,
-    updateAttribute,
   } from '@/services/gridstack-service';
   import { appState } from '@/states/app-state.svelte';
   import { ComfyGridGroup, ComfyGridNode } from '@/states/model-state.svelte';
@@ -78,7 +77,39 @@
     return result;
   }
 
-  const nodesInBoard = $derived(flattenNodes(groups));
+  const nodesInBoard = $derived.by(() => {
+    const effectiveNodes = workspaceState.getEffectiveNodes(boardId, groupId);
+    const nodeSet = new Set(effectiveNodes.map((n) => n.id));
+    return flattenNodes(groups).filter((entry) => nodeSet.has(entry.node.id));
+  });
+
+  const floatingWidgetsInBoard = $derived.by(() => {
+    const result: Array<{
+      group: ComfyGridGroup;
+      node: ComfyGridNode;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      widget: any;
+    }> = [];
+    const allEntries = flattenNodes(workspaceState.groups);
+
+    for (const entry of allEntries) {
+      for (const widget of entry.node.widgets) {
+        if (widget.type === 'customtext') {
+          const targetBoard = workspaceState.layout?.floatingWidgets?.get(widget.id);
+          if (!targetBoard) continue;
+
+          if (boardId === 'Global' && targetBoard === 'Global') {
+            result.push({ group: entry.group, node: entry.node, widget });
+          } else if (boardId === 'Tab' && targetBoard === 'Tab') {
+            if (commonTabBoard || groupId === undefined || entry.group.id === groupId) {
+              result.push({ group: entry.group, node: entry.node, widget });
+            }
+          }
+        }
+      }
+    }
+    return result;
+  });
 
   function getGSParams(id: string, node: ComfyGridNode) {
     const saved = workspaceState.layout?.floatingPositions?.get(boardId)?.[String(id)];
@@ -114,19 +145,54 @@
     workspaceState.setGridStackBoard(gridKey, grid);
     applyFloatingPositions(gridKey);
 
-    const handleGridChange = () => {
-      updateAttribute(grid);
+    const handleGridChange = (event: Event, items?: unknown) => {
+      logger.trace(`[LAYOUT_LOG] GridStack event: type="${event.type}", board="${gridKey}"`, items);
+
+      const logicalKey = gridKey.split('-')[0];
+      const savedNodes = (grid.save(false) ?? []) as Array<{
+        id?: string;
+        x?: number;
+        y?: number;
+        w?: number;
+        h?: number;
+      }>;
+      for (const nodeItem of savedNodes) {
+        if (nodeItem.id && nodeItem.x !== undefined && nodeItem.y !== undefined) {
+          workspaceState.layout.updateFloatingPosition(logicalKey, nodeItem.id, {
+            x: nodeItem.x,
+            y: nodeItem.y,
+            w: nodeItem.w ?? 1,
+            h: nodeItem.h ?? 1,
+          });
+        }
+      }
+
       saveLayoutDebounced();
     };
 
-    grid.on('change', handleGridChange);
-    grid.on('resizestop', handleGridChange);
-    grid.on('dragstop', handleGridChange);
+    grid.on('change', (e, items) => handleGridChange(e, items));
+    grid.on('resizestop', (e, el) => {
+      logger.trace(
+        `[LAYOUT_LOG] GridStack resizestop: board="${gridKey}", gs-id="${el?.getAttribute('gs-id')}"`,
+      );
+      handleGridChange(e, el);
+    });
+    grid.on('dragstop', (e, el) => {
+      logger.trace(
+        `[LAYOUT_LOG] GridStack dragstop: board="${gridKey}", gs-id="${el?.getAttribute('gs-id')}"`,
+      );
+      handleGridChange(e, el);
+    });
 
     return () => {
       grid.off('change');
       grid.off('resizestop');
       grid.off('dragstop');
+      try {
+        grid.destroy(false);
+      } catch (err) {
+        logger.error('Error destroying GridStack instance:', err);
+      }
       gridInstance = null;
       workspaceState.deleteGridStackBoard(gridKey);
     };
@@ -140,34 +206,33 @@
 
   let prevNodeIdsKey = '';
   $effect(() => {
-    const currentNodeIdsKey = nodesInBoard.map((n) => n.node.id).join(',');
+    const currentNodeIdsKey = [
+      ...nodesInBoard.map((n) => n.node.id),
+      ...floatingWidgetsInBoard.map((w) => w.widget.id),
+    ].join(',');
     if (currentNodeIdsKey !== prevNodeIdsKey) {
       prevNodeIdsKey = currentNodeIdsKey;
-      if (nodesInBoard.length > 0) {
-        if (gridInstance) {
-          workspaceState.setGridStackBoard(gridKey, gridInstance);
-        }
-        logger.log(`Nodes layout in board "${gridKey}" changed`);
-        applyFloatingPositions(gridKey);
+      if (gridInstance) {
+        workspaceState.setGridStackBoard(gridKey, gridInstance);
       }
+      logger.log(`Nodes layout in board "${gridKey}" changed`);
+      applyFloatingPositions(gridKey);
     }
   });
 </script>
 
 <div id="grid-stack-{gridKey}" class="grid-stack w-100" bind:this={container}>
-  {#each nodesInBoard as { group, node } (`${group.id}-${node.id}`)}
+  {#each nodesInBoard as { group, node } (`node-${group.id}-${node.id}`)}
     {#if workspaceState.layout.floatingNodes.get(node.id) === boardId}
       <div class="grid-stack-item" use:gs={getGSParams(node.id, node)} data-id={node.id}>
         <NodeWidget {node} />
       </div>
     {/if}
-    {#each node.widgets as widget, widgetIndex (`${widget.id}-${widgetIndex}`)}
-      {#if widget.type === 'customtext' && workspaceState.layout.floatingWidgets.get(widget.id) === boardId}
-        <div class="grid-stack-item" use:gs={getGSParams(widget.id, node)} data-id={widget.id}>
-          <NodeWidget {node} {widget} />
-        </div>
-      {/if}
-    {/each}
+  {/each}
+  {#each floatingWidgetsInBoard as { node, widget } (`widget-${widget.id}`)}
+    <div class="grid-stack-item" use:gs={getGSParams(widget.id, node)} data-id={widget.id}>
+      <NodeWidget {node} {widget} />
+    </div>
   {/each}
 </div>
 

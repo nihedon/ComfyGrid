@@ -1,5 +1,6 @@
 <script lang="ts">
   import { tick } from 'svelte';
+  import { Languages, Loader2, Settings, TriangleAlert } from '@lucide/svelte';
   import { t } from '@/i18n/i18n';
   import { callLayoutChangedCallbacks } from '@/services/callback-service';
   import { saveLayoutObject } from '@/services/gridstack-service';
@@ -115,19 +116,21 @@
     {textCategoryLabel}
   </a>
   {#if isTranslate}
-    <!-- svelte-ignore a11y_consider_explicit_label -->
-    <button class="btn btn-xs btn-secondary" onclick={openSettingModal}>
-      <i class="pi pi-cog"></i>
+    <button
+      class="btn btn-xs btn-secondary d-inline-flex align-items-center justify-content-center p-1"
+      onclick={openSettingModal}
+    >
+      <Settings size={14} />
     </button>
   {/if}
   {#if widget.isTranslating}
-    <span class="badge text-bg-primary ms-2 fs-7">
-      <i class="pi pi-spin pi-spinner me-1"></i>
+    <span class="badge text-bg-primary ms-2 fs-7 d-inline-flex align-items-center gap-1">
+      <Loader2 size={14} class="spin" />
       {$t('widget.translate.indicator')}
     </span>
   {:else if isTranslate && isManual && widget.isDirty}
     <button
-      class="badge btn btn-primary ms-2 px-2"
+      class="badge btn btn-primary ms-2 px-2 d-inline-flex align-items-center gap-1"
       onclick={() => {
         if (onManualTranslate) {
           onManualTranslate();
@@ -136,12 +139,12 @@
         }
       }}
     >
-      <i class="pi pi-language me-1"></i>
+      <Languages size={14} />
       {$t('widget.translate.manual_button')}
     </button>
   {:else if isTranslate && widget.translationFailed}
-    <span class="badge text-bg-danger ms-2 fs-7">
-      <i class="pi pi-exclamation-triangle me-1"></i>
+    <span class="badge text-bg-danger ms-2 fs-7 d-inline-flex align-items-center gap-1">
+      <TriangleAlert size={14} />
       {$t('widget.translate.failed')}
     </span>
   {/if}

@@ -1,4 +1,15 @@
 <script lang="ts">
+  import {
+    ChevronLeft,
+    ChevronRight,
+    Heart,
+    Link,
+    Pencil,
+    Plus,
+    RotateCw,
+    Star,
+    X,
+  } from '@lucide/svelte';
   import { Modal } from 'bootstrap';
   import DOMPurify from 'dompurify';
   import { marked } from 'marked';
@@ -175,10 +186,13 @@
         throw new Error('Failed to save model info');
       }
       if (tempPreviewUrl) {
-        const parts = model.full_path.split(/[/\\]/);
-        parts.shift();
         const ext = isVideoFile(tempPreviewUrl) ? '.preview.mp4' : '.preview.png';
-        model.preview = parts.join('/').replace(model.extension, ext);
+        let relPath = model.full_path.replace(/^models[/\\]/i, '');
+        const lastDotIndex = relPath.lastIndexOf('.');
+        if (lastDotIndex !== -1) {
+          relPath = relPath.substring(0, lastDotIndex);
+        }
+        model.preview = relPath + ext;
       }
       model.description = tempDescription;
       model.url = tempUrl;
@@ -216,23 +230,23 @@
         <div class="modal-header">
           <h5 class="modal-title d-flex align-items-center gap-2">
             <!-- svelte-ignore a11y_click_events_have_key_events -->
-            <!-- svelte-ignore a11y_role_has_required_aria_props -->
-            <!-- svelte-ignore a11y_interactive_supports_focus -->
-            <i
-              class="pi pi-heart{tempFavorite ? '-fill text-warning' : ''}"
+            <!-- svelte-ignore a11y_no_static_element_interactions -->
+            <span
+              class="d-flex"
               style="cursor: pointer;"
-              role="switch"
               onclick={() => (tempFavorite = !tempFavorite)}
-            ></i>
+            >
+              {#if tempFavorite}
+                <Heart size={18} class="text-warning" fill="currentColor" />
+              {:else}
+                <Heart size={18} />
+              {/if}
+            </span>
             {model.name}
             {#if tempUrl}
-              <!-- svelte-ignore a11y_click_events_have_key_events -->
-              <!-- svelte-ignore a11y_no_static_element_interactions -->
-              <i
-                class="pi pi-link fs-5"
-                style="cursor: pointer;"
-                onclick={() => window.open(tempUrl, '_blank')}
-              ></i>
+              <a href={tempUrl} target="_blank" style="cursor: pointer;">
+                <Link size={14} />
+              </a>
             {/if}
           </h5>
           <button type="button" class="btn-close" aria-label="Close" onclick={handleClose}></button>
@@ -256,34 +270,37 @@
                   {#each [1, 2, 3, 4, 5] as star, i (i)}
                     <!-- svelte-ignore a11y_click_events_have_key_events -->
                     <!-- svelte-ignore a11y_no_static_element_interactions -->
-                    <i
-                      class="pi pi-star{tempRate && tempRate >= star
-                        ? '-fill text-warning'
-                        : ''} fs-4 me-1"
+                    <span
                       style="cursor: pointer;"
+                      class="me-1"
                       onclick={() => (tempRate = tempRate === star ? undefined : star)}
-                    ></i>
+                    >
+                      {#if tempRate && tempRate >= star}
+                        <Star size={20} class="text-warning" fill="currentColor" />
+                      {:else}
+                        <Star size={20} />
+                      {/if}
+                    </span>
                   {/each}
                 </div>
               </div>
               <div class="mb-1 vstack flex-grow-1 description">
-                <!-- svelte-ignore a11y_label_has_associated_control -->
                 <label class="fs-5 mb-0 form-label fw-bold d-flex align-items-center gap-2"
                   >Description
                   <!-- svelte-ignore a11y_click_events_have_key_events -->
                   <!-- svelte-ignore a11y_no_static_element_interactions -->
-                  <i
-                    class="pi pi-file-edit fs-5 text-secondary"
+                  <span
                     style="cursor: pointer;"
                     onclick={() => (isEditingDescription = !isEditingDescription)}
-                  ></i>
+                  >
+                    <Pencil size={14} class="text-secondary" />
+                  </span>
                 </label>
                 {#if isEditingDescription}
                   <textarea
                     class="form-control flex-grow-1 font-monospace"
                     rows="10"
-                    bind:value={tempDescription}
-                  ></textarea>
+                    bind:value={tempDescription}></textarea>
                 {:else}
                   <div class="form-control flex-grow-1 mb-0">
                     <!-- eslint-disable-next-line svelte/no-at-html-tags -->
@@ -299,26 +316,25 @@
                     {#each { length: tempTrainedWords.length }, i (i)}
                       <div class="input-group input-group-sm mb-1">
                         <input type="text" class="form-control" bind:value={tempTrainedWords[i]} />
-                        <!-- svelte-ignore a11y_consider_explicit_label -->
                         <button
-                          class="btn btn-secondary"
+                          class="btn btn-danger d-flex align-items-center justify-content-center"
                           type="button"
                           onclick={() => {
                             tempTrainedWords.splice(i, 1);
                           }}
                         >
-                          <i class="pi pi-times"></i>
+                          <X size={14} />
                         </button>
                       </div>
                     {/each}
                   {/if}
                   <button
-                    class="btn btn-sm btn-primary mt-1"
+                    class="btn btn-sm btn-primary mt-1 d-inline-flex align-items-center gap-1"
                     onclick={() => {
                       tempTrainedWords.push('');
                     }}
                   >
-                    <i class="pi pi-plus me-1"></i>Add Word
+                    <Plus size={16} />Add Word
                   </button>
                 </div>
               {/if}
@@ -370,10 +386,10 @@
                 {/if}
               </div>
 
-              {#if fetchedImages.length > 1 && fetchedImages.includes(tempPreviewUrl || '')}
+              {#if fetchedImages.length > 1}
                 <div class="d-flex align-items-center justify-content-between px-1">
                   <button
-                    class="btn btn-sm btn-outline-secondary"
+                    class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1"
                     onclick={(e) => {
                       e.stopPropagation();
                       selectedImageIndex =
@@ -381,20 +397,20 @@
                       tempPreviewUrl = fetchedImages[selectedImageIndex];
                     }}
                   >
-                    <i class="pi pi-chevron-left"></i> Prev
+                    <ChevronLeft size={16} /> Prev
                   </button>
                   <span class="text-muted small fw-bold">
                     {selectedImageIndex + 1} / {fetchedImages.length}
                   </span>
                   <button
-                    class="btn btn-sm btn-outline-secondary"
+                    class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1"
                     onclick={(e) => {
                       e.stopPropagation();
                       selectedImageIndex = (selectedImageIndex + 1) % fetchedImages.length;
                       tempPreviewUrl = fetchedImages[selectedImageIndex];
                     }}
                   >
-                    Next <i class="pi pi-chevron-right"></i>
+                    Next <ChevronRight size={16} />
                   </button>
                 </div>
               {/if}
@@ -405,7 +421,7 @@
           <div class="flex flex-row flex-grow-1 d-flex gap-2">
             <button
               type="button"
-              class="btn btn-secondary"
+              class="btn btn-secondary d-flex align-items-center gap-1"
               onclick={handleFetch}
               disabled={isFetching || isSaving}
             >
@@ -413,17 +429,17 @@
                 <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
                 <span class="visually-hidden" role="status">Loading...</span>
               {:else}
-                <i class="pi pi-refresh me-1"></i>Fetch Info
+                <RotateCw size={16} />Fetch Info
               {/if}
             </button>
             {#if tempUrl}
               <button
                 type="button"
-                class="btn btn-outline-secondary"
+                class="btn btn-outline-secondary d-flex align-items-center gap-1"
                 onclick={handleEditUrl}
                 disabled={isFetching || isSaving}
               >
-                <i class="pi pi-link me-1"></i>Edit URL
+                <Link size={16} />Edit URL
               </button>
             {/if}
           </div>

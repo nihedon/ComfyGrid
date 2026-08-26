@@ -1,6 +1,7 @@
 import inject from '@rollup/plugin-inject';
-import { svelte } from '@sveltejs/vite-plugin-svelte';
-import { resolve } from 'path';
+import { svelte, vitePreprocess } from '@sveltejs/vite-plugin-svelte';
+import path, { resolve } from 'node:path';
+import license from 'rollup-plugin-license';
 import { visualizer } from 'rollup-plugin-visualizer';
 import { defineConfig } from 'vite';
 
@@ -8,9 +9,7 @@ import { defineConfig } from 'vite';
 export default defineConfig({
     plugins: [
         svelte({
-            compilerOptions: {
-                // runes: true,
-            },
+            preprocess: [vitePreprocess({ script: true })],
         }),
         visualizer({
             open: true,
@@ -19,15 +18,22 @@ export default defineConfig({
             brotliSize: true,
         }),
         inject({
+            include: ['**/*.js', '**/*.ts', '**/*.jsx', '**/*.tsx'],
+            exclude: ['**/*.svelte'],
             $: 'jquery',
             jQuery: 'jquery',
             'window.jQuery': 'jquery',
             'window.$': 'jquery',
         }),
+        license({
+            thirdParty: {
+                output: [path.join(import.meta.dirname, 'dist', 'THIRD_PARTY_LICENSES.txt'), path.join(import.meta.dirname, '..', 'THIRD_PARTY_LICENSES.txt')],
+            },
+        }),
     ],
     resolve: {
         alias: {
-            '@': resolve(__dirname, './src'),
+            '@': resolve(import.meta.dirname, './src'),
         },
     },
     build: {

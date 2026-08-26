@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onDestroy, untrack } from 'svelte';
+  import { LayoutDashboard } from '@lucide/svelte';
   import { comfyGridApiClient } from '@/api/api-client';
   import { t } from '@/i18n/i18n';
   import { saveLayoutObject, updateBoardFloatingState } from '@/services/gridstack-service';
@@ -53,7 +54,7 @@
       if (!text.trim()) {
         if (currentReqId === translationRequestId) {
           widget.value = text;
-          widget.updateComfyUiValue();
+          widget.updateValue();
           widget.isDirty = false;
           widget.isTranslating = false;
           widget.translationFailed = false;
@@ -89,7 +90,7 @@
 
         if (res.ok && res.json?.translated_text) {
           widget.value = res.json.translated_text;
-          widget.updateComfyUiRawValue({ rawValue: text });
+          widget.updateRawValue({ rawValue: text });
           widget.isDirty = false;
         }
         widget.translationFailed = !res.ok;
@@ -103,7 +104,7 @@
         }
       } finally {
         if (currentReqId === translationRequestId) {
-          widget.updateComfyUiValue();
+          widget.updateValue();
           widget.isTranslating = false;
           saveLayoutObject(layout);
           registerOrUnregisterPending();
@@ -147,7 +148,7 @@
       widget.isDirty = true;
       registerOrUnregisterPending();
     } else {
-      widget.updateComfyUiValue();
+      widget.updateValue();
     }
   }
 
@@ -256,8 +257,7 @@
       readonly={widget.readonly}
       placeholder={widget.placeholder}
       bind:value={widget.rawValue}
-      bind:this={textareaElement}
-    ></textarea>
+      bind:this={textareaElement}></textarea>
   {:else}
     <textarea
       class="flex-grow-1 form-control overflow-y-scroll rounded-top-0"
@@ -270,8 +270,7 @@
       readonly={widget.readonly}
       placeholder={widget.placeholder}
       bind:value={widget.value}
-      bind:this={textareaElement}
-    ></textarea>
+      bind:this={textareaElement}></textarea>
   {/if}
 {/snippet}
 
@@ -288,12 +287,12 @@
       >
         <TextareaCategory {widget} onManualTranslate={handleManualTranslate} />
         <button
-          class="btn btn-xs ms-auto"
+          class="btn btn-xs ms-auto d-flex align-items-center justify-content-center"
           title={$t(floatingButtonTitle)}
           style="background: var(--background-fill-primary);"
           onclick={toggleFloating}
         >
-          <i class="pi pi-objects-column"></i>
+          <LayoutDashboard size={14} />
         </button>
       </div>
       <div class="d-flex flex-grow-1 overflow-y-hidden">

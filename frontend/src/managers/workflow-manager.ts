@@ -14,10 +14,14 @@ function isGroupInGroup(child: ComfyGroup, parent: ComfyGroup): boolean {
     const [cx, cy, cw, ch] = child.boundingRect;
     const [px, py, pw, ph] = parent.boundingRect;
     const childArea = cw * ch;
-    if (childArea <= 0) return false;
+    const parentArea = pw * ph;
+    if (childArea <= 0 || parentArea <= childArea) return false;
+
     const overlapWidth = Math.max(0, Math.min(cx + cw, px + pw) - Math.max(cx, px));
     const overlapHeight = Math.max(0, Math.min(cy + ch, py + ph) - Math.max(cy, py));
-    return overlapWidth * overlapHeight >= childArea / 2;
+    const overlapArea = overlapWidth * overlapHeight;
+
+    return overlapArea >= childArea * 0.7;
 }
 
 function findParentGroup(child: ComfyGroup, allGroups: ComfyGroup[]): ComfyGroup | undefined {
@@ -41,6 +45,7 @@ class WorkflowManager {
 
     async handleWorkflow(payload: { graphId: string; name: string; nodes: ComfyNode[]; layout?: LayoutType }) {
         const { graphId, nodes: comfyNodes, name, layout: customLayout } = payload;
+        logger.info(`[WORKFLOW_LOG] handleWorkflow start: graphId=${graphId}, name="${name}", nodeCount=${comfyNodes?.length ?? 0}`);
 
         const app = appState.comfyUiState.app;
         if (app?.rootGraph) {
@@ -51,9 +56,7 @@ class WorkflowManager {
             }
             logger.log('Injected extra.comfygrid:', app.rootGraph.extra.comfygrid);
         }
-
-        let nodes = comfyNodes.map((n) => new ComfyGridNode(n, app)).filter((n) => !this.#isIgnoreNode(n));
-        nodes = ComfyGridNode.sortNodesByPosition(nodes);
+        const nodes = ComfyGridNode.sortNodesByPosition(comfyNodes.map((n) => new ComfyGridNode(n, app)));
 
         const expandedMap = this.#collectExpandedState(appState.workspaceState.groups);
 
@@ -111,10 +114,22 @@ class WorkflowManager {
             }
         }
 
+        logger.trace('[WORKFLOW_LOG] groups:', {
+            allComfyGroups: allComfyGroups.map((g) => ({ id: g.id, title: g.title })),
+            rootGroups: rootGroups.map((rg) => ({
+                id: rg.id,
+                title: rg.title,
+                nodeCount: rg.nodes.length,
+                childGroupCount: rg.children.length,
+            })),
+        });
+
         const loadedLayout = customLayout ?? loadLayout(graphId);
         if (customLayout) {
             saveLayout(customLayout);
         }
+        logger.trace('[WORKFLOW_LOG] loadedLayout:', loadedLayout);
+
         const { floatingPositions: orgFloatingPositions, floatingNodes: orgFloatingNodes, floatingWidgets: orgFloatingWidgets } = loadedLayout;
 
         const floatingNodes: Record<string, BoardId> = {};
@@ -136,6 +151,7 @@ class WorkflowManager {
             sortOrder: loadedLayout.sortOrder ?? 'default',
         };
 
+        appState.workspaceState.clearErrorWidgets();
         appState.workspaceState.setGroups(rootGroups);
         appState.workspaceState.setNodes(nodes);
         appState.workspaceState.layout.import(layout);
@@ -146,6 +162,7 @@ class WorkflowManager {
         applyFloatingPositions(undefined, this.#rearrangeFloatingPositions(orgFloatingPositions, nodes));
         await tick();
         callLayoutChangedCallbacks();
+        logger.info(`[WORKFLOW_LOG] handleWorkflow finish: graphId=${graphId}`);
     }
 
     async handleUpdateNode(payload: { nodeId: string }) {
@@ -185,16 +202,6 @@ class WorkflowManager {
                 });
         });
         return floatingPositions;
-    }
-
-    #isIgnoreNode(node: ComfyGridNode) {
-        if (node.type.endsWith('Note')) {
-            return true;
-        }
-        if (node.type === 'Reroute') {
-            return true;
-        }
-        return false;
     }
 
     exportLayout() {

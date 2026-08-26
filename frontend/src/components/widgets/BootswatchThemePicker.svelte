@@ -7,6 +7,7 @@
     selectBootswatchTheme,
   } from '@/services/bootswatch-service';
   import { saveOptsWithCallback } from '@/services/options-service';
+  import { Check, TriangleAlert } from '@lucide/svelte';
   import { appState } from '@/states/app-state.svelte';
 
   let themes = $state<BootswatchTheme[]>([]);
@@ -41,7 +42,7 @@
     </div>
   {:else if error}
     <div class="alert alert-warning d-flex align-items-center gap-2 py-2">
-      <i class="pi pi-exclamation-triangle"></i>
+      <TriangleAlert size={18} />
       <span>Failed to load themes: {error}</span>
     </div>
   {:else}
@@ -60,7 +61,7 @@
             <div class="d-flex align-items-center justify-content-between gap-1">
               <span class="fw-semibold text-truncate small">Default</span>
               {#if selectedUrl === ''}
-                <i class="pi pi-check text-primary flex-shrink-0"></i>
+                <Check size={16} class="text-primary flex-shrink-0" />
               {/if}
             </div>
             <div class="text-body-secondary text-truncate" style="font-size: 0.7rem;">
@@ -88,7 +89,7 @@
               <div class="d-flex align-items-center justify-content-between gap-1">
                 <span class="fw-semibold text-truncate small">{theme.name}</span>
                 {#if selectedUrl === theme.cssCdn}
-                  <i class="pi pi-check text-primary flex-shrink-0"></i>
+                  <Check size={16} class="text-primary flex-shrink-0" />
                 {/if}
               </div>
               <div class="text-body-secondary text-truncate" style="font-size: 0.7rem;">

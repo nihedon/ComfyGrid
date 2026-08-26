@@ -1,5 +1,13 @@
 <script lang="ts">
   import { SvelteMap } from 'svelte/reactivity';
+  import {
+    Download,
+    Eye,
+    Info,
+    Save,
+    Trash2,
+    Upload,
+  } from '@lucide/svelte';
   import { t } from '@/i18n/i18n';
   import { galleryManager } from '@/managers/gallery-manager';
   import { appState } from '@/states/app-state.svelte';
@@ -310,9 +318,9 @@
             {/if}
             {#if galleryState.currentGalleryJob.completed && !galleryState.currentGalleryJob.hasPreviewNode}
               <button
-                class="delete-button btn btn-danger position-absolute d-flex justify-content-center align-items-center fs-6 z-1"
+                class="delete-button btn btn-danger position-absolute d-flex justify-content-center align-items-center fs-6 z-1 p-1"
                 aria-label="delete"
-                onclick={deleteJob}><i class="pi pi-trash"></i></button
+                onclick={deleteJob}><Trash2 size={16} /></button
               >
             {/if}
             {#if galleryState.currentGalleryNode?.assets}
@@ -440,66 +448,66 @@
     <div class="d-flex flex-row p-1 m-0 column-gap-2">
       {#if galleryState.currentGalleryJob && !galleryState.currentGalleryJob.isPreview}
         <button
-          class="btn btn-primary flex-grow-1"
+          class="btn btn-primary flex-grow-1 d-flex align-items-center justify-content-center gap-1 p-1"
           aria-label="Save (ctrl + s)"
           onclick={() => galleryManager.saveImage(getMetadata())}
-          ><i class="pi pi-save"></i> (ctrl + s)</button
+          ><Save size={16} /> (ctrl + s)</button
         >
         <button
-          class="btn btn-primary"
+          class="btn btn-primary d-flex align-items-center justify-content-center"
           aria-label="Download"
           onclick={() => galleryManager.downloadImage(getMetadata())}
-          ><i class="pi pi-download"></i></button
+          ><Download size={16} /></button
         >
         <button
-          class="btn btn-secondary"
-          aria-label="Upload to input"
-          title={$t('gallery.upload_to_input')}
-          onclick={() => galleryManager.uploadToInput()}><i class="pi pi-upload"></i></button
+          class="btn btn-secondary d-flex align-items-center justify-content-center"
+          aria-label="Send to input"
+          title={$t('gallery.send_to_input')}
+          onclick={() => galleryManager.uploadToInput()}><Upload size={16} /></button
         >
         <button
-          class="btn btn-secondary"
+          class="btn btn-secondary d-flex align-items-center justify-content-center"
           aria-label="Send to Image Info"
           title={$t('gallery.send_to_image_info')}
-          onclick={() => galleryManager.sendToImageInfo()}><i class="pi pi-info-circle"></i></button
+          onclick={() => galleryManager.sendToImageInfo()}><Info size={16} /></button
         >
       {:else}
         <div class="flex-grow-1"></div>
       {/if}
       <div class="dropdown">
         <button
-          class="btn btn-danger dropdown-toggle"
+          class="btn btn-danger dropdown-toggle d-flex align-items-center justify-content-center"
           type="button"
           data-bs-toggle="dropdown"
           aria-expanded="false"
           title={$t('gallery.clear')}
         >
-          <i class="pi pi-trash"></i>
+          <Trash2 size={16} />
         </button>
         <ul class="dropdown-menu dropdown-menu-end">
           <li>
             <button
-              class="dropdown-item"
+              class="dropdown-item d-flex align-items-center gap-2"
               type="button"
               onclick={clearSavedImages}
               disabled={!hasSavedImages}
             >
-              <i class="pi pi-save me-2"></i>{$t('gallery.clear_saved')}
+              <Save size={16} />{$t('gallery.clear_saved')}
             </button>
           </li>
           <li>
             <button
-              class="dropdown-item"
+              class="dropdown-item d-flex align-items-center gap-2"
               type="button"
               onclick={clearViewedImages}
               disabled={!hasViewedImages}
             >
-              <i class="pi pi-eye me-2"></i>{$t('gallery.clear_viewed')}
+              <Eye size={16} />{$t('gallery.clear_viewed')}
             </button>
           </li>
           <li>
-            <button class="dropdown-item text-danger" type="button" onclick={clearAllImages}>
-              <i class="pi pi-trash me-2"></i>{$t('gallery.clear_all')}
+            <button class="dropdown-item text-danger d-flex align-items-center gap-2" type="button" onclick={clearAllImages}>
+              <Trash2 size={16} />{$t('gallery.clear_all')}
             </button>
           </li>
         </ul>
@@ -554,12 +562,15 @@
     }
 
     > button:not(.viewed)::before {
-      content: '\e9dd';
+      content: '';
       position: absolute;
-      width: 80px;
-      color: var(--bs-primary);
-      font-size: 0.5rem;
-      bottom: -11px;
+      width: 6px;
+      height: 6px;
+      background-color: var(--bs-primary);
+      border-radius: 50%;
+      bottom: -8px;
+      left: 50%;
+      transform: translateX(-50%);
     }
   }
 

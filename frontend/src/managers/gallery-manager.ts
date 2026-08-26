@@ -1,4 +1,6 @@
+import { get } from 'svelte/store';
 import { comfyGridApiClient } from '@/api/api-client';
+import { t } from '@/i18n/i18n';
 import { refreshModels } from '@/services/models-service';
 import { appState } from '@/states/app-state.svelte';
 import logger from '@/utils/logger';
@@ -80,13 +82,26 @@ class GalleryManager {
                 for (const node of appState.workspaceState.nodes.values()) {
                     for (const widget of node.widgets) {
                         if (widget.className === 'ComboWidget') {
-                            widget.updateComfyUiSelect({ addOptions: [filename] });
+                            widget.updateSelect({ addOptions: [filename] });
                         }
                     }
                 }
+                appState.toastState.addToast({
+                    type: 'success',
+                    message: get(t)('toast.send_to_input_success'),
+                });
+            } else {
+                appState.toastState.addToast({
+                    type: 'error',
+                    message: get(t)('toast.send_to_input_failed'),
+                });
             }
         } catch (e) {
             logger.error('Failed to upload to input', e);
+            appState.toastState.addToast({
+                type: 'error',
+                message: get(t)('toast.send_to_input_failed'),
+            });
         }
     }
 

@@ -6,10 +6,10 @@
   import ModalComboWidget from './features/ModalComboWidget.svelte';
 
   type ComboWidget = ComfyGridWidget<
-    string,
+    string | number,
     {
-      values: string[];
-      fixed_values: string[];
+      values: (string | number)[];
+      fixed_values: (string | number)[];
     }
   >;
 
@@ -22,7 +22,7 @@
     } else if (name.includes('vae_name')) {
       return { dir: 'models', subdirs: ['vae'] };
     } else if (name.includes('clip_name')) {
-      if (widget.node.type.toLowerCase().indexOf('clipvision') >= 0) {
+      if (widget.node.type!.toLowerCase().indexOf('clipvision') >= 0) {
         return { dir: 'models', subdirs: ['clip_vision'] };
       } else {
         return { dir: 'models', subdirs: ['clip', 'text_encoders'] };
@@ -43,23 +43,39 @@
     return null;
   }) as { dir: ModelTypes; subdirs: string[] } | null;
 
+  function parseValue(rawValue: string | number): string | number {
+    if (typeof rawValue === 'number') return rawValue;
+    const strVal = String(rawValue);
+    const allValues = [
+      ...(widget.options?.values ?? []),
+      ...(widget.options?.fixed_values ?? []),
+    ];
+    const matchedNumber = allValues.find(
+      (v) => typeof v === 'number' && String(v) === strVal,
+    );
+    if (matchedNumber !== undefined) {
+      return matchedNumber as number;
+    }
+    return strVal;
+  }
+
   function handleInput(
     e: Event,
-    widget: ComfyGridWidget<string, unknown>,
+    widget: ComfyGridWidget<string | number, unknown>,
     model?: Model,
     doUpdate?: boolean,
   ) {
     if (model) {
       widget.value = model.path;
     } else if (e.type === 'autocompleteChange') {
-      widget.value = (e as CustomEvent).detail.value;
+      widget.value = parseValue((e as CustomEvent).detail.value);
     } else {
-      widget.value = (e.currentTarget as HTMLSelectElement).value;
+      widget.value = parseValue((e.currentTarget as HTMLSelectElement).value);
     }
 
-    widget.updateComfyUiValue();
+    widget.updateValue();
     if (doUpdate) {
-      widget.node.drawBackground();
+      widget.onDrawBackground();
     }
   }
 </script>

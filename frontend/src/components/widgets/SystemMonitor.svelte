@@ -14,6 +14,10 @@
 
   let systemState = appState.systemState;
 
+  const isVisible = $derived(
+    (appState.optionState.get(`ComfyGrid.system_monitor.${monitorType}`) as boolean) ?? true,
+  );
+
   const isGpuGroup = $derived(
     monitorType === 'gpu' || monitorType === 'vram' || monitorType === 'temp',
   );
@@ -85,150 +89,157 @@
   </div>
 {/snippet}
 
-<div class="card" class:simple class:unavailable={isGpuGroup && !gpu.available}>
-  <!-- CPU -->
-  {#if monitorType === 'cpu'}
-    <div class="card-head w-100">
-      <span>
-        <span class="label">CPU</span>
-        {#if !simple && cpu.freq_mhz}
-          <span class="label chip">{cpu.freq_mhz} MHz</span>
-        {/if}
-      </span>
-      <span class="val" style:color={color(cpu.total)}
-        >{cpu.total.toFixed(1)}<span class="sup">%</span></span
-      >
-    </div>
-    {@render sparkbox('CPU Usage Graph', cpuHistory, 100, color(cpu.total ?? 0))}
-    <!-- Core -->
-    {#if !simple && showCores && cpu.per_core.length}
-      <div class="core-row">
-        {#each cpu.per_core as c, i (i)}
-          <div class="core-cell">
-            <div class="core-bg">
-              <div class="core-fill" style:height={c + '%'} style:background={color(c)}></div>
-            </div>
-            <span class="core-lbl" style:color={color(c)}>{Math.round(c)}%</span>
-            <span class="core-name">C{i}</span>
-          </div>
-        {/each}
-      </div>
-    {/if}
-  {:else if monitorType === 'ram'}
-    <!-- RAM -->
-    <div class="card-head w-100">
-      <span class="label">RAM</span>
-      <span class="val" style:color={color(ram.pct)}
-        >{ram.pct.toFixed(1)}<span class="sup">%</span></span
-      >
-    </div>
-    {@render sparkbox('RAM Usage Graph', ramHistory, 100, color(ram.pct ?? 0))}
-    {#if !simple}
-      <div class="sub-info">
-        <span>{ram.used_gb.toFixed(1)} GB</span>
-        <span class="muted">/ {ram.total_gb.toFixed(1)} GB</span>
-      </div>
-      <div class="progress-track">
-        <div
-          class="progress-fill"
-          style:width={ram.pct + '%'}
-          style:background={color(ram.pct)}
-        ></div>
-      </div>
-    {/if}
-  {:else if monitorType === 'gpu'}
-    <!-- GPU -->
-    <div class="card-head w-100">
-      <span>
-        <span class="label">GPU</span>
-        {#if gpu.available && !simple && gpu.name}<span class="label chip">{gpu.name}</span>{/if}
-      </span>
-      {#if gpu.available}
-        <span class="val" style:color={color(gpu.gpu_pct ?? 0)}
-          >{(gpu.gpu_pct ?? 0).toFixed(1)}<span class="sup">%</span></span
+{#if isVisible}
+  <div class="card" class:simple class:unavailable={isGpuGroup && !gpu.available}>
+    <!-- CPU -->
+    {#if monitorType === 'cpu'}
+      <div class="card-head w-100">
+        <span>
+          <span class="label">CPU</span>
+          {#if !simple && cpu.freq_mhz}
+            <span class="label chip">{cpu.freq_mhz} MHz</span>
+          {/if}
+        </span>
+        <span class="val" style:color={color(cpu.total)}
+          >{cpu.total.toFixed(1)}<span class="sup">%</span></span
         >
-      {:else}
-        <span class="no-gpu">N/A</span>
-      {/if}
-    </div>
-    {#if gpu.available}
-      {@render sparkbox('GPU Usage Graph', gpuHistory, 100, color(gpu.gpu_pct ?? 0))}
-      {#if !simple}
-        <div class="progress-track">
-          <div
-            class="progress-fill"
-            style:width={(gpu.gpu_pct ?? 0) + '%'}
-            style:background={color(gpu.gpu_pct ?? 0)}
-          ></div>
+      </div>
+      {@render sparkbox('CPU Usage Graph', cpuHistory, 100, color(cpu.total ?? 0))}
+      <!-- Core -->
+      {#if !simple && showCores && cpu.per_core.length}
+        <div class="core-row">
+          {#each cpu.per_core as c, i (i)}
+            <div class="core-cell">
+              <div class="core-bg">
+                <div class="core-fill" style:height={c + '%'} style:background={color(c)}></div>
+              </div>
+              <span class="core-lbl" style:color={color(c)}>{Math.round(c)}%</span>
+              <span class="core-name">C{i}</span>
+            </div>
+          {/each}
         </div>
       {/if}
-    {:else}
-      <p class="no-gpu-msg">Not Found</p>
-    {/if}
-  {:else if monitorType === 'vram'}
-    <!-- VRAM -->
-    <div class="card-head w-100">
-      <span class="label">VRAM</span>
-      {#if gpu.available}
-        <span class="val" style:color={color(gpu.vram_pct ?? 0)}
-          >{(gpu.vram_pct ?? 0).toFixed(1)}<span class="sup">%</span></span
+    {:else if monitorType === 'ram'}
+      <!-- RAM -->
+      <div class="card-head w-100">
+        <span class="label">RAM</span>
+        <span class="val" style:color={color(ram.pct)}
+          >{ram.pct.toFixed(1)}<span class="sup">%</span></span
         >
-      {:else}
-        <span class="no-gpu">N/A</span>
-      {/if}
-    </div>
-    {#if gpu.available}
-      {@render sparkbox('VRAM Usage Graph', vramHistory, 100, color(gpu.vram_pct ?? 0))}
+      </div>
+      {@render sparkbox('RAM Usage Graph', ramHistory, 100, color(ram.pct ?? 0))}
       {#if !simple}
         <div class="sub-info">
-          <span>{(gpu.vram_used ?? 0).toFixed(1)} GB</span>
-          <span class="muted">/ {(gpu.vram_total ?? 0).toFixed(1)} GB</span>
+          <span>{ram.used_gb.toFixed(1)} GB</span>
+          <span class="muted">/ {ram.total_gb.toFixed(1)} GB</span>
         </div>
         <div class="progress-track">
           <div
             class="progress-fill"
-            style:width={(gpu.vram_pct ?? 0) + '%'}
-            style:background={color(gpu.vram_pct ?? 0)}
+            style:width={ram.pct + '%'}
+            style:background={color(ram.pct)}
           ></div>
         </div>
       {/if}
-    {:else}
-      <p class="no-gpu-msg">Not Found</p>
-    {/if}
-  {:else if monitorType === 'temp'}
-    <!-- TEMP -->
-    <div class="card-head w-100">
-      <span class="label">TEMP</span>
+    {:else if monitorType === 'gpu'}
+      <!-- GPU -->
+      <div class="card-head w-100">
+        <span>
+          <span class="label">GPU</span>
+          {#if gpu.available && !simple && gpu.name}<span class="label chip">{gpu.name}</span>{/if}
+        </span>
+        {#if gpu.available}
+          <span class="val" style:color={color(gpu.gpu_pct ?? 0)}
+            >{(gpu.gpu_pct ?? 0).toFixed(1)}<span class="sup">%</span></span
+          >
+        {:else}
+          <span class="no-gpu">N/A</span>
+        {/if}
+      </div>
       {#if gpu.available}
-        <span class="val" style:color={tempColor(gpu.temp_c ?? 0)}
-          >{gpu.temp_c ?? 0}<span class="sup">°C</span></span
-        >
-      {:else}
-        <span class="no-gpu">N/A</span>
-      {/if}
-    </div>
-    {#if gpu.available}
-      {@render sparkbox('GPU Temperature Graph', tempHistory, tempMax, tempColor(gpu.temp_c ?? 0))}
-      {#if !simple}
-        <!-- Temperature Gauge -->
-        <div class="temp-gauge">
-          {#each [40, 60, 80, 100, 120] as mark, i (i)}
-            <span class="temp-mark" style:left={(mark / tempMax) * 100 + '%'}>{mark}</span>
-          {/each}
+        {@render sparkbox('GPU Usage Graph', gpuHistory, 100, color(gpu.gpu_pct ?? 0))}
+        {#if !simple}
           <div class="progress-track">
             <div
               class="progress-fill"
-              style:width={((gpu.temp_c ?? 0) / tempMax) * 100 + '%'}
-              style:background={tempColor(gpu.temp_c ?? 0)}
+              style:width={(gpu.gpu_pct ?? 0) + '%'}
+              style:background={color(gpu.gpu_pct ?? 0)}
             ></div>
           </div>
-        </div>
+        {/if}
+      {:else}
+        <p class="no-gpu-msg">Not Found</p>
       {/if}
-    {:else}
-      <p class="no-gpu-msg">Not Found</p>
+    {:else if monitorType === 'vram'}
+      <!-- VRAM -->
+      <div class="card-head w-100">
+        <span class="label">VRAM</span>
+        {#if gpu.available}
+          <span class="val" style:color={color(gpu.vram_pct ?? 0)}
+            >{(gpu.vram_pct ?? 0).toFixed(1)}<span class="sup">%</span></span
+          >
+        {:else}
+          <span class="no-gpu">N/A</span>
+        {/if}
+      </div>
+      {#if gpu.available}
+        {@render sparkbox('VRAM Usage Graph', vramHistory, 100, color(gpu.vram_pct ?? 0))}
+        {#if !simple}
+          <div class="sub-info">
+            <span>{(gpu.vram_used ?? 0).toFixed(1)} GB</span>
+            <span class="muted">/ {(gpu.vram_total ?? 0).toFixed(1)} GB</span>
+          </div>
+          <div class="progress-track">
+            <div
+              class="progress-fill"
+              style:width={(gpu.vram_pct ?? 0) + '%'}
+              style:background={color(gpu.vram_pct ?? 0)}
+            ></div>
+          </div>
+        {/if}
+      {:else}
+        <p class="no-gpu-msg">Not Found</p>
+      {/if}
+    {:else if monitorType === 'temp'}
+      <!-- TEMP -->
+      <div class="card-head w-100">
+        <span class="label">TEMP</span>
+        {#if gpu.available}
+          <span class="val" style:color={tempColor(gpu.temp_c ?? 0)}
+            >{gpu.temp_c ?? 0}<span class="sup">°C</span></span
+          >
+        {:else}
+          <span class="no-gpu">N/A</span>
+        {/if}
+      </div>
+      {#if gpu.available}
+        {@render sparkbox(
+          'GPU Temperature Graph',
+          tempHistory,
+          tempMax,
+          tempColor(gpu.temp_c ?? 0),
+        )}
+        {#if !simple}
+          <!-- Temperature Gauge -->
+          <div class="temp-gauge">
+            {#each [40, 60, 80, 100, 120] as mark, i (i)}
+              <span class="temp-mark" style:left={(mark / tempMax) * 100 + '%'}>{mark}</span>
+            {/each}
+            <div class="progress-track">
+              <div
+                class="progress-fill"
+                style:width={((gpu.temp_c ?? 0) / tempMax) * 100 + '%'}
+                style:background={tempColor(gpu.temp_c ?? 0)}
+              ></div>
+            </div>
+          </div>
+        {/if}
+      {:else}
+        <p class="no-gpu-msg">Not Found</p>
+      {/if}
     {/if}
-  {/if}
-</div>
+  </div>
+{/if}
 
 <style>
   .card {

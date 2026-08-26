@@ -1,5 +1,4 @@
 import { tick } from 'svelte';
-import { GridStack, type GridStackWidget } from 'gridstack';
 import { get } from 'svelte/store';
 import { t } from '@/i18n/i18n';
 import { callLayoutChangedCallbacks } from '@/services/callback-service';
@@ -50,8 +49,10 @@ function makeEptyLayout(graph_id: string): LayoutType {
         promptWidgetIds: [],
         positivePromptWidgetId: null,
         negativePromptWidgetId: null,
-        noControlNodes: true,
-        noCollapsedNodes: true,
+        showRenderableLessNodes: false,
+        showControlLessNodes: false,
+        showCollapsedNodes: false,
+        showNoteNodes: false,
         sortOrder: 'default',
     };
 }
@@ -90,8 +91,10 @@ export function loadLayout(graphId: string): LayoutType {
         promptWidgetIds: [],
         positivePromptWidgetId: null,
         negativePromptWidgetId: null,
-        noControlNodes: true,
-        noCollapsedNodes: true,
+        showRenderableLessNodes: false,
+        showControlLessNodes: false,
+        showCollapsedNodes: false,
+        showNoteNodes: false,
         sortOrder: 'default',
     };
 }
@@ -139,39 +142,9 @@ export async function importLayout(strLayout: string) {
     }
 }
 
-export function updateAttribute(grid: GridStack) {
-    if (!grid.el) return;
-    const children = Array.from(grid.el.children) as HTMLElement[];
-    const savedLayout = (grid.save(false) as GridStackWidget[]).reduce(
-        (acc, item) => {
-            if (item.id) {
-                acc[item.id] = { x: item.x, y: item.y, w: item.w, h: item.h };
-            }
-            return acc;
-        },
-        {} as Record<string, FloatingPosition>,
-    );
-
-    children.forEach((child) => {
-        const id = child.getAttribute('gs-id');
-        const layout = id ? savedLayout[id] : null;
-        if (layout) {
-            Object.entries(layout).forEach(([key, val]) => {
-                const current = child.getAttribute(`gs-${key}`);
-                const next = String(val);
-                if (current !== next) {
-                    child.setAttribute(`gs-${key}`, next);
-                }
-            });
-        }
-    });
-}
-
-export function applyFloatingPositions(boardId?: string, initSettings?: Record<string, Record<string, FloatingPosition>>) {
+export function applyFloatingPositions(boardId?: string, initSettings?: Record<string, Record<string, FloatingPosition>>, priorityId?: string) {
     const activeKeys = Array.from(appState.workspaceState.gridStackBoards.keys());
-    const boardIds = boardId
-        ? activeKeys.filter((k) => k === boardId || k.startsWith(boardId + '-'))
-        : activeKeys;
+    const boardIds = boardId ? activeKeys.filter((k) => k === boardId || k.startsWith(boardId + '-')) : activeKeys;
 
     for (const exactGridKey of boardIds) {
         const grid = appState.workspaceState.gridStackBoards.get(exactGridKey);
@@ -184,7 +157,10 @@ export function applyFloatingPositions(boardId?: string, initSettings?: Record<s
         const children = Array.from(container.children) as HTMLElement[];
         const boardSettings = initSettings?.[logicalKey] ?? appState.workspaceState.layout?.floatingPositions?.get(logicalKey);
 
-        // 1. Sync attributes from settings for DOM nodes (if settings available)
+        // 1. Temporarily enable float mode to place items at exact saved (x, y) without collision displacement
+        grid.float(true);
+
+        // 2. Sync attributes from settings for DOM nodes (if settings available)
         if (boardSettings) {
             children.forEach((el) => {
                 const id = el.getAttribute('gs-id');
@@ -198,28 +174,20 @@ export function applyFloatingPositions(boardId?: string, initSettings?: Record<s
             });
         }
 
-        // 2. Identify current maxY to avoid overlapping new items with existing layouts
-        let maxY = 0;
-        grid.getGridItems().forEach((w) => {
-            maxY = Math.max(maxY, (w.gridstackNode?.y ?? 0) + (w.gridstackNode?.h ?? 0));
-        });
-
-        // 3. For new items (no gs-y coordinate), assign the maxY to ensure they append to bottom
-        children.forEach((el) => {
-            if (el.getAttribute('gs-y') === null) {
-                el.setAttribute('gs-y', String(maxY));
-                if (el.getAttribute('gs-x') === null) {
-                    el.setAttribute('gs-x', '0');
-                }
-            }
-        });
-
-        // 4. Stable rebuild from sorted DOM
+        // 3. Stable rebuild from sorted DOM (with priorityId placed first if matched)
         children.sort((a, b) => {
-            const ay = Number(a.getAttribute('gs-y') || '9999');
-            const ax = Number(a.getAttribute('gs-x') || '0');
-            const by = Number(b.getAttribute('gs-y') || '9999');
-            const bx = Number(b.getAttribute('gs-x') || '0');
+            const aId = a.getAttribute('gs-id');
+            const bId = b.getAttribute('gs-id');
+
+            if (priorityId) {
+                if (aId === priorityId && bId !== priorityId) return -1;
+                if (bId === priorityId && aId !== priorityId) return 1;
+            }
+
+            const ay = Number(a.getAttribute('gs-y') ?? '9999');
+            const ax = Number(a.getAttribute('gs-x') ?? '0');
+            const by = Number(b.getAttribute('gs-y') ?? '9999');
+            const bx = Number(b.getAttribute('gs-x') ?? '0');
             if (ay !== by) return ay - by;
             return ax - bx;
         });
@@ -227,24 +195,37 @@ export function applyFloatingPositions(boardId?: string, initSettings?: Record<s
         grid.batchUpdate();
         grid.removeAll(false);
         children.forEach((child) => {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const anyChild = child as any;
+            if (anyChild.gridstackNode && anyChild.gridstackNode.grid !== grid) {
+                delete anyChild.gridstackNode;
+            }
+            child.querySelectorAll('.ui-resizable-handle').forEach((h) => h.remove());
             grid.makeWidget(child);
         });
         grid.commit();
 
-        // 5. Final sync internal -> DOM attributes to ensure Svelte sees the actual final positions
-        updateAttribute(grid);
+        // 4. Restore auto-packing (float: false)
+        grid.float(false);
+
+        if (children.length === 0 && grid.el) {
+            grid.el.style.removeProperty('height');
+        }
     }
 }
 
 export function syncAndSaveLayout() {
     if (!appState.workspaceState.layout) return;
+    logger.trace('[LAYOUT_LOG] syncAndSaveLayout triggered');
     saveLayoutObject(appState.workspaceState.layout);
     callLayoutChangedCallbacks();
 }
 
-export async function updateBoardFloatingState() {
+export async function updateBoardFloatingState(priorityId?: string) {
+    logger.trace(`[LAYOUT_LOG] updateBoardFloatingState start (priorityId="${priorityId ?? ''}")`);
     await waitForDom();
-    applyFloatingPositions();
-    await waitForDom(); // Allow GridStack to process newly created elements
+    applyFloatingPositions(undefined, undefined, priorityId);
+    await waitForDom();
     syncAndSaveLayout();
+    logger.trace('[LAYOUT_LOG] updateBoardFloatingState finish');
 }

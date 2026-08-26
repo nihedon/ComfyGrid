@@ -23,12 +23,20 @@ choices = ["none", "node", "group", "node_priority"]
 
 [ComfyGrid.ui.group_tabify]
 type = "dropdown"
-choices = ["none", "all_top_groups", "tab_groups_only"]
+choices = ["none", "all_top_groups"]
 default = "all_top_groups"
 
 [ComfyGrid.ui.common_tab_board]
 type = "checkbox"
 default = true
+
+[ComfyGrid.ui.always_show_node_focus_button]
+type = "checkbox"
+default = false
+
+[ComfyGrid.ui.simple_node_mode]
+type = "checkbox"
+default = false
 
 [ComfyGrid.ui.model_thumbnail_width]
 type = "slider"
@@ -48,6 +56,26 @@ step = "8"
 type = "radio"
 default = "top"
 choices = ["none", "top", "left"]
+
+[ComfyGrid.system_monitor.cpu]
+type = "checkbox"
+default = true
+
+[ComfyGrid.system_monitor.ram]
+type = "checkbox"
+default = true
+
+[ComfyGrid.system_monitor.gpu]
+type = "checkbox"
+default = true
+
+[ComfyGrid.system_monitor.vram]
+type = "checkbox"
+default = true
+
+[ComfyGrid.system_monitor.temp]
+type = "checkbox"
+default = true
 
 [ComfyGrid.save.directory]
 type = "text"

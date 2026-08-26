@@ -1,10 +1,11 @@
 <script lang="ts">
+  import { CircleDot } from '@lucide/svelte';
   import { appState } from '@/states/app-state.svelte';
   import { ComfyGridGroup, ComfyGridNode } from '@/states/model-state.svelte';
   import type { ComfyNodeMode } from '@/types/model-shared';
   import NodeWidget from './NodeWidget.svelte';
   import Self from './NodeWidgetGroup.svelte';
-  import NodeMode from './comfyui/features/NodeModeSelector.svelte';
+  import NodeModeSelector from './comfyui/features/NodeModeSelector.svelte';
 
   let {
     group,
@@ -20,9 +21,6 @@
 
   const workspaceState = appState.workspaceState;
 
-  const noControlNodes = $derived(workspaceState.layout.noControlNodes);
-  const noCollapsedNodes = $derived(workspaceState.layout.noCollapsedNodes);
-
   let isTitleEditing = $state(false);
 
   function findChildren(g: ComfyGridGroup | undefined = undefined): ComfyGridNode[] {
@@ -37,19 +35,19 @@
 
   const nodes = $derived(findChildren());
 
-  const floatingNodes = $derived(
-    group.nodes.filter((n) => !workspaceState.layout.floatingNodes.get(n.id)),
+  const visibleNodes = $derived(
+    group.nodes.filter((n) => n.isGroupVisible),
   );
 
   const masonryNodes = $derived(
-    floatingNodes.filter(
+    visibleNodes.filter(
       (node) =>
         workspaceState.hasErrorNode(node.id) || (!node.collapsed && node.widgets.length > 0),
     ),
   );
 
   const listNodes = $derived(
-    floatingNodes.filter(
+    visibleNodes.filter(
       (node) =>
         !(workspaceState.hasErrorNode(node.id) || (!node.collapsed && node.widgets.length > 0)),
     ),
@@ -62,7 +60,6 @@
   function handleStateChange(e: Event, mode: ComfyNodeMode) {
     nodes.forEach((node) => {
       node.mode = mode;
-      node.setComfyUiProperty('mode', node.mode);
     });
     e.stopPropagation();
   }
@@ -85,9 +82,10 @@
   {#snippet header()}
     {#if nodeColorOpts !== 'none'}
       <div
-        class="pi pi-circle-fill position-relative me-2"
-        style:color={group.color ? group.color + '70' : '#00000000'}
+        class="position-relative me-2 d-inline-flex align-items-center"
+        style:color={group.color ? group.color + '70' : 'transparent'}
       >
+        <CircleDot size={16} />
         <input
           class="position-absolute top-0 end-0 w-100 h-100 opacity-0"
           type="color"
@@ -108,14 +106,20 @@
         </datalist>
       </div>
     {/if}
-    <NodeMode
+    <NodeModeSelector
       className="me-2"
       mode={group.modeSet}
       handleChange={(e, val) => handleStateChange(e, val)}
     />
     {#if !isTitleEditing}
       <!-- svelte-ignore a11y_no_static_element_interactions -->
-      <span ondblclick={() => (isTitleEditing = true)}>{group.title?.trim()}</span>
+      <span
+        ondblclick={() => {
+          if (group.id !== undefined) {
+            isTitleEditing = true;
+          }
+        }}>{group.title?.trim()}</span
+      >
     {:else}
       <input
         type="text"
@@ -166,7 +170,7 @@
       </div>
     {/if}
     {#if listNodes.length > 0}
-      <div class="list-group" style:display={noControlNodes && noCollapsedNodes ? 'none' : ''}>
+      <div class="list-group">
         {#each listNodes as node, index (`${node.id}-${index}`)}
           <NodeWidget {node} />
         {/each}

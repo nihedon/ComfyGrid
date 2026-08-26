@@ -1,4 +1,5 @@
 import { SvelteSet } from 'svelte/reactivity';
+import { getWidgetComponentWithMeta } from '@/components/widgets/comfyui/registry/widget-registry';
 import { workflowManager } from '@/managers/workflow-manager';
 import type { ComfyApp, ComfyGroup, ComfyNode, ComfyWidget } from '@/types/comfy-model';
 import type { ComfyNodeMode, ImageInfo, WidgetContext } from '@/types/model-shared';
@@ -11,12 +12,24 @@ function safeClone<T>(obj: T): T {
 }
 
 function isNodeInGroup(node: ComfyNode, group: ComfyGroup): boolean {
-    const [nx, ny, nw, nh] = node.getBounding();
-    const [gx, gy, gw, gh] = group.boundingRect;
+    if (!node || !group?.boundingRect) return false;
+
+    let [nx, ny, nw, nh] = typeof node.getBounding === 'function' ? node.getBounding() : [0, 0, 0, 0];
+    if (nw <= 0 || nh <= 0) {
+        nx = node.pos ? node.pos[0] : nx;
+        ny = node.pos ? node.pos[1] : ny;
+        nw = node.size ? node.size[0] : 100;
+        nh = node.size ? node.size[1] : 100;
+    }
     const nodeArea = nw * nh;
+    if (nodeArea <= 0) return false;
+
+    const [gx, gy, gw, gh] = group.boundingRect;
     const overlapWidth = Math.max(0, Math.min(nx + nw, gx + gw) - Math.max(nx, gx));
     const overlapHeight = Math.max(0, Math.min(ny + nh, gy + gh) - Math.max(ny, gy));
-    return overlapWidth * overlapHeight >= nodeArea / 2;
+    const overlapArea = overlapWidth * overlapHeight;
+
+    return overlapArea >= nodeArea / 2;
 }
 
 /**
@@ -68,12 +81,9 @@ export class ComfyGridGroup {
     }
 
     readonly isTabify = $derived.by(() => {
-        const groupTabify = appState.optionState.get('group_tabify') || 'all_top_groups';
+        const groupTabify = appState.optionState.get('ComfyGrid.ui.group_tabify') ?? 'all_top_groups';
         if (groupTabify === 'all_top_groups') {
-            return this.#id;
-        }
-        if (groupTabify === 'tab_groups_only') {
-            return this.#id && this.#title.startsWith('[Tab]');
+            return Boolean(this.#id);
         }
         return false;
     });
@@ -84,17 +94,8 @@ export class ComfyGridGroup {
         return 0;
     });
 
-    readonly noControlNodes = $derived(appState.workspaceState.layout.noControlNodes ?? true);
-    readonly noCollapsedNodes = $derived(appState.workspaceState.layout.noCollapsedNodes ?? true);
     readonly hasVisibleNodes = $derived.by(() => {
-        if (
-            this.#nodes.some((node) => {
-                if (this.noControlNodes && node.widgets.length === 0) return false;
-                if (this.noCollapsedNodes && node.collapsed) return false;
-                if (appState.workspaceState.layout.floatingNodes.get(node.id)) return false;
-                return true;
-            })
-        ) {
+        if (this.#nodes.some((node) => node.isGroupVisible)) {
             return true;
         }
         return this.#children.some((child) => child.hasVisibleNodes);
@@ -112,7 +113,7 @@ export class ComfyGridGroup {
 
     readonly modeSet = $derived.by(() => {
         const modes = new SvelteSet<ComfyNodeMode>();
-        for (const node of this.#nodes) {
+        for (const node of this.allNodes) {
             modes.add(node.mode);
         }
         return modes;
@@ -136,6 +137,9 @@ export class ComfyGridGroup {
     get nodes(): ReadonlyArray<ComfyGridNode> {
         return this.#nodes;
     }
+    readonly allNodes = $derived.by<ComfyGridNode[]>(() => {
+        return [...this.#nodes, ...this.#children.flatMap((child) => child.allNodes)];
+    });
     get color() {
         return this.#color;
     }
@@ -178,27 +182,63 @@ export class ComfyGridGroup {
     }
 }
 
-export class ComfyGridNode<P = undefined> {
+export class ComfyGridNode {
     readonly #comfyNode: ComfyNode;
     #title: string = $state();
-    #type: string = $state();
-    readonly #pos: { x: number; y: number } = $state();
     #collapsed: boolean = $state();
-    #hasOutputNode: boolean = false;
     #mode: ComfyNodeMode = $state();
     #bgcolor: string | null = $state();
     readonly #widgets: ComfyGridWidget[] = $state([]);
     readonly #groups: ComfyGridGroup[] = [];
     readonly #comfyGroups: ComfyGroup[] = [];
-    #properties: P = $state();
+
+    readonly isGroupVisible = $derived.by(() => {
+        const layout = appState.workspaceState.layout;
+        if (layout.floatingNodes.get(this.id)) {
+            return false;
+        }
+
+        if (appState.workspaceState.hasErrorNode(this.id)) {
+            return true;
+        }
+
+        const showRenderableLessNodes = layout.showRenderableLessNodes ?? false;
+        const showControlLessNodes = layout.showControlLessNodes ?? false;
+        const showCollapsedNodes = layout.showCollapsedNodes ?? false;
+        const showNoteNodes = layout.showNoteNodes ?? false;
+
+        if (!showRenderableLessNodes) {
+            if (this.widgets.length > 0) {
+                const renderable = this.widgets.some((w) => getWidgetComponentWithMeta(this, w));
+                if (!renderable) {
+                    return false;
+                }
+            }
+        }
+        if (!showControlLessNodes) {
+            const containsWidgets = this.#widgets.filter((w) => !layout.floatingWidgets.get(w.id));
+            if (containsWidgets.length === 0) {
+                return false;
+            }
+        }
+        if (!showCollapsedNodes && this.#collapsed) {
+            return false;
+        }
+        if (!showNoteNodes && this.isNote) {
+            return false;
+        }
+        return true;
+    });
+
+    readonly isVisible = $derived.by(() => {
+        const isFloating = Boolean(appState.workspaceState.layout.floatingNodes.get(this.id));
+        return isFloating || this.isGroupVisible;
+    });
 
     constructor(comfyNode: ComfyNode, app: ComfyApp) {
         this.#comfyNode = comfyNode;
         this.#title = comfyNode.title;
-        this.#type = comfyNode.type;
-        this.#pos = { x: comfyNode.pos[0], y: comfyNode.pos[1] };
         this.#collapsed = comfyNode.collapsed;
-        this.#hasOutputNode = comfyNode.constructor.nodeData?.output_node;
         this.#mode = comfyNode.mode as ComfyNodeMode;
         this.#bgcolor = comfyNode.bgcolor;
 
@@ -217,15 +257,18 @@ export class ComfyGridNode<P = undefined> {
         for (const group of this.#comfyGroups) {
             this.#groups.push(new ComfyGridGroup(group));
         }
-
-        this.#properties = (typeof comfyNode.properties === 'object' ? safeClone(comfyNode.properties) : comfyNode.properties) as P;
     }
 
-    static #buildWidgetConfigList(
-        comfyNode: ComfyNode,
-    ): Array<{ widget: ComfyWidget; idx: number; image?: ImageInfo; overrides?: { type?: string; callback?: (value?: unknown) => void } }> {
+    #buildWidgetConfigList(): Array<{
+        widget: ComfyWidget;
+        index: number;
+        image?: ImageInfo;
+        overrides?: { type?: string; callback?: (value?: unknown) => void };
+    }> {
+        const comfyNode = this.#comfyNode;
         const images = comfyNode.images || [];
-        const result: Array<{ widget: ComfyWidget; idx: number; image?: ImageInfo; overrides?: { type?: string; callback?: (value?: unknown) => void } }> = [];
+        const result: Array<{ widget: ComfyWidget; index: number; image?: ImageInfo; overrides?: { type?: string; callback?: (value?: unknown) => void } }> =
+            [];
         // eslint-disable-next-line svelte/prefer-svelte-reactivity
         const skipIndexSet = new Set<number>();
         let index = 0;
@@ -245,7 +288,7 @@ export class ComfyGridNode<P = undefined> {
                     skipIndexSet.add(Number.parseInt(findIdx));
                     result.push({
                         widget: w,
-                        idx: index++,
+                        index: index++,
                         image: images[imgIdx],
                         overrides: { type: 'upload', callback: uploadButtonWidget.callback },
                     });
@@ -257,7 +300,7 @@ export class ComfyGridNode<P = undefined> {
                         if (previewWidget) skipIndexSet.add(Number.parseInt(pIdx));
                         result.push({
                             widget: w,
-                            idx: index++,
+                            index: index++,
                             overrides: { type: 'audio', callback: comfyNode.pasteFiles },
                         });
                     } else if (comfyNode.images?.length > 0) {
@@ -270,22 +313,22 @@ export class ComfyGridNode<P = undefined> {
                         }
                         result.push({
                             widget: w,
-                            idx: index++,
+                            index: index++,
                             image: images[imgIdx],
                             overrides: { type: overrideType, callback: comfyNode.pasteFiles },
                         });
                         imgIdx++;
                     }
                 } else {
-                    result.push({ widget: w, idx: index++ });
+                    result.push({ widget: w, index: index++ });
                 }
             } else if (w.constructor.name === 'ImagePreviewWidget') {
                 if (comfyNode.widgets.length === 1 && comfyNode.outputs.length === 0) {
-                    result.push({ widget: w, idx: index++, image: images[imgIdx] });
+                    result.push({ widget: w, index: index++, image: images[imgIdx] });
                 }
                 imgIdx++;
             } else {
-                result.push({ widget: w, idx: index++ });
+                result.push({ widget: w, index: index++ });
             }
         }
 
@@ -300,20 +343,20 @@ export class ComfyGridNode<P = undefined> {
     }
 
     updateWidgets(app: ComfyApp) {
-        const configs = ComfyGridNode.#buildWidgetConfigList(this.#comfyNode);
         const unusedWidgets = [...this.#widgets];
         const newWidgets: ComfyGridWidget[] = [];
+        const configs = this.#buildWidgetConfigList();
         for (const config of configs) {
             const targetType = config.overrides?.type ?? config.widget.type;
             const existingIdx = unusedWidgets.findIndex((w) => w.comfyWidget === config.widget && w.type === targetType);
             if (existingIdx !== -1) {
                 const existing = unusedWidgets[existingIdx];
                 unusedWidgets.splice(existingIdx, 1);
-                existing.update(app, config.idx, config.image, config.overrides);
+                existing.update(app, config.index, config.image, config.overrides);
                 newWidgets.push(existing);
             } else {
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                newWidgets.push(new ComfyGridWidget(app, this as ComfyGridNode<any>, config.widget, config.idx, config.image, config.overrides));
+                const newWidget = new ComfyGridWidget(app, this, config.widget, config.index, config.image, config.overrides);
+                newWidgets.push(newWidget);
             }
         }
         this.#widgets.length = 0;
@@ -330,22 +373,25 @@ export class ComfyGridNode<P = undefined> {
         return this.#title;
     }
     get type() {
-        return this.#type;
+        return this.#comfyNode.type;
     }
     get pos(): Readonly<{ x: number; y: number }> {
-        return this.#pos;
+        return { x: this.#comfyNode.pos[0], y: this.#comfyNode.pos[1] };
     }
     get collapsed() {
         return this.#collapsed;
     }
     get hasOutputNode() {
-        return this.#hasOutputNode;
+        return this.#comfyNode.constructor.nodeData?.output_node;
     }
     get mode() {
         return this.#mode;
     }
     get bgcolor() {
         return this.#bgcolor;
+    }
+    get isNote() {
+        return this.type.endsWith('Note');
     }
     get widgets() {
         return this.#widgets;
@@ -356,9 +402,6 @@ export class ComfyGridNode<P = undefined> {
     get groups() {
         return this.#groups;
     }
-    get properties() {
-        return this.#properties;
-    }
     get comfyClass() {
         return this.#comfyNode.constructor.comfyClass;
     }
@@ -368,36 +411,19 @@ export class ComfyGridNode<P = undefined> {
 
     set title(title: string) {
         this.#title = title;
-        if (this.#comfyNode) {
-            this.#comfyNode.title = title;
-        }
-    }
-    set type(type: string) {
-        this.#type = type;
-        if (this.#comfyNode) {
-            this.#comfyNode.type = type;
-        }
+        this.#comfyNode.title = title;
     }
     set collapsed(collapsed: boolean) {
         this.#collapsed = collapsed;
-        if (this.#comfyNode) {
-            this.#comfyNode.collapsed = collapsed;
-        }
-    }
-    set hasOutputNode(hasOutputNode: boolean) {
-        this.#hasOutputNode = hasOutputNode;
+        this.#comfyNode.collapsed = collapsed;
     }
     set mode(mode: ComfyNodeMode) {
         this.#mode = mode;
-        if (this.#comfyNode) {
-            this.#comfyNode.mode = mode as 0 | 1 | 2 | 3;
-        }
+        this.#comfyNode.mode = mode as 0 | 1 | 2 | 3;
     }
     set bgcolor(bgcolor: string | null) {
         this.#bgcolor = bgcolor;
-        if (this.#comfyNode) {
-            this.#comfyNode.bgcolor = bgcolor;
-        }
+        this.#comfyNode.bgcolor = bgcolor;
     }
     addWidget(widget: ComfyGridWidget) {
         this.#widgets.push(widget);
@@ -416,9 +442,6 @@ export class ComfyGridNode<P = undefined> {
     addGroup(group: ComfyGridGroup) {
         this.#groups.push(group);
     }
-    set properties(properties: P) {
-        this.#properties = properties;
-    }
 
     static sortNodesByPosition(nodes: ComfyGridNode[]): ComfyGridNode[] {
         return [...nodes].sort(comparePositions);
@@ -436,39 +459,28 @@ export class ComfyGridNode<P = undefined> {
         }
     }
 
-    drawBackground() {
+    onDrawBackground() {
         this.#comfyNode.onDrawBackground?.();
     }
 
     updateNode() {
         workflowManager.handleUpdateNode({ nodeId: this.id });
     }
-
-    setComfyUiProperty(key: string, value: unknown) {
-        this.comfyNode[key] = value;
-        // setNestedProperty(this as unknown as Record<string, unknown>, key, value);
-    }
 }
 
 export class ComfyGridWidget<V = string, O = undefined> {
-    readonly #comfyNode: ComfyNode;
     readonly #comfyWidget: ComfyWidget;
     readonly #node: ComfyGridNode;
-    #id: string = $state();
     #index: number = $state();
     #label: string | undefined = $state();
     #name: string = $state();
-    #tooltip: string | null = $state();
     #type: string = $state();
     #value: V = $state();
     #rawValue: string = $state();
     #image: ImageInfo = $state({ filename: '', subfolder: '', type: '' });
-    #element: HTMLElement = $state();
-    #placeholder: string = $state();
-    #readonly: boolean = $state();
+    #element: HTMLElement | null = $state();
     #input: { id: string; slot: string } | null = $state();
     #options: O = $state();
-    #className: string = $state();
     #textarea: HTMLTextAreaElement | null = null;
     #isTranslating: boolean = $state(false);
     #translationFailed: boolean = $state(false);
@@ -479,31 +491,27 @@ export class ComfyGridWidget<V = string, O = undefined> {
     constructor(
         app: ComfyApp,
         node: ComfyGridNode,
-        widget: ComfyWidget,
-        idx: number,
+        comfyWidget: ComfyWidget,
+        index: number,
         image?: ImageInfo,
         overrides?: { type?: string; callback?: (value?: unknown) => void },
     ) {
-        this.#comfyNode = node.comfyNode;
-        this.#comfyWidget = widget;
         this.#node = node;
-        this.update(app, idx, image, overrides);
+        this.#comfyWidget = comfyWidget;
+        this.update(app, index, image, overrides);
     }
 
-    get comfyNode() {
-        return this.#comfyNode;
+    get node() {
+        return this.#node;
     }
     get comfyWidget() {
         return this.#comfyWidget;
     }
-    get node() {
-        return this.#node;
-    }
-    get id() {
-        return this.#id;
-    }
     get index() {
         return this.#index;
+    }
+    get id() {
+        return `${this.#node.comfyNode.id}_${this.#index}`;
     }
     get label() {
         return this.#label;
@@ -512,7 +520,7 @@ export class ComfyGridWidget<V = string, O = undefined> {
         return this.#name;
     }
     get tooltip() {
-        return this.#tooltip;
+        return this.#node.comfyNode.constructor.nodeData?.inputs?.[this.#comfyWidget.name]?.tooltip ?? null;
     }
     get type() {
         return this.#type;
@@ -530,10 +538,10 @@ export class ComfyGridWidget<V = string, O = undefined> {
         return this.#element;
     }
     get placeholder() {
-        return this.#placeholder;
+        return (this.#element as HTMLInputElement)?.placeholder || '';
     }
     get readonly() {
-        return this.#readonly;
+        return (this.#element as HTMLInputElement)?.readOnly || false;
     }
     get input() {
         return this.#input;
@@ -542,7 +550,7 @@ export class ComfyGridWidget<V = string, O = undefined> {
         return this.#options;
     }
     get className() {
-        return this.#className;
+        return this.#comfyWidget.constructor.name;
     }
     get textarea() {
         return this.#textarea;
@@ -560,20 +568,11 @@ export class ComfyGridWidget<V = string, O = undefined> {
         return this.#callback;
     }
 
-    set id(id: string) {
-        this.#id = id;
-    }
-    set index(index: number) {
-        this.#index = index;
-    }
     set label(label: string | undefined) {
         this.#label = label;
     }
     set name(name: string) {
         this.#name = name;
-    }
-    set tooltip(tooltip: string | null) {
-        this.#tooltip = tooltip;
     }
     set type(type: string) {
         this.#type = type;
@@ -587,24 +586,6 @@ export class ComfyGridWidget<V = string, O = undefined> {
     set image(image: ImageInfo) {
         this.#image = { filename: '', subfolder: '', type: '', ...image };
     }
-    set element(element: HTMLElement) {
-        this.#element = element;
-    }
-    set placeholder(placeholder: string) {
-        this.#placeholder = placeholder;
-    }
-    set readonly(readonly: boolean) {
-        this.#readonly = readonly;
-    }
-    set input(input: { id: string; slot: string } | null) {
-        this.#input = input;
-    }
-    set options(options: O) {
-        this.#options = options;
-    }
-    set className(className: string) {
-        this.#className = className;
-    }
     set textarea(textarea: HTMLTextAreaElement) {
         this.#textarea = textarea;
     }
@@ -617,12 +598,9 @@ export class ComfyGridWidget<V = string, O = undefined> {
     set isDirty(isDirty: boolean) {
         this.#isDirty = isDirty;
     }
-    set callback(callback: (value?: unknown) => void) {
-        this.#callback = callback;
-    }
 
-    update(app: ComfyApp, idx: number, image?: ImageInfo, overrides?: { type?: string; callback?: (value?: unknown) => void }) {
-        const widgetInput = this.#comfyNode.inputs?.find((i) => i.widget?.name === this.#comfyWidget.name);
+    update(app: ComfyApp, index: number, image?: ImageInfo, overrides?: { type?: string; callback?: (value?: unknown) => void }) {
+        const widgetInput = this.#node.comfyNode.inputs?.find((i) => i.widget?.name === this.#comfyWidget.name);
         let input: { id: string; slot: string } | null = null;
         if (widgetInput) {
             const link = app.rootGraph.getLink?.(widgetInput.link);
@@ -631,18 +609,14 @@ export class ComfyGridWidget<V = string, O = undefined> {
             }
         }
 
-        this.#id = `${this.#comfyNode.id}_${idx}`;
-        this.#index = idx;
+        this.#index = index;
         this.#label = this.#comfyWidget.label;
         this.#name = this.#comfyWidget.name;
-        this.#tooltip = this.#comfyNode.constructor.nodeData?.inputs?.[this.#comfyWidget.name]?.tooltip ?? null;
         this.#type = overrides?.type ?? this.#comfyWidget.type;
         this.#value = (typeof this.#comfyWidget.value === 'object' ? safeClone(this.#comfyWidget.value) : this.#comfyWidget.value) as V;
-        this.#rawValue = this.#comfyNode.properties.rawValues?.[this.#index] ?? this.#value;
+        this.#rawValue = this.#node.comfyNode.properties.rawValues?.[this.#index] ?? this.#value;
         this.#image = image ? { filename: '', subfolder: '', type: '', ...image } : { filename: '', subfolder: '', type: '' };
         this.#element = this.#comfyWidget.inputEl || this.#comfyWidget.element || null;
-        this.#placeholder = this.#comfyWidget.inputEl?.placeholder || this.#comfyWidget.element?.placeholder || '';
-        this.#readonly = this.#comfyWidget.inputEl?.readOnly || this.#comfyWidget.element?.readOnly || false;
         this.#input = input;
 
         const options = safeClone(this.#comfyWidget.options) as Record<string, unknown>;
@@ -653,7 +627,6 @@ export class ComfyGridWidget<V = string, O = undefined> {
             options['fixed_values'] = ComfyGridWidget.#computeFixedValues(this.#comfyWidget);
         }
         this.#options = options as O;
-        this.#className = this.#comfyWidget.constructor.name;
         this.#callback = overrides?.callback ?? this.#comfyWidget.callback;
     }
 
@@ -674,12 +647,14 @@ export class ComfyGridWidget<V = string, O = undefined> {
     }
 
     #getContext(): WidgetContext {
-        const canvas = appState.comfyUiState.app.canvas;
-        const ctx: WidgetContext = { node: this.#comfyNode, widget: this.#comfyWidget, canvas };
-        return ctx;
+        return {
+            node: this.#node.comfyNode,
+            widget: this.#comfyWidget,
+            canvas: appState.comfyUiState.app.canvas,
+        };
     }
 
-    updateComfyUiValue(payload?: { value?: V }) {
+    updateValue(payload?: { value?: V }) {
         const value = payload?.value ?? this.#value;
 
         if (typeof this.#comfyWidget.setValue === 'function') {
@@ -689,22 +664,22 @@ export class ComfyGridWidget<V = string, O = undefined> {
         }
     }
 
-    updateComfyUiRawValue(payload?: { rawValue?: V }) {
+    updateRawValue(payload?: { rawValue?: V }) {
         const rawValue = payload?.rawValue;
 
         if (rawValue === undefined) {
-            if (this.#comfyNode.properties.rawValues) {
-                delete this.#comfyNode.properties.rawValues[this.#index];
+            if (this.#node.comfyNode.properties.rawValues) {
+                delete this.#node.comfyNode.properties.rawValues[this.#index];
             }
             return;
         }
-        if (!this.#comfyNode.properties.rawValues) {
-            this.#comfyNode.properties.rawValues = {};
+        if (!this.#node.comfyNode.properties.rawValues) {
+            this.#node.comfyNode.properties.rawValues = {};
         }
-        this.#comfyNode.properties.rawValues[this.#index] = rawValue;
+        this.#node.comfyNode.properties.rawValues[this.#index] = rawValue;
     }
 
-    updateComfyUiSelect(payload?: { value?: V; addOptions?: string[] }) {
+    updateSelect(payload?: { value?: V; addOptions?: string[] }) {
         const { addOptions } = payload ?? {};
         const value = payload?.value ?? this.#value;
 
@@ -727,11 +702,16 @@ export class ComfyGridWidget<V = string, O = undefined> {
         this.#comfyWidget.callback?.(this.#value);
     }
 
-    clickComfyUiButton() {
+    clickButton() {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const widgetAny = this.#comfyWidget as any;
         if (typeof widgetAny.onClick === 'function') {
             (widgetAny.onClick as (ctx: WidgetContext) => void)(this.#getContext());
         }
+        workflowManager.handleUpdateNode({ nodeId: this.id });
+    }
+
+    onDrawBackground() {
+        this.#node.onDrawBackground?.();
     }
 }

@@ -44,7 +44,7 @@ export const t = derived(currentLang, ($lang) => {
 });
 
 export async function setLanguage(lang: string) {
-    let detectedLang = lang;
+    let detectedLang: string;
     if (!lang || lang === 'auto') {
         detectedLang = browserLang in translations ? browserLang : 'en';
     } else {

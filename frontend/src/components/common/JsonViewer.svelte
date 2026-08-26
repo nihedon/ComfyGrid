@@ -1,4 +1,12 @@
 <script lang="ts">
+  import {
+    Check,
+    ChevronDown,
+    ChevronRight,
+    ChevronsDownUp,
+    ChevronsUpDown,
+    Copy,
+  } from '@lucide/svelte';
   import { SvelteSet } from 'svelte/reactivity';
 
   let { value }: { value: unknown } = $props();
@@ -61,23 +69,40 @@
     <div class="d-flex gap-1">
       <button
         type="button"
-        class="btn btn-sm btn-outline-secondary"
+        class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1"
         onclick={() => expandAll(value)}
       >
-        <i class="pi pi-angle-down me-1"></i>Expand All
+        <ChevronsUpDown size={16} />Expand
       </button>
-      <button type="button" class="btn btn-sm btn-outline-secondary" onclick={collapseAll}>
-        <i class="pi pi-angle-right me-1"></i>Collapse All
+      <button
+        type="button"
+        class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1"
+        onclick={collapseAll}
+      >
+        <ChevronsDownUp size={16} />Collapse
       </button>
     </div>
-    <button type="button" class="btn btn-sm btn-outline-secondary" onclick={copyJson}>
-      <i class="pi {copySuccess ? 'pi-check text-success' : 'pi-copy'} me-1"></i>
+    <button
+      type="button"
+      class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1"
+      onclick={copyJson}
+    >
+      {#if copySuccess}
+        <Check size={16} class="text-success" />
+      {:else}
+        <Copy size={16} />
+      {/if}
       {copySuccess ? 'Copied!' : 'Copy JSON'}
     </button>
   </div>
 
   <div class="json-viewer-content flex-grow-1 p-3 overflow-auto font-monospace small">
-    {#snippet node(val: unknown, keyName?: string, path = 'root', isLast = true)}
+    {#snippet node(
+      val: unknown,
+      keyName: string | undefined = undefined,
+      path = 'root',
+      isLast = true,
+    )}
       <div class="json-node-line">
         {#if isObject(val)}
           {@const keys = Object.keys(val)}
@@ -87,13 +112,17 @@
           {@const closeChar = isArr ? ']' : '}'}
 
           <span
-            class="json-toggle me-1"
+            class="json-toggle me-1 d-inline-flex align-items-center"
             role="button"
             tabindex="0"
             onclick={() => togglePath(path)}
             onkeydown={(e) => e.key === 'Enter' && togglePath(path)}
           >
-            <i class="pi {isExpanded ? 'pi-chevron-down' : 'pi-chevron-right'}"></i>
+            {#if isExpanded}
+              <ChevronDown size={14} />
+            {:else}
+              <ChevronRight size={14} />
+            {/if}
           </span>
 
           {#if keyName !== undefined}

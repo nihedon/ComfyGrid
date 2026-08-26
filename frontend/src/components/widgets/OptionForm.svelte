@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { Info } from '@lucide/svelte';
   import { t } from '@/i18n/i18n';
   import { saveOptsWithCallback } from '@/services/options-service';
   import { appState } from '@/states/app-state.svelte';
@@ -62,10 +63,12 @@
 
 {#snippet labelBlock()}
   <div class="label-block d-flex">
-    <label for={optionKey}>
+    <label class="d-flex justify-contents-between" for={optionKey}>
       {label}
       {#if hint}
-        <i class="pi pi-info-circle" title={hint}></i>
+        <span title={hint} class="ms-1 d-inline-flex align-items-center"
+          ><Info size={14} /></span
+        >
       {/if}
     </label>
   </div>

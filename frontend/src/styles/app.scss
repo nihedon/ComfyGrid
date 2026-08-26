@@ -1,7 +1,6 @@
 @use 'bootstrap/dist/css/bootstrap.min.css';
 @use 'gridstack/dist/gridstack.min.css';
-@use 'primeicons/primeicons.css';
-@use 'bootstrap-icons/font/bootstrap-icons.css';
+@use 'lucide-static/font/lucide.css';
 
 @layer base, utilities, components;
 
@@ -44,6 +43,12 @@
 @layer utilities {
     .fs-7 {
         font-size: 0.75rem !important;
+    }
+    .btn-icon {
+        @extend .d-flex;
+        @extend .align-items-center;
+        @extend .justify-content-center;
+        @extend .p-1;
     }
 
     .nav.nav-tabs {
@@ -170,15 +175,13 @@
         z-index: 100 !important;
         border-radius: 0.375rem 0.375rem 0 0 !important;
     }
-
     .node-group:has(.node-widget.executing) {
         box-shadow:
-            0 0 0px 4px var(--bs-body-bg),
-            0 0 0px 6px var(--bs-teal) !important;
+            0 0 0px 2px var(--bs-body-bg),
+            0 0 0px 4px var(--bs-teal) !important;
         z-index: 100 !important;
         border-radius: 0.375rem !important;
     }
-
     .accordion > .node-group:has(.node-widget.executing) {
         box-shadow:
             0 0 0px 1px var(--bs-body-bg),
@@ -186,7 +189,6 @@
         z-index: 100 !important;
         border-radius: 0.375rem !important;
     }
-
     .node-widget.executing {
         box-shadow:
             0 0 0px 1px var(--bs-body-bg),
@@ -195,22 +197,34 @@
     }
 
     .nav-item.is-invalid > button {
-        box-shadow: 0 0 0 var(--error-border-width) var(--bs-form-invalid-border-color) !important;
-        border-radius: 0.375rem 0.375rem 0 0 !important;
+        outline: var(--error-border-width) solid var(--bs-form-invalid-border-color) !important;
+        outline-offset: calc(var(--error-border-width) * -1) !important;
     }
-
-    .node-group:has(.node-widget.normal .is-invalid),
-    .node-group:has(.node-widget.is-invalid) {
-        box-shadow: 0 0 0 var(--error-border-width) var(--bs-form-invalid-border-color) !important;
+    .node-group:has(.node-widget.normal .is-invalid, .node-widget.is-invalid) {
+        outline: var(--error-border-width) solid var(--bs-form-invalid-border-color) !important;
         border-radius: var(--bs-border-radius) 0.375rem;
     }
-    .node-widget.normal:has(.is-invalid) {
-        box-shadow: 0 0 0 var(--error-border-width) var(--bs-form-invalid-border-color) !important;
+    .node-widget.normal.is-invalid {
+        outline: var(--error-border-width) solid var(--bs-form-invalid-border-color) !important;
     }
-    :not(.nav-item).is-invalid {
-        box-shadow: 0 0 0 var(--error-border-width) var(--bs-form-invalid-border-color) !important;
+    :not(.node-widget, .nav-item).is-invalid {
+        outline: var(--error-border-width) solid var(--bs-form-invalid-border-color) !important;
+        outline-offset: calc(var(--error-border-width) * -1);
     }
     .is-invalid {
         border: inherit !important;
     }
+}
+
+@keyframes icon-spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.spin {
+    animation: icon-spin 1s linear infinite;
 }

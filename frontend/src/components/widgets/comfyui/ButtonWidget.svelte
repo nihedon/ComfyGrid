@@ -5,8 +5,7 @@
   let { widget }: { widget: ComfyGridWidget } = $props();
 
   function clickAction() {
-    widget.clickComfyUiButton();
-    widget.node.updateNode();
+    widget.clickButton();
   }
 </script>
 

@@ -5,7 +5,7 @@
   let { widget }: { widget: ComfyGridWidget } = $props();
 
   function handleInput() {
-    widget.updateComfyUiValue();
+    widget.updateValue();
   }
 </script>
 

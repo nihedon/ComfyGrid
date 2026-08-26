@@ -25,6 +25,12 @@
 
   const systemMonitor = $derived(optionState.get('ComfyGrid.ui.system_monitor'));
 
+  const showCpu = $derived((optionState.get('ComfyGrid.system_monitor.cpu') as boolean) ?? true);
+  const showRam = $derived((optionState.get('ComfyGrid.system_monitor.ram') as boolean) ?? true);
+  const showGpu = $derived((optionState.get('ComfyGrid.system_monitor.gpu') as boolean) ?? true);
+  const showVram = $derived((optionState.get('ComfyGrid.system_monitor.vram') as boolean) ?? true);
+  const showTemp = $derived((optionState.get('ComfyGrid.system_monitor.temp') as boolean) ?? true);
+
   function changePosition() {
     if (systemMonitor === 'top') {
       optionState.set('ComfyGrid.ui.system_monitor', 'left');
@@ -45,6 +51,13 @@
     saveOptsWithCallback();
   }
 
+  function toggleMonitorItem(itemKey: 'cpu' | 'ram' | 'gpu' | 'vram' | 'temp') {
+    const fullKey = `ComfyGrid.monitor.${itemKey}`;
+    const current = (optionState.get(fullKey) as boolean) ?? true;
+    optionState.set(fullKey, !current);
+    saveOptsWithCallback();
+  }
+
   onMount(() => {
     systemState.startMonitoring();
 
@@ -62,6 +75,14 @@
           const action = (e.target as HTMLElement).dataset.action;
           if (action === 'top' || action === 'left' || action === 'none') {
             setMonitorPosition(action);
+          } else if (
+            action === 'cpu' ||
+            action === 'ram' ||
+            action === 'gpu' ||
+            action === 'vram' ||
+            action === 'temp'
+          ) {
+            toggleMonitorItem(action);
           }
         },
       });
@@ -78,11 +99,21 @@
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div class={className} {style} bind:this={cardEl} ondblclick={changePosition}>
-  <SystemMonitor monitorType="cpu" {simple} {showCores} />
-  <SystemMonitor monitorType="ram" {simple} />
-  <SystemMonitor monitorType="gpu" {simple} />
-  <SystemMonitor monitorType="vram" {simple} />
-  <SystemMonitor monitorType="temp" {simple} />
+  {#if showCpu}
+    <SystemMonitor monitorType="cpu" {simple} {showCores} />
+  {/if}
+  {#if showRam}
+    <SystemMonitor monitorType="ram" {simple} />
+  {/if}
+  {#if showGpu}
+    <SystemMonitor monitorType="gpu" {simple} />
+  {/if}
+  {#if showVram}
+    <SystemMonitor monitorType="vram" {simple} />
+  {/if}
+  {#if showTemp}
+    <SystemMonitor monitorType="temp" {simple} />
+  {/if}
 </div>
 
 <div id="system-monitor-context-menu" bind:this={menuEl}>

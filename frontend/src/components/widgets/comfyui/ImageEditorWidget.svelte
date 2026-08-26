@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { Paintbrush } from '@lucide/svelte';
   import { comfyUiApiClient } from '@/api/api-client';
   import { refreshModels } from '@/services/models-service';
   import { appState } from '@/states/app-state.svelte';
@@ -29,8 +30,8 @@
       widget.image.filename = filename;
       cacheBuster = Math.random(); // Force refresh preview
 
-      widget.updateComfyUiSelect({ value: filename, addOptions: [filename] });
-      widget.node.drawBackground();
+      widget.updateSelect({ value: filename, addOptions: [filename] });
+      widget.onDrawBackground();
       refreshModels('images');
     });
   }
@@ -63,7 +64,7 @@
       try {
         widget.callback(files);
       } catch (err) {
-        logger.debug('Widget callback error ignored', err);
+        logger.error('Widget callback error ignored', err);
       }
 
       widget.image = {
@@ -72,8 +73,8 @@
         type,
       };
       cacheBuster = Math.random();
-      widget.updateComfyUiSelect({ value: filename, addOptions: [filename] });
-      widget.node.drawBackground();
+      widget.updateSelect({ value: filename, addOptions: [filename] });
+      widget.onDrawBackground();
       await refreshModels('images');
     }
   }
@@ -117,14 +118,13 @@
     style="background-color: #f8f9fa; min-height: 0;"
   >
     <div class="vstack position-absolute gap-1 top-0 end-0 me-1 mt-1 z-1">
-      <!-- svelte-ignore a11y_consider_explicit_label -->
       <button
-        class="btn btn-primary btn-sm"
+        class="btn btn-primary btn-sm btn-icon"
         onclick={openPaintModal}
         data-bs-toggle="modal"
         data-bs-target="#models-modal-paint"
       >
-        <i class="pi pi-pencil"></i>
+        <Paintbrush size={16} />
       </button>
     </div>
 

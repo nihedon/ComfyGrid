@@ -1,4 +1,10 @@
 <script lang="ts">
+  import {
+    Info,
+    Loader2,
+    RotateCw,
+    TriangleAlert,
+  } from '@lucide/svelte';
   import { Modal } from 'bootstrap';
   import { appState } from '@/states/app-state.svelte';
 
@@ -62,11 +68,11 @@
         <div class="modal-header">
           <h5 class="modal-title d-flex align-items-center gap-2">
             {#if type === 'TypeInfo'}
-              <i class="pi pi-info-circle text-info"></i>
+              <Info size={20} class="text-info" />
             {:else if type === 'TypeError'}
-              <i class="pi pi-info-circle text-error"></i>
+              <Info size={20} class="text-error" />
             {:else if type === 'TypeFatal'}
-              <i class="pi pi-exclamation-triangle text-fatal"></i>
+              <TriangleAlert size={20} class="text-fatal" />
             {/if}
             {title}
           </h5>
@@ -95,9 +101,9 @@
               disabled={reloading}
             >
               {#if reloading}
-                <i class="pi pi-spin pi-spinner"></i>
+                <Loader2 size={16} class="spin" />
               {:else}
-                <i class="pi pi-refresh"></i>
+                <RotateCw size={16} />
               {/if}
               Reload
             </button>
