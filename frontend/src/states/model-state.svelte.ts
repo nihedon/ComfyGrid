@@ -211,9 +211,11 @@ export class ComfyGridNode {
         const showNoteNodes = layout.showNoteNodes ?? false;
 
         if (!showRenderableLessNodes) {
-            const renderable = this.widgets.some((w) => getWidgetComponentWithMeta(this, w));
-            if (!renderable) {
-                return false;
+            if (this.widgets.length > 0) {
+                const renderable = this.widgets.some((w) => getWidgetComponentWithMeta(this, w));
+                if (!renderable) {
+                    return false;
+                }
             }
         }
         if (!showControlLessNodes) {
