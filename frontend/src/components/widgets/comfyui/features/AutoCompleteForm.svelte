@@ -4,6 +4,7 @@
   import { appState } from '@/states/app-state.svelte';
   import { ComfyGridWidget } from '@/states/model-state.svelte';
   import type { Model, ModelTypes } from '@/states/storage-state.svelte';
+  import { COMFY_NODE_MODE } from '@/types/model-shared';
 
   type ComboWidget = ComfyGridWidget<
     string | number,
@@ -201,7 +202,7 @@
   }
 
   $effect(() => {
-    if (widget.node.mode === 0 && !isValid) {
+    if (widget.node.mode === COMFY_NODE_MODE.NORMAL && !isValid) {
       workspaceState.addErrorWidget(widget.node.id, widget.id);
     } else {
       workspaceState.deleteErrorWidget(widget.node.id, widget.id);
@@ -212,7 +213,7 @@
 <input
   id={widget.id}
   class="form-control autoCompleteForm"
-  class:is-invalid={widget.node.mode === 0 && !isValid}
+  class:is-invalid={widget.node.mode === COMFY_NODE_MODE.NORMAL && !isValid}
   autocomplete="off"
   data-name={widget.name}
   bind:value={widget.value}

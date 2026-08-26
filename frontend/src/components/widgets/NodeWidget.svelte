@@ -51,7 +51,11 @@
     return Boolean(workspaceState.layout.floatingNodes.get(node.id));
   });
 
-  const isInvalid = $derived(workspaceState.hasErrorNode(node.id));
+  const isInvalid = $derived(
+    widget
+      ? workspaceState.hasErrorWidget(node.id, widget.id)
+      : workspaceState.hasErrorNode(node.id),
+  );
 
   const alwaysShowFocusButton = $derived(
     (appState.optionState.get('ComfyGrid.ui.always_show_node_focus_button') as boolean) ?? false,
@@ -319,7 +323,7 @@
   data-id={node.id}
   data-name={node.title}
 >
-  <div class="card-header" class:mute={node.mode === 2}>
+  <div class="card-header" class:mute={node.mode === COMFY_NODE_MODE.MUTE}>
     {#if !isTitleEditing}
       <div class="d-flex align-items-center gap-2">
         {#if !widget}

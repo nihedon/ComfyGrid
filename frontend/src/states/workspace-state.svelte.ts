@@ -388,6 +388,10 @@ class WorkspaceState {
         return this.#errorWidgets.has(nodeId);
     }
 
+    hasErrorWidget(nodeId: string, widgetId: string) {
+        return Boolean(this.#errorWidgets.get(nodeId)?.has(widgetId));
+    }
+
     getLogicalNodes(groupId?: string): ComfyGridNode[] {
         if (!groupId || groupId === '__ungrouped__') {
             return this.#groups.filter((g) => !g.isTabify).flatMap((g) => g.nodes);
