@@ -84,9 +84,7 @@
     {/if}
     <div class="flex-grow-1" style="min-width: 0;">
       <GridStackBoard boardId="Global"></GridStackBoard>
-      {#if hasGlobalFloatingItems}
-        <hr />
-      {/if}
+      <hr class:no-border={!hasGlobalFloatingItems} />
       {#if workspaceState.layout}
         <SplitPane sizes={[70, 30]}>
           <div class="px-1">
@@ -235,3 +233,13 @@
     {/each}
   </div>
 </div>
+
+<style lang="scss">
+  hr {
+    margin: 0.5rem 0;
+    &.no-border {
+      border: none;
+      margin: 0.25rem 0;
+    }
+  }
+</style>
