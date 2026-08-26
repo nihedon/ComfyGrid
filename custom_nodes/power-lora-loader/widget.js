@@ -70,12 +70,6 @@ class PowerLoraList extends HTMLElement {
   disconnectedCallback() {
     this.#unsubscribe?.();
     this.#destroyListSortable();
-    const rows = this.querySelectorAll('[data-list-index]');
-    for (const row of rows) {
-      if (row._svelteComponent) {
-        row._svelteComponent.destroy();
-      }
-    }
   }
 
   async #initialize() {
@@ -110,21 +104,20 @@ class PowerLoraList extends HTMLElement {
 
     this.#destroyListSortable();
 
-    const existingRows = Array.from(section.querySelectorAll('[data-list-index]'));
+    const existingRows = Array.from(section.querySelectorAll("[data-list-index]"));
     const targetCount = this.#widgets.length;
 
     for (let i = 0; i < targetCount; i++) {
       if (i < existingRows.length) {
         this.#updateRow(existingRows[i], this.#widgets[i], i, loraValues);
       } else {
-        section.append(this.#createRow(this.#widgets[i], i, loraValues));
+        const newRow = this.#createRow(this.#widgets[i], i, loraValues);
+        section.append(newRow);
+        this.#setupComboWidget(newRow, this.#widgets[i], i, loraValues);
       }
     }
 
     for (let i = targetCount; i < existingRows.length; i++) {
-      if (existingRows[i]._svelteComponent) {
-        existingRows[i]._svelteComponent.destroy();
-      }
       existingRows[i].remove();
     }
 
@@ -178,9 +171,40 @@ class PowerLoraList extends HTMLElement {
     });
   }
 
+  #setupComboWidget(row, widget, listIndex) {
+    const combo = row.querySelector('[data-role="combo"]');
+    if (!combo) return;
+
+    const value = widget.value ?? {};
+    const liveLoras = api.getModels("loras").map((m) => m.path);
+    const isValidOverride = !value.on ? true : liveLoras.length === 0 || liveLoras.includes(value.lora ?? "") ? undefined : false;
+
+    const fakeWidget = {
+      id: `lora_${this.#node.id}_${listIndex}`,
+      name: `lora_${listIndex}`,
+      get options() {
+        const models = api.getModels("loras").map((m) => m.path);
+        return { values: models, fixed_values: [] };
+      },
+      node: this.#node,
+      get value() {
+        return widget.value.lora ?? "";
+      },
+      set value(v) {
+        widget.value.lora = v;
+        widget.comfyWidget.value = { ...widget.value };
+        widget.comfyWidget.setLora(v);
+        this._node.updateNode({ silent: true });
+      },
+      _node: this.#node,
+    };
+
+    combo.isValidOverride = isValidOverride;
+    combo.widget = fakeWidget;
+  }
+
   #updateRow(row, widget, listIndex, loraValues) {
     const value = widget.value ?? {};
-    const isValidOverride = !value.on ? true : (loraValues.includes(value.lora ?? "") ? undefined : false);
 
     row.dataset.listIndex = String(listIndex);
     setWidgetIndex(row, listIndex);
@@ -191,32 +215,11 @@ class PowerLoraList extends HTMLElement {
     toggle.checked = Boolean(value.on);
     strength.value = String(value.strength ?? 1);
 
-    if (row._svelteComponent) {
-      const fakeWidget = {
-        id: `lora_${this.#node.id}_${listIndex}`,
-        name: `lora_${listIndex}`,
-        options: { values: loraValues, fixed_values: [] },
-        node: this.#node,
-        get value() { return widget.value.lora ?? ""; },
-        set value(v) { 
-          widget.value.lora = v;
-          widget.comfyWidget.value = { ...widget.value };
-          widget.comfyWidget.setLora(v);
-          this._node.updateNode();
-        },
-        _node: this.#node
-      };
-
-      row._svelteComponent.update({
-        widget: fakeWidget,
-        isValidOverride,
-      });
-    }
+    this.#setupComboWidget(row, widget, listIndex, loraValues);
   }
 
   #createRow(widget, listIndex, loraValues) {
     const value = widget.value ?? {};
-    const isValid = !value.on || loraValues.includes(value.lora ?? "");
     const row = this.#rowTemplate.content.firstElementChild.cloneNode(true);
 
     row.dataset.listIndex = String(listIndex);
@@ -224,42 +227,9 @@ class PowerLoraList extends HTMLElement {
 
     const toggle = row.querySelector('[data-role="toggle"]');
     const strength = row.querySelector('[data-role="strength"]');
-    const comboContainer = row.querySelector('[data-role="combo-container"]');
 
     toggle.checked = Boolean(value.on);
     strength.value = String(value.strength ?? 1);
-
-    const fakeWidget = {
-      id: `lora_${this.#node.id}_${listIndex}`,
-      name: `lora_${listIndex}`,
-      options: { values: loraValues, fixed_values: [] },
-      node: this.#node,
-      get value() { return widget.value.lora ?? ""; },
-      set value(v) { 
-        widget.value.lora = v;
-        widget.comfyWidget.value = { ...widget.value };
-        widget.comfyWidget.setLora(v);
-        this._node.updateNode();
-      },
-      _node: this.#node
-    };
-
-    if (api.mountModalComboWidget) {
-      const isValidOverride = !value.on ? true : (loraValues.includes(value.lora ?? "") ? undefined : false);
-      row._svelteComponent = api.mountModalComboWidget(comboContainer, {
-        widget: fakeWidget,
-        isValidOverride,
-        modelDir: 'models',
-        modelSubdirs: ['loras'],
-        handleInput: (e, w, model) => {
-          if (model) {
-            fakeWidget.value = model.path;
-          } else if (e.detail?.value !== undefined) {
-            fakeWidget.value = e.detail.value;
-          }
-        }
-      });
-    }
 
     return row;
   }
@@ -287,7 +257,7 @@ class PowerLoraList extends HTMLElement {
     widget.comfyWidget.value = data;
     widget.comfyWidget.setLora(data.lora);
 
-    this.#node.updateNode();
+    this.#node.updateNode({ silent: true });
   }
 
   #handleClick(event) {

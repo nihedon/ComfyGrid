@@ -101,7 +101,6 @@ export class Layout {
         }
     }
     deleteFloatingNode(nodeId: string) {
-        logger.trace(`[LAYOUT_LOG] deleteFloatingNode: nodeId=${nodeId}`);
         this.#floatingNodes.delete(nodeId);
     }
     setFloatingWidgets(widgetId: string, boardId: BoardId) {

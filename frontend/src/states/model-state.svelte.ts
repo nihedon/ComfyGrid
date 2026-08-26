@@ -463,8 +463,8 @@ export class ComfyGridNode {
         this.#comfyNode.onDrawBackground?.();
     }
 
-    updateNode() {
-        workflowManager.handleUpdateNode({ nodeId: this.id });
+    updateNode(options?: { silent?: boolean }) {
+        workflowManager.handleUpdateNode({ nodeId: this.id, silent: options?.silent });
     }
 }
 

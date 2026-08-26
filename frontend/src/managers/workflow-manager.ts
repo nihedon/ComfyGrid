@@ -165,16 +165,18 @@ class WorkflowManager {
         logger.info(`[WORKFLOW_LOG] handleWorkflow finish: graphId=${graphId}`);
     }
 
-    async handleUpdateNode(payload: { nodeId: string }) {
+    async handleUpdateNode(payload: { nodeId: string; silent?: boolean }) {
         if (appState.uiState.activePageId !== 'grid') return;
-        const { nodeId } = payload;
+        const { nodeId, silent } = payload;
 
         const node = appState.workspaceState.getRealNode(nodeId);
         if (node) {
             node.updateWidgets(appState.comfyUiState.app);
-            setTimeout(() => {
-                notifyNodeChanged(node.id, node);
-            }, 100);
+            if (!silent) {
+                setTimeout(() => {
+                    notifyNodeChanged(node.id, node);
+                }, 100);
+            }
         }
     }
 

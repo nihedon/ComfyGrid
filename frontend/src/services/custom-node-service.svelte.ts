@@ -61,6 +61,72 @@ export function setupCustomNodeApi(): void {
             };
         },
     });
+
+    if (!customElements.get('cg-modal-combo-widget')) {
+        class CgModalComboWidget extends HTMLElement {
+            #comp: Record<string, any> | null = null;
+            #widget: any = null;
+            #isValidOverride: any = undefined;
+
+            set widget(val: any) {
+                this.#widget = val;
+                this.#mountIfReady();
+            }
+            get widget() {
+                return this.#widget;
+            }
+
+            set isValidOverride(val: any) {
+                this.#isValidOverride = val;
+            }
+            get isValidOverride() {
+                return this.#isValidOverride;
+            }
+
+            connectedCallback() {
+                this.#mountIfReady();
+            }
+
+            #mountIfReady() {
+                if (this.#comp || !this.#widget) return;
+
+                const modelDir = (this.getAttribute('model-dir') as any) || 'models';
+                const rawSubdirs = this.getAttribute('model-subdirs');
+                const modelSubdirs = rawSubdirs ? rawSubdirs.split(',').map((s) => s.trim()) : ['loras'];
+
+                const props = $state({
+                    widget: this.#widget,
+                    isValidOverride: this.#isValidOverride,
+                    modelDir,
+                    modelSubdirs,
+                    handleInput: (e: any, _w: any, model: any) => {
+                        if (this.#widget) {
+                            if (model) {
+                                this.#widget.value = model.path;
+                            } else if (e?.detail?.value !== undefined) {
+                                this.#widget.value = e.detail.value;
+                            }
+                        }
+                        this.dispatchEvent(new CustomEvent('change', { bubbles: true }));
+                    },
+                });
+
+                this.#comp = mount(ModalComboWidget, {
+                    target: this,
+                    props,
+                });
+            }
+
+            disconnectedCallback() {
+                if (this.#comp) {
+                    unmount(this.#comp);
+                    this.#comp = null;
+                }
+            }
+        }
+
+        customElements.define('cg-modal-combo-widget', CgModalComboWidget);
+    }
 }
 
 /** Called by NodeWidget's $effect whenever a tracked node changes. */
