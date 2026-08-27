@@ -27,6 +27,7 @@
   import { appState } from '@/states/app-state.svelte';
   import type { Model, ModelTypes } from '@/states/storage-state.svelte';
   import logger from '@/utils/logger';
+  import { SearchIndexer } from '@/utils/search-indexer';
   import ModelInfoWrapper from './ModelInfoWrapper.svelte';
   import Thumbnail from './Thumbnail.svelte';
 
@@ -154,12 +155,22 @@
     return sortAsc ? sortedList : sortedList.reverse();
   });
 
+  let modelIndexer: SearchIndexer<Model> | null = null;
+
+  $effect(() => {
+    if (!modelIndexer) {
+      modelIndexer = new SearchIndexer(modelList, (m) => m.path ?? '');
+    } else {
+      modelIndexer.update(modelList, (m) => m.path ?? '');
+    }
+  });
+
   const folderFilteredModelList = $derived.by(() => {
     if (!selectedFolder) {
       return sortedModelList;
     }
     return sortedModelList.filter((model: Model) => {
-      const normalizedPath = model.path.replace(/\\/g, '/');
+      const normalizedPath = (model.path ?? '').replace(/\\/g, '/');
       return normalizedPath.startsWith(selectedFolder + '/');
     });
   });
@@ -173,17 +184,12 @@
       list = list.filter((model: Model) => model.favorite === true);
     }
 
-    const filters = filterText
-      .toLowerCase()
-      .split(' ')
-      .filter((f) => f.trim() !== '');
-    if (filters.length === 0) {
+    if (!filterText.trim() || !modelIndexer) {
       return list;
     }
-    return list.filter((model: Model) => {
-      const path = (model.path ?? '').toLowerCase();
-      return filters.every((f) => path.includes(f));
-    });
+
+    const searchSet = new Set(modelIndexer.search(filterText));
+    return list.filter((model: Model) => searchSet.has(model));
   });
 
   const PAGE_SIZE = 100;

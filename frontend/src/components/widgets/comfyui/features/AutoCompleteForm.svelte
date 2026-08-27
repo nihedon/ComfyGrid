@@ -5,6 +5,7 @@
   import { ComfyGridWidget } from '@/states/model-state.svelte';
   import type { Model, ModelTypes } from '@/states/storage-state.svelte';
   import { COMFY_NODE_MODE } from '@/types/model-shared';
+  import { SearchIndexer } from '@/utils/search-indexer';
 
   type ComboWidget = ComfyGridWidget<
     string | number,
@@ -58,6 +59,19 @@
   });
 
   let isAutoCompleteInitialized = false;
+  let indexer: SearchIndexer<string> | null = null;
+
+  $effect(() => {
+    const sorted = select
+      .map((v) => String(v))
+      .sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
+
+    if (!indexer) {
+      indexer = new SearchIndexer(sorted);
+    } else {
+      indexer.update(sorted);
+    }
+  });
 
   function initAutoComplete() {
     if (isAutoCompleteInitialized || !inputDomEl) return;
@@ -70,18 +84,19 @@
       minLength: 0,
       events: {
         search: function (query: string, callback: (results: string[]) => void) {
-          const selectList = select
-            .map((v) => String(v))
-            .sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
+          if (!indexer) {
+            callback([]);
+            return;
+          }
 
           if (showAllOnNextSearch) {
             showAllOnNextSearch = false;
-            callback(selectList);
-          } else {
-            const lowerQuery = query.toLowerCase();
-            const filtered = selectList.filter((v) => v.toLowerCase().includes(lowerQuery));
-            callback(filtered);
+            indexer.resetQuery();
+            callback(indexer.search('').slice(0, 200));
+            return;
           }
+
+          callback(indexer.search(query).slice(0, 200));
         },
       },
     });
