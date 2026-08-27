@@ -166,8 +166,7 @@
       }
       widget.isDirty = true;
       registerOrUnregisterPending();
-      const timing =
-        appState.optionState.get('ComfyGrid.ollama.translate_timing') ?? 'on_generate';
+      const timing = appState.optionState.get('ComfyGrid.ollama.translate_timing') ?? 'on_generate';
       const text = widget.rawValue ?? '';
       if (timing === 'on_blur' && text.trim()) {
         triggerTranslation(text);

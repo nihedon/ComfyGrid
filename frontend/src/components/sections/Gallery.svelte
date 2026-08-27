@@ -1,13 +1,6 @@
 <script lang="ts">
+  import { Download, Eye, Info, Save, Trash2, Upload } from '@lucide/svelte';
   import { SvelteMap } from 'svelte/reactivity';
-  import {
-    Download,
-    Eye,
-    Info,
-    Save,
-    Trash2,
-    Upload,
-  } from '@lucide/svelte';
   import { t } from '@/i18n/i18n';
   import { galleryManager } from '@/managers/gallery-manager';
   import { appState } from '@/states/app-state.svelte';
@@ -108,8 +101,6 @@
     }
     container?.focus();
   });
-
-
 
   function handleKeydown(e: KeyboardEvent) {
     if (fullscreen && (e.key === 'Escape' || e.key === 'Esc')) {
@@ -329,7 +320,8 @@
                   muted
                 ></video>
               {:else}
-                {@const isCompare = genAssets.originalCompare && genAssets.originalCompare.length > 1}
+                {@const isCompare =
+                  genAssets.originalCompare && genAssets.originalCompare.length > 1}
                 {@const src = isCompare ? genAssets.originalCompare : [genAssets.originalSingle]}
                 {#if isCompare && src && src.length > 1}
                   <div class="generated object-fit-contain">
@@ -448,8 +440,7 @@
         <button
           class="btn btn-primary d-flex align-items-center justify-content-center"
           aria-label="Download"
-          onclick={() => galleryManager.downloadImage(getMetadata())}
-          ><Download size={16} /></button
+          onclick={() => galleryManager.downloadImage(getMetadata())}><Download size={16} /></button
         >
         <button
           class="btn btn-secondary d-flex align-items-center justify-content-center"
@@ -498,7 +489,11 @@
             </button>
           </li>
           <li>
-            <button class="dropdown-item text-danger d-flex align-items-center gap-2" type="button" onclick={clearAllImages}>
+            <button
+              class="dropdown-item text-danger d-flex align-items-center gap-2"
+              type="button"
+              onclick={clearAllImages}
+            >
               <Trash2 size={16} />{$t('gallery.clear_all')}
             </button>
           </li>

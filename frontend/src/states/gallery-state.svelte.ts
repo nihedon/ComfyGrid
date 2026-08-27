@@ -315,7 +315,7 @@ class GalleryState {
         const record = this.#jobs.get(jobId);
         if (!record) return;
         for (const node of record.nodes) {
-            if (node.previewUrl && node.previewUrl.startsWith('blob:')) {
+            if (node.previewUrl?.startsWith('blob:')) {
                 try {
                     URL.revokeObjectURL(node.previewUrl);
                 } catch {

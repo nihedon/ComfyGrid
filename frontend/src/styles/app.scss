@@ -119,6 +119,10 @@
     }
 
     .node-widget {
+        @extend .card;
+        @extend .grid-stack-item-content;
+        @extend .overflow-hidden;
+        @extend .shadow-sm;
         * {
             scrollbar-width: thin;
         }
@@ -136,6 +140,22 @@
             @extend .flex-nowrap;
             @extend .justify-content-between;
             @extend .align-items-center;
+            > .card-header-left {
+                @extend .d-flex;
+                @extend .align-items-center;
+                @extend .gap-2;
+            }
+
+            > .card-header-right {
+                @extend .d-flex;
+                @extend .align-items-center;
+                @extend .gap-1;
+            }
+
+            > .node-title {
+                @extend .text-truncate;
+                @extend .fs-6;
+            }
         }
     }
 

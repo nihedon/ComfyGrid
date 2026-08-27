@@ -1,10 +1,10 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
+  import { Copy, Info, Link, Tag } from '@lucide/svelte';
   import { comfyGridApiClient } from '@/api/api-client';
   import { appState } from '@/states/app-state.svelte';
   import type { Model } from '@/states/storage-state.svelte';
   import logger from '@/utils/logger';
-  import { Copy, Info, Link, Tag } from '@lucide/svelte';
   import SelectablePopover from './SelectablePopover.svelte';
 
   let {
@@ -173,6 +173,7 @@
     background-color: #20202070;
     -webkit-text-stroke: 2px #000000a0;
     paint-order: stroke;
+    z-index: 100;
   }
 
   .menu-icon a {

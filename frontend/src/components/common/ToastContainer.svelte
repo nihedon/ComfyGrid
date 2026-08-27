@@ -1,10 +1,5 @@
 <script lang="ts">
-  import {
-    Check,
-    Info,
-    TriangleAlert,
-    X,
-  } from '@lucide/svelte';
+  import { Check, Info, TriangleAlert, X } from '@lucide/svelte';
   import { SvelteMap } from 'svelte/reactivity';
   import { appState } from '@/states/app-state.svelte';
 

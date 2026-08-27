@@ -23,7 +23,8 @@
 
   function scrollToBottomIfNear() {
     if (!logContainer) return;
-    const isNearBottom = logContainer.scrollHeight - logContainer.scrollTop - logContainer.clientHeight < 80;
+    const isNearBottom =
+      logContainer.scrollHeight - logContainer.scrollTop - logContainer.clientHeight < 80;
     if (isNearBottom) {
       requestAnimationFrame(() => {
         if (logContainer) {

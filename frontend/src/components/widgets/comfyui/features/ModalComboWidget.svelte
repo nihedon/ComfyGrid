@@ -24,7 +24,11 @@
     modelDir: ModelTypes;
     modelSubdirs: string[];
     isValidOverride?: boolean;
-    handleInput: (e: CustomEvent, widget: ComfyGridWidget<string | number, unknown>, model?: Model) => void;
+    handleInput: (
+      e: CustomEvent,
+      widget: ComfyGridWidget<string | number, unknown>,
+      model?: Model,
+    ) => void;
   } = $props();
 
   let element = $state<HTMLElement>();

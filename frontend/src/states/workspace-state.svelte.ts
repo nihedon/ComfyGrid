@@ -420,7 +420,7 @@ class WorkspaceState {
             }
 
             if (boardTarget === '' || boardTarget === 'default') {
-                return !parentGroup || !parentGroup.isTabify;
+                return !parentGroup?.isTabify;
             }
 
             return false;

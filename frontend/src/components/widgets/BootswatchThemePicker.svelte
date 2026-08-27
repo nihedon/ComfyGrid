@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import { Check, TriangleAlert } from '@lucide/svelte';
   import {
     BOOTSWATCH_THEME_OPT_KEY,
     type BootswatchTheme,
@@ -7,7 +8,6 @@
     selectBootswatchTheme,
   } from '@/services/bootswatch-service';
   import { saveOptsWithCallback } from '@/services/options-service';
-  import { Check, TriangleAlert } from '@lucide/svelte';
   import { appState } from '@/states/app-state.svelte';
 
   let themes = $state<BootswatchTheme[]>([]);

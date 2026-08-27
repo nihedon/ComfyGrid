@@ -10,9 +10,7 @@
 
   let containerWidth = $state(0);
 
-  const columnCount = $derived(
-    containerWidth >= 1100 ? 3 : containerWidth >= 700 ? 2 : 1,
-  );
+  const columnCount = $derived(containerWidth >= 1100 ? 3 : containerWidth >= 700 ? 2 : 1);
 
   const sortedGroups = $derived.by(() => {
     if (group) {

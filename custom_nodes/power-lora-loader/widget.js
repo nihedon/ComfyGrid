@@ -177,7 +177,14 @@ class PowerLoraList extends HTMLElement {
 
     const value = widget.value ?? {};
     const liveLoras = api.getModels("loras").map((m) => m.path);
-    const isValidOverride = !value.on ? true : liveLoras.length === 0 || liveLoras.includes(value.lora ?? "") ? undefined : false;
+    let isValidOverride;
+    if (!value.on) {
+      isValidOverride = true;
+    } else if (liveLoras.length === 0 || liveLoras.includes(value.lora ?? "")) {
+      isValidOverride = undefined;
+    } else {
+      isValidOverride = false;
+    }
 
     const fakeWidget = {
       id: `lora_${this.#node.id}_${listIndex}`,
