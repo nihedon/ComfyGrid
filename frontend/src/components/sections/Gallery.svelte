@@ -76,16 +76,11 @@
   $effect(() => {
     if (galleryState.galleryJobs.length === 0) {
       galleryState.selectedJobIndex = 0;
+      galleryState.selectedNodeIndex = undefined;
       return;
     }
     if (galleryState.selectedJobIndex >= galleryState.galleryJobs.length) {
       galleryState.selectedJobIndex = galleryState.galleryJobs.length - 1;
-    }
-  });
-
-  $effect(() => {
-    if (galleryState.galleryJobs.length === 0) {
-      galleryState.selectedNodeIndex = undefined;
     }
   });
 
@@ -194,22 +189,19 @@
   });
 
   $effect(() => {
-    // eslint-disable-next-line @typescript-eslint/no-unused-expressions
-    galleryState.currentJobIndex;
+    void galleryState.currentJobIndex;
     const timerId = setTimeout(scrollToActiveJobThumbnail, 50);
     return () => clearTimeout(timerId);
   });
 
   $effect(() => {
-    // eslint-disable-next-line @typescript-eslint/no-unused-expressions
-    galleryState.selectedNodeIndex;
+    void galleryState.selectedNodeIndex;
     const timerId = setTimeout(scrollToActiveNodeThumbnail, 50);
     return () => clearTimeout(timerId);
   });
 
   $effect(() => {
-    // eslint-disable-next-line @typescript-eslint/no-unused-expressions
-    fullscreen;
+    void fullscreen;
     const timerId1 = setTimeout(scrollToActiveNodeThumbnail, 50);
     const timerId2 = setTimeout(scrollToActiveJobThumbnail, 50);
     return () => {

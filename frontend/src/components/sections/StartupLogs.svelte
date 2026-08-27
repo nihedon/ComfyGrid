@@ -2,7 +2,13 @@
   import { onDestroy, onMount } from 'svelte';
   import logger from '@/utils/logger';
 
-  let logs = $state<string[]>([]);
+  interface LogItem {
+    id: number;
+    text: string;
+  }
+
+  let nextLogId = 0;
+  let logs = $state<LogItem[]>([]);
   let logContainer: HTMLDivElement;
   let ws: WebSocket | null = null;
   let reconnectTimeout: number;
@@ -14,6 +20,18 @@
     total: number;
     percent: number;
   } | null>(null);
+
+  function scrollToBottomIfNear() {
+    if (!logContainer) return;
+    const isNearBottom = logContainer.scrollHeight - logContainer.scrollTop - logContainer.clientHeight < 80;
+    if (isNearBottom) {
+      requestAnimationFrame(() => {
+        if (logContainer) {
+          logContainer.scrollTop = logContainer.scrollHeight;
+        }
+      });
+    }
+  }
 
   function connect() {
     if (isUnmounting) return;
@@ -35,22 +53,13 @@
       try {
         const data = JSON.parse(event.data);
         if (data.type === 'comfygrid.startup_log') {
-          const isNearBottom = logContainer
-            ? logContainer.scrollHeight - logContainer.scrollTop - logContainer.clientHeight < 50
-            : false;
-
-          logs.push(data.message);
-          if (logs.length > 500) {
-            logs.shift();
+          const newItem: LogItem = { id: nextLogId++, text: data.message };
+          if (logs.length >= 500) {
+            logs = [...logs.slice(logs.length - 499), newItem];
+          } else {
+            logs.push(newItem);
           }
-
-          if (isNearBottom) {
-            setTimeout(() => {
-              if (logContainer) {
-                logContainer.scrollTop = logContainer.scrollHeight;
-              }
-            }, 10);
-          }
+          scrollToBottomIfNear();
         } else if (data.type === 'comfygrid.download_progress') {
           progressState = {
             desc: data.desc,
@@ -119,8 +128,8 @@
 
   <div class="logs-content" bind:this={logContainer}>
     {#if logs.length > 0}
-      {#each logs as log, index (index)}
-        <div class="log-line">{log}</div>
+      {#each logs as log (log.id)}
+        <div class="log-line">{log.text}</div>
       {/each}
     {/if}
   </div>

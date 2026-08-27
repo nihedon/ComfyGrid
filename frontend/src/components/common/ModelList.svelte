@@ -202,7 +202,6 @@
   }
 
   $effect(() => {
-    // Reset page and scroll to top when filter/folder/sort changes
     void filterText;
     void selectedFolder;
     void sortMethod;
@@ -215,9 +214,6 @@
 
   $effect(() => {
     optionState.set('ComfyGrid.ui.show_nsfw', showNsfw);
-  });
-
-  $effect(() => {
     optionState.set('ComfyGrid.ui.model_tree_view', modelTreeView);
   });
 

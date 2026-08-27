@@ -30,7 +30,6 @@
 
   let activeTranslationText = '';
   let activeTranslationPromise: Promise<void> | null = null;
-  let prevIsTranslate = $state<boolean>(false);
   let inputTimer: ReturnType<typeof setTimeout> | null = null;
   let translationRequestId = 0;
 
@@ -161,40 +160,34 @@
   }
 
   $effect(() => {
-    const currentIsTranslate = isTranslate;
-    if (currentIsTranslate !== prevIsTranslate) {
-      prevIsTranslate = currentIsTranslate;
-      if (currentIsTranslate) {
-        if (widget.rawValue === undefined || widget.rawValue === null) {
-          widget.rawValue = widget.value ?? '';
-        }
-        widget.isDirty = true;
-        registerOrUnregisterPending();
-        const timing =
-          appState.optionState.get('ComfyGrid.ollama.translate_timing') ?? 'on_generate';
-        const text = widget.rawValue ?? '';
-        if (timing === 'on_blur' && text.trim()) {
-          triggerTranslation(text);
-        }
-      } else {
-        if (widget.rawValue !== undefined && widget.rawValue === widget.value) {
-          widget.rawValue = undefined;
-        }
-        widget.translationFailed = false;
-        translationManager.unregister(widget.id);
+    if (isTranslate) {
+      if (widget.rawValue === undefined || widget.rawValue === null) {
+        widget.rawValue = widget.value ?? '';
       }
+      widget.isDirty = true;
+      registerOrUnregisterPending();
+      const timing =
+        appState.optionState.get('ComfyGrid.ollama.translate_timing') ?? 'on_generate';
+      const text = widget.rawValue ?? '';
+      if (timing === 'on_blur' && text.trim()) {
+        triggerTranslation(text);
+      }
+    } else {
+      if (widget.rawValue !== undefined && widget.rawValue === widget.value) {
+        widget.rawValue = undefined;
+      }
+      widget.translationFailed = false;
+      translationManager.unregister(widget.id);
     }
   });
 
   const currentOllamaConfig = $derived(
     `${layout.getTranslateModel(widget.id) ?? appState.optionState.get('ComfyGrid.ollama.model') ?? ''}::${layout.getTranslateSystem(widget.id) ?? appState.optionState.get('ComfyGrid.ollama.system') ?? ''}`,
   );
-  let prevOllamaConfig = $state<string>(untrack(() => currentOllamaConfig));
 
   $effect(() => {
-    const config = currentOllamaConfig;
-    if (prevOllamaConfig && config && config !== prevOllamaConfig) {
-      prevOllamaConfig = config;
+    void currentOllamaConfig;
+    untrack(() => {
       widget.isDirty = true;
       const text = widget.rawValue ?? '';
       if (isTranslate && text.trim()) {
@@ -206,9 +199,7 @@
           triggerTranslation(text);
         }
       }
-    } else {
-      prevOllamaConfig = config;
-    }
+    });
   });
 
   onDestroy(() => {
