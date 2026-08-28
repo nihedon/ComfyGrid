@@ -35,7 +35,6 @@
       bsModal.hide();
     }
   });
-  const activeDir = $derived(modalState.modelDir);
 </script>
 
 <div
@@ -48,14 +47,16 @@
 >
   <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
     <div class="modal-content">
-      {#if activeDir}
-        <ModelList
-          dir={modalState.modelDir!}
-          subdirs={modalState.modelSubdirs}
-          valueSet={modalState.valueSet}
-          action={null}
-          focusSelectedModel={true}
-        />
+      {#if modalState.modelDir}
+        {#key modalState.modelDir}
+          <ModelList
+            dir={modalState.modelDir}
+            subdirs={modalState.modelSubdirs}
+            valueSet={modalState.valueSet}
+            action={null}
+            focusSelectedModel={true}
+          />
+        {/key}
       {/if}
     </div>
   </div>

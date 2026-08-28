@@ -65,12 +65,17 @@ export function setupCustomNodeApi(): void {
     if (!customElements.get('cg-modal-combo-widget')) {
         class CgModalComboWidget extends HTMLElement {
             #comp: Record<string, any> | null = null;
+            #props: Record<string, any> | null = null;
             #widget: any = null;
             #isValidOverride: any = undefined;
 
             set widget(val: any) {
                 this.#widget = val;
-                this.#mountIfReady();
+                if (this.#props) {
+                    this.#props.widget = val;
+                } else {
+                    this.#mountIfReady();
+                }
             }
             get widget() {
                 return this.#widget;
@@ -78,6 +83,9 @@ export function setupCustomNodeApi(): void {
 
             set isValidOverride(val: any) {
                 this.#isValidOverride = val;
+                if (this.#props) {
+                    this.#props.isValidOverride = val;
+                }
             }
             get isValidOverride() {
                 return this.#isValidOverride;
@@ -110,6 +118,7 @@ export function setupCustomNodeApi(): void {
                         this.dispatchEvent(new CustomEvent('change', { bubbles: true }));
                     },
                 });
+                this.#props = props;
 
                 this.#comp = mount(ModalComboWidget, {
                     target: this,
@@ -121,6 +130,7 @@ export function setupCustomNodeApi(): void {
                 if (this.#comp) {
                     unmount(this.#comp);
                     this.#comp = null;
+                    this.#props = null;
                 }
             }
         }
