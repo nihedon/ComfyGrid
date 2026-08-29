@@ -32,12 +32,12 @@ export interface ComfyGridExtension {
 }
 
 class ComfyGridExtensionManager {
-    #extensions = new Map<string, ComfyGridExtension>();
-    #nodeWidgetRegistrations: NodeWidgetRegistration[] = [];
-    #headerButtonRegistrations: HeaderButtonRegistration[] = [];
+    readonly #extensions = new Map<string, ComfyGridExtension>();
+    readonly #nodeWidgetRegistrations: NodeWidgetRegistration[] = [];
+    readonly #headerButtonRegistrations: HeaderButtonRegistration[] = [];
 
     registerExtension(extension: ComfyGridExtension): void {
-        if (!extension || !extension.name) {
+        if (!extension?.name) {
             logger.error('Invalid extension registration: missing name');
             return;
         }

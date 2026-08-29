@@ -31,7 +31,7 @@ export function getCachedSearchIndex(items: readonly (string | number)[]): Cache
     let cached = indexCache.get(items);
     if (!cached) {
         const itemSet = getCachedItemSet(items);
-        const sortedItems = items.map((v) => String(v)).sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
+        const sortedItems = items.map(String).sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
         const indexer = new SearchIndexer(sortedItems);
         cached = {
             sortedItems,

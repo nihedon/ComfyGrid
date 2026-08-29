@@ -106,7 +106,7 @@
       {/each}
     </ul>
     <div class="vstack overflow-y-hidden py-2">
-      <InnerTabContainer tabId={activeTabId} {activeTabId}>
+      <InnerTabContainer>
         {#key activeTabId}
           <ModelList dir="models" subdirs={activeTab.subdirs} action={activeTab.action} />
         {/key}

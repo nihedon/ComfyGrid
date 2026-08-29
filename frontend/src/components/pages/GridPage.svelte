@@ -202,15 +202,19 @@
             </div>
             <div class="py-2">
               {#if workspaceState.hasTabContent('__ungrouped__')}
-                <InnerTabContainer tabId="__ungrouped__" {activeTabId}>
-                  <WidgetsSection />
-                </InnerTabContainer>
+                {#if '__ungrouped__' == activeTabId}
+                  <InnerTabContainer>
+                    <WidgetsSection />
+                  </InnerTabContainer>
+                {/if}
               {/if}
               {#each workspaceState.groups as group (group.id)}
                 {#if group.isTabify && workspaceState.hasTabContent(group.id)}
-                  <InnerTabContainer tabId={group.id} {activeTabId}>
-                    <WidgetsSection {group} />
-                  </InnerTabContainer>
+                  {#if group.id == activeTabId}
+                    <InnerTabContainer>
+                      <WidgetsSection {group} />
+                    </InnerTabContainer>
+                  {/if}
                 {/if}
               {/each}
             </div>
