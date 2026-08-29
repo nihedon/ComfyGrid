@@ -201,7 +201,7 @@ class ComfyGridApiClient {
     }
 
     async getCustomNodes(): Promise<ApiResultJson<Record<string, ExtensionManifestJson>[]>> {
-        return await fetchApiJson('/comfygrid/api/custom_nodes');
+        return await fetchApiJson('/comfygrid/api/extensions');
     }
 
     async postUploadToInput(url: string, filename: string): Promise<ApiResultJson<{ message: string }>> {

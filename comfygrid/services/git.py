@@ -47,22 +47,15 @@ def update_git_repository(repo_dir):
 
 
 def get_version_info():
-    import sys
-    from pathlib import Path
     import json
+    from pathlib import Path
 
-    if getattr(sys, "frozen", False):
-        exe_path = sys.executable
-        if "_MEI" in str(exe_path):
-            base_path = Path(sys.argv[0]).resolve().parent
-        else:
-            base_path = Path(exe_path).parent
-        version_file = base_path / "version.json"
-        if version_file.exists():
-            try:
-                return json.loads(version_file.read_text(encoding="utf-8"))
-            except Exception:
-                pass
+    version_file = Path.cwd() / "version.json"
+    if version_file.exists():
+        try:
+            return json.loads(version_file.read_text(encoding="utf-8"))
+        except Exception:
+            pass
         return {}
 
     info = {}

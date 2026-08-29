@@ -1,5 +1,7 @@
 import { comfyGridApiClient } from '@/api/api-client';
+import { appState } from '@/states/app-state.svelte';
 import logger from '@/utils/logger';
+import { extensionManager } from './extension-manager';
 
 async function loadExtensionModule(jsUrl: string, { useCache = false } = {}): Promise<void> {
     let apiUrl = `/comfygrid/api/file=${jsUrl}`;
@@ -38,7 +40,10 @@ export async function loadExtensions() {
         });
         await Promise.all(promises);
         logger.log('All extension scripts loaded.');
+
+        await extensionManager.runInitHooks(appState);
     } catch (error) {
         logger.error('Failed to fetch extension JS:', error);
     }
 }
+

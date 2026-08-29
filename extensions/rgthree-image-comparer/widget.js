@@ -7,7 +7,7 @@ async function loadTemplateDocument(extensionName) {
     return templateCache.get(extensionName);
   }
 
-  const response = await fetch(`/comfygrid/api/custom_nodes/${extensionName}/assets/template.html`);
+  const response = await fetch(`/comfygrid/api/extensions/${extensionName}/assets/template.html`);
   if (!response.ok) {
     throw new Error(`Failed to load template for ${extensionName}`);
   }

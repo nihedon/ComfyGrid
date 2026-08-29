@@ -9,7 +9,7 @@ async function loadTemplateDocument(extensionName) {
     return templateCache.get(extensionName);
   }
 
-  const response = await fetch(`/comfygrid/api/custom_nodes/${extensionName}/assets/template.html`);
+  const response = await fetch(`/comfygrid/api/extensions/${extensionName}/assets/template.html`);
   if (!response.ok) {
     throw new Error(`Failed to load template for ${extensionName}`);
   }
@@ -102,18 +102,23 @@ class PowerLoraList extends HTMLElement {
 
     const loraValues = api.getModels("loras").map((m) => m.path);
 
-    this.#destroyListSortable();
-
     const existingRows = Array.from(section.querySelectorAll("[data-list-index]"));
     const targetCount = this.#widgets.length;
+    const countChanged = existingRows.length !== targetCount;
+
+    if (countChanged) {
+      this.#destroyListSortable();
+    }
+
+    const loraOptions = { values: loraValues, fixed_values: [] };
 
     for (let i = 0; i < targetCount; i++) {
       if (i < existingRows.length) {
-        this.#updateRow(existingRows[i], this.#widgets[i], i, loraValues);
+        this.#updateRow(existingRows[i], this.#widgets[i], i, loraValues, loraOptions);
       } else {
-        const newRow = this.#createRow(this.#widgets[i], i, loraValues);
+        const newRow = this.#createRow(this.#widgets[i], i);
         section.append(newRow);
-        this.#setupComboWidget(newRow, this.#widgets[i], i, loraValues);
+        this.#setupComboWidget(newRow, this.#widgets[i], i, loraValues, loraOptions);
       }
     }
 
@@ -121,7 +126,9 @@ class PowerLoraList extends HTMLElement {
       existingRows[i].remove();
     }
 
-    this.#initSortable(section);
+    if (countChanged || !section.classList.contains("ui-sortable")) {
+      this.#initSortable(section);
+    }
   }
 
   #destroyListSortable() {
@@ -171,16 +178,15 @@ class PowerLoraList extends HTMLElement {
     });
   }
 
-  #setupComboWidget(row, widget, listIndex) {
+  #setupComboWidget(row, widget, listIndex, loraValues, loraOptions) {
     const combo = row.querySelector('[data-role="combo"]');
     if (!combo) return;
 
     const value = widget.value ?? {};
-    const liveLoras = api.getModels("loras").map((m) => m.path);
     let isValidOverride;
     if (!value.on) {
       isValidOverride = true;
-    } else if (liveLoras.length === 0 || liveLoras.includes(value.lora ?? "")) {
+    } else if (loraValues.length === 0 || loraValues.includes(value.lora ?? "")) {
       isValidOverride = undefined;
     } else {
       isValidOverride = false;
@@ -189,10 +195,7 @@ class PowerLoraList extends HTMLElement {
     const fakeWidget = {
       id: `lora_${this.#node.id}_${listIndex}`,
       name: `lora_${listIndex}`,
-      get options() {
-        const models = api.getModels("loras").map((m) => m.path);
-        return { values: models, fixed_values: [] };
-      },
+      options: loraOptions,
       node: this.#node,
       get value() {
         return widget.value.lora ?? "";
@@ -210,22 +213,29 @@ class PowerLoraList extends HTMLElement {
     combo.widget = fakeWidget;
   }
 
-  #updateRow(row, widget, listIndex, loraValues) {
+  #updateRow(row, widget, listIndex, loraValues, loraOptions) {
     const value = widget.value ?? {};
 
-    row.dataset.listIndex = String(listIndex);
-    setWidgetIndex(row, listIndex);
+    if (row.dataset.listIndex !== String(listIndex)) {
+      row.dataset.listIndex = String(listIndex);
+      setWidgetIndex(row, listIndex);
+    }
 
     const toggle = row.querySelector('[data-role="toggle"]');
     const strength = row.querySelector('[data-role="strength"]');
 
-    toggle.checked = Boolean(value.on);
-    strength.value = String(value.strength ?? 1);
+    if (toggle && toggle.checked !== Boolean(value.on)) {
+      toggle.checked = Boolean(value.on);
+    }
+    const strengthStr = String(value.strength ?? 1);
+    if (strength && strength.value !== strengthStr) {
+      strength.value = strengthStr;
+    }
 
-    this.#setupComboWidget(row, widget, listIndex, loraValues);
+    this.#setupComboWidget(row, widget, listIndex, loraValues, loraOptions);
   }
 
-  #createRow(widget, listIndex, loraValues) {
+  #createRow(widget, listIndex) {
     const value = widget.value ?? {};
     const row = this.#rowTemplate.content.firstElementChild.cloneNode(true);
 
@@ -235,8 +245,8 @@ class PowerLoraList extends HTMLElement {
     const toggle = row.querySelector('[data-role="toggle"]');
     const strength = row.querySelector('[data-role="strength"]');
 
-    toggle.checked = Boolean(value.on);
-    strength.value = String(value.strength ?? 1);
+    if (toggle) toggle.checked = Boolean(value.on);
+    if (strength) strength.value = String(value.strength ?? 1);
 
     return row;
   }
@@ -321,4 +331,23 @@ class PowerLoraAddButton extends HTMLElement {
 
 if (!customElements.get(POWER_LORA_LOADER_ADD_TEMPLATE_ID)) {
   customElements.define(POWER_LORA_LOADER_ADD_TEMPLATE_ID, PowerLoraAddButton);
+}
+
+if (typeof window !== "undefined" && window.comfygrid?.registerExtension) {
+  window.comfygrid.registerExtension({
+    name: "power-lora-loader",
+    version: "1.0.0",
+    description: "LoRA list widget for PowerLoraLoader nodes",
+    nodeWidgets: [
+      {
+        match: { widgetClassName: "PowerLoraLoaderWidget" },
+        element: "power-lora-list",
+        groupBy: "widget_class_name",
+      },
+      {
+        match: { widgetClassName: "RgthreeBetterButtonWidget" },
+        element: "power-lora-add-button",
+      },
+    ],
+  });
 }

@@ -1,11 +1,12 @@
 {
-  "name": "power-lora-loader",
+  "id": "power-lora-loader",
+  "name": "Power LoRA Loader",
   "version": "1.0.0",
   "description": "LoRA list widget for PowerLoraLoader nodes",
-  "assets": {
+  "frontend": {
     "scripts": ["widget.js"],
-    "templates": ["template.html"],
-    "styles": ["style.css"]
+    "styles": ["style.css"],
+    "templates": ["template.html"]
   },
   "widgets": [
     {
@@ -17,6 +18,5 @@
       "match": { "widget_class_name": "RgthreeBetterButtonWidget" },
       "custom_element": "power-lora-add-button"
     }
-  ],
-  "ignore": []
+  ]
 }

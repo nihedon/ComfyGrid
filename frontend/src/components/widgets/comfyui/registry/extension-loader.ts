@@ -2,6 +2,7 @@
  * Extension loader for dynamically registered widget extensions
  */
 import type { Component } from 'svelte';
+import { extensionManager } from '@/services/extension-manager';
 import { ComfyGridNode, ComfyGridWidget } from '@/states/model-state.svelte';
 
 export type GroupByKey = 'widget_class_name' | 'widget_name' | 'widget_type';
@@ -113,6 +114,16 @@ export function shouldIgnore(node: ComfyGridNode): boolean {
  * @returns Match result with component and groupBy info
  */
 export function matchExtensionWithMeta(node: ComfyGridNode, widget: ComfyGridWidget): ExtensionMatchResult | null {
+    // Check dynamically registered node widgets from unified extensionManager
+    for (const reg of extensionManager.getNodeWidgetRegistrations()) {
+        if (matchesConditions(reg.match, node, widget)) {
+            return {
+                customElement: reg.element,
+                groupBy: reg.groupBy,
+            };
+        }
+    }
+
     for (const ext of loadedExtensions) {
         for (const widgetDef of ext.manifest.widgets) {
             if (matchesConditions(widgetDef.match, node, widget)) {

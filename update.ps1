@@ -124,7 +124,7 @@ try {
 }
 
 # --- Copy files (skip user data) ---
-$userDataDirs = @("config", "custom_nodes", "cache", "logs")
+$userDataDirs = @("config", "extensions", "cache", "logs")
 
 Write-Step "Installing update..."
 $sourceItems = Get-ChildItem -Path $tempDir

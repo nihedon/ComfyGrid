@@ -52,29 +52,6 @@ jobs:
           pip install .
           pip install pyinstaller
 
-      - name: Build executable with PyInstaller
-        shell: cmd
-        run: |
-          mkdir release
-          mkdir release\config
-          mkdir release\frontend
-          mkdir release\hook
-          mkdir release\custom_nodes
-          python -m PyInstaller --name comfygrid --icon=frontend/public/icon.ico --onefile --console --distpath release ^
-            --hidden-import uvicorn.logging ^
-            --hidden-import uvicorn.loops ^
-            --hidden-import uvicorn.loops.auto ^
-            --hidden-import uvicorn.protocols ^
-            --hidden-import uvicorn.protocols.http ^
-            --hidden-import uvicorn.protocols.http.auto ^
-            --hidden-import uvicorn.protocols.websockets ^
-            --hidden-import uvicorn.protocols.websockets.auto ^
-            --hidden-import uvicorn.lifespan.on ^
-            --hidden-import uvicorn.lifespan.off ^
-            --hidden-import polars ^
-            --hidden-import piexif ^
-            main.py
-
       - name: Assemble Release Folder
         shell: cmd
         run: |
@@ -82,7 +59,6 @@ jobs:
           xcopy config release\config /E /I /Q
           xcopy frontend\dist release\frontend /E /I /Q
           xcopy hook release\hook /E /I /Q
-          if exist "custom_nodes\" xcopy custom_nodes release\custom_nodes /E /I /Q
           if exist "extensions\" xcopy extensions release\extensions /E /I /Q
           copy update.bat release\
           copy update.ps1 release\
@@ -102,7 +78,6 @@ jobs:
           xcopy config release_portable\config /E /I /Q
           xcopy frontend\dist release_portable\frontend\dist /E /I /Q
           xcopy hook release_portable\hook /E /I /Q
-          if exist "custom_nodes\" xcopy custom_nodes release_portable\custom_nodes /E /I /Q
           if exist "extensions\" xcopy extensions release_portable\extensions /E /I /Q
           if exist "modules\" xcopy modules release_portable\modules /E /I /Q
           if exist "release_portable\frontend\dist\THIRD_PARTY_LICENSES.txt" move release_portable\frontend\dist\THIRD_PARTY_LICENSES.txt release_portable\

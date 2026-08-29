@@ -19,7 +19,7 @@ async function attachScripts(manifest: ExtensionManifestJson) {
     for (const script of scripts) {
         try {
             if (script) {
-                await loadScript(`/comfygrid/api/custom_nodes/${manifest.name}/assets/${script}`);
+                await loadScript(`/comfygrid/api/extensions/${manifest.name}/assets/${script}`);
             }
         } catch (e) {
             logger.error(`Failed to load ${script} for "${manifest.name}":`, e);
@@ -42,7 +42,7 @@ async function attachStyles(manifest: ExtensionManifestJson) {
     for (const style of styles) {
         try {
             if (style) {
-                await loadStyle(`/comfygrid/api/custom_nodes/${manifest.name}/assets/${style}`);
+                await loadStyle(`/comfygrid/api/extensions/${manifest.name}/assets/${style}`);
             }
         } catch (e) {
             logger.error(`Failed to load ${style} for "${manifest.name}":`, e);

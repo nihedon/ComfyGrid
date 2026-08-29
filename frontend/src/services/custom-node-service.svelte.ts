@@ -70,6 +70,10 @@ export function setupCustomNodeApi(): void {
             #isValidOverride: any = undefined;
 
             set widget(val: any) {
+                if (this.#widget?.id === val?.id && this.#widget?.value === val?.value) {
+                    this.#widget = val;
+                    return;
+                }
                 this.#widget = val;
                 if (this.#props) {
                     this.#props.widget = val;
@@ -82,6 +86,9 @@ export function setupCustomNodeApi(): void {
             }
 
             set isValidOverride(val: any) {
+                if (this.#isValidOverride === val) {
+                    return;
+                }
                 this.#isValidOverride = val;
                 if (this.#props) {
                     this.#props.isValidOverride = val;
