@@ -2,7 +2,7 @@
 import { mount, unmount } from 'svelte';
 import ModalComboWidget from '@/components/widgets/comfyui/features/ModalComboWidget.svelte';
 import { appState } from '@/states/app-state.svelte';
-import type { ComfyGridNode } from '@/states/model-state.svelte';
+import type { ComfyGridNode, ComfyGridWidget } from '@/states/model-state.svelte';
 
 type NodeChangeCallback = (node: unknown) => void;
 
@@ -66,7 +66,7 @@ export function setupCustomNodeApi(): void {
         class CgModalComboWidget extends HTMLElement {
             #comp: Record<string, any> | null = null;
             #props: Record<string, any> | null = null;
-            #widget: any = null;
+            #widget: ComfyGridWidget = null;
             #isValidOverride: any = undefined;
 
             set widget(val: any) {

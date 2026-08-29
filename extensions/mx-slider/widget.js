@@ -31,7 +31,7 @@ async function renderExternalTemplate(extensionName, templateId, target) {
 
 class MxSlider extends HTMLElement {
   #widget = null;
-  #props = null;
+  #isInitialized = false;
   #unsubscribe = null;
 
   #rangeInput = null;
@@ -39,20 +39,51 @@ class MxSlider extends HTMLElement {
 
   set widget(value) {
     this.#widget = value;
+    if (this.#isInitialized && this.isConnected) {
+      this.#syncValues();
+    } else if (this.isConnected && !this.#isInitialized && this.#widget) {
+      void this.#initialize();
+    }
   }
+
   get widget() {
     return this.#widget;
   }
 
   connectedCallback() {
-    void this.#initialize();
+    if (this.#widget && !this.#isInitialized) {
+      void this.#initialize();
+    }
   }
 
   disconnectedCallback() {
     this.#unsubscribe?.();
+    this.#unsubscribe = null;
+    this.#isInitialized = false;
   }
 
   async #initialize() {
+    if (this.#isInitialized || !this.#widget) return;
+
+    this.#setupEventListeners();
+    await this.#render();
+    if (!this.isConnected || !this.#widget) return;
+
+    this.#isInitialized = true;
+    this.#syncValues();
+
+    const api = globalThis.api ?? globalThis.__COMFYGRID_WIDGETS__;
+    if (api?.subscribe && this.#widget?.node?.id) {
+      this.#unsubscribe?.();
+      this.#unsubscribe = api.subscribe(this.#widget.node.id, (node) => {
+        if (!this.isConnected) return;
+        this.#widget = node.widgets?.[this.#widget.index];
+        this.#syncValues();
+      });
+    }
+  }
+
+  #setupEventListeners() {
     this.addEventListener("input", (event) => {
       const target = event.target;
       if (target.dataset.role === "range" && this.#numberInput) {
@@ -62,6 +93,7 @@ class MxSlider extends HTMLElement {
 
     this.addEventListener("change", (event) => {
       const target = event.target;
+      if (!this.#widget?.node) return;
       const node = this.#widget.node;
       const props = node.properties ?? {};
 
@@ -78,61 +110,77 @@ class MxSlider extends HTMLElement {
         this.#update(value);
       }
     });
-
-    await this.#render();
-    if (!this.isConnected) return;
-
-    const node = this.#widget.node;
-    this.#props = node.properties ?? {};
-
-    this.#unsubscribe = api.subscribe(this.#widget.node.id, (node) => {
-      if (!this.isConnected) return;
-      this.#widget = node.widgets?.[this.#widget.index];
-      this.#render();
-    });
   }
 
   async #render() {
+    if (!this.#widget) return;
+    await renderExternalTemplate(MX_SLIDER_EXTENSION_NAME, MX_SLIDER_TEMPLATE_ID, this);
+    if (!this.isConnected) return;
+
+    this.#rangeInput = this.querySelector('[data-role="range"]');
+    this.#numberInput = this.querySelector('[data-role="number"]');
+  }
+
+  #syncValues() {
+    if (!this.#widget || !this.isConnected) return;
     const node = this.#widget.node;
-    const props = node.properties ?? {};
+    const comfyNode = node?.comfyNode;
+    const props = node?.properties ?? comfyNode?.properties ?? {};
     const name = this.#widget.name ?? "";
     const tooltip = this.#widget.tooltip ?? "";
     const min = props.min ?? 0;
     const max = props.max ?? 1;
     const step = props.step ?? 0.01;
-    const value = props.value ?? 0;
 
-    await renderExternalTemplate(MX_SLIDER_EXTENSION_NAME, MX_SLIDER_TEMPLATE_ID, this);
-    if (!this.isConnected) return;
+    let value = props.value;
+    if (value === undefined || value === null) {
+      if (comfyNode?.intpos?.x != null) {
+        value = min + comfyNode.intpos.x * (max - min);
+      } else if (this.#widget.value != null) {
+        value = this.#widget.value;
+      } else if (comfyNode?.widgets?.[1]?.value != null) {
+        value = comfyNode.widgets[1].value;
+      } else {
+        value = 0;
+      }
+    }
 
     const root = this.querySelector('[data-role="root"]');
-    root.dataset.name = name;
-    root.title = tooltip;
+    if (root) {
+      root.dataset.name = name;
+      root.title = tooltip;
+    }
 
-    this.#rangeInput = this.querySelector('[data-role="range"]');
-    this.#numberInput = this.querySelector('[data-role="number"]');
-
-    this.#configureInput(this.#rangeInput, { name, min, max, step, value });
-    this.#configureInput(this.#numberInput, { min, max, step, value });
+    if (this.#rangeInput) {
+      this.#configureInput(this.#rangeInput, { name, min, max, step, value });
+    }
+    if (this.#numberInput) {
+      this.#configureInput(this.#numberInput, { min, max, step, value });
+    }
   }
 
   #update(value) {
-    const node = this.#widget.node;
-    const min = node.properties.min || 0;
-    const max = node.properties.max || 1;
-    const ratio = (value - min) / (max - min);
+    const node = this.#widget?.node;
+    const comfyNode = node?.comfyNode;
+    if (!comfyNode) return;
 
-    const comfyNode = node.comfyNode;
+    const props = node.properties ?? comfyNode.properties ?? {};
+    const min = props.min || 0;
+    const max = props.max || 1;
+    const ratio = max !== min ? (value - min) / (max - min) : 0;
 
-    // Set position and value
-    comfyNode.intpos.x = ratio;
-    comfyNode.properties.value = value;
+    props.value = value;
+    if (comfyNode.properties) {
+      comfyNode.properties.value = value;
+    }
+    if (comfyNode.intpos) {
+      comfyNode.intpos.x = ratio;
+    }
 
-    // Call updateThisNodeGraph method
     comfyNode.updateThisNodeGraph?.();
 
-    comfyNode.widgets[0].value = Math.floor(value);
-    comfyNode.widgets[1].value = value;
+    if (comfyNode.widgets?.[0]) comfyNode.widgets[0].value = Math.floor(value);
+    if (comfyNode.widgets?.[1]) comfyNode.widgets[1].value = value;
   }
 
   #configureInput(input, attrs) {
