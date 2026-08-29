@@ -38,7 +38,9 @@
 
   const showNsfw = $derived(appState.optionState.get('ComfyGrid.ui.show_nsfw'));
 
-  const select = $derived((widget.options?.values ?? []).map((v) => String(v)));
+  const select = $derived(
+    (widget.options?.values ?? []).map((v) => String(v)) as readonly string[],
+  );
 
   const filteredSelect = $derived.by(() => {
     if (showNsfw || !modelDir || !modelSubdirs) {
