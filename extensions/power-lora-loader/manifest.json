@@ -4,9 +4,9 @@
   "version": "1.0.0",
   "description": "LoRA list widget for PowerLoraLoader nodes",
   "frontend": {
-    "scripts": ["widget_lora.js", "widget_button.js"],
+    "scripts": ["lora.js", "add_button.js"],
     "styles": ["style.css"],
-    "templates": ["template_lora.html"]
+    "templates": ["lora.html"]
   },
   "widgets": [
     {
