@@ -144,6 +144,68 @@ export function setupCustomNodeApi(): void {
 
         customElements.define('cg-modal-combo-widget', CgModalComboWidget);
     }
+
+    if (!customElements.get('cg-button-widget')) {
+        class CgButtonWidget extends HTMLElement {
+            #button: HTMLButtonElement | null = null;
+            #widget: any = null;
+            #label: string | null = null;
+            #variant: string = 'secondary';
+
+            set widget(val: any) {
+                this.#widget = val;
+                this.#update();
+            }
+            get widget() {
+                return this.#widget;
+            }
+
+            set label(val: string | null) {
+                this.#label = val;
+                this.#update();
+            }
+            get label() {
+                return this.#label;
+            }
+
+            set variant(val: string | null) {
+                this.#variant = val || 'secondary';
+                this.#update();
+            }
+            get variant() {
+                return this.#variant;
+            }
+
+            connectedCallback() {
+                if (!this.#button) {
+                    const btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.addEventListener('click', () => {
+                        this.dispatchEvent(new CustomEvent('click', { bubbles: true }));
+                    });
+                    this.#button = btn;
+                    this.appendChild(btn);
+                }
+                this.#update();
+            }
+
+            #update() {
+                if (!this.#button) return;
+                const labelAttr = this.getAttribute('label');
+                const variantAttr = this.getAttribute('variant') || 'secondary';
+                const currentVariant = this.#variant || variantAttr;
+                this.#button.className = `btn btn-sm btn-${currentVariant} w-100`;
+
+                const labelText = this.#label ?? labelAttr ?? this.#widget?.label ?? this.#widget?.name ?? 'Button';
+                this.#button.textContent = labelText;
+                if (this.#widget?.tooltip) {
+                    this.#button.title = this.#widget.tooltip;
+                }
+            }
+        }
+
+        customElements.define('cg-button-widget', CgButtonWidget);
+    }
 }
 
 /** Called by NodeWidget's $effect whenever a tracked node changes. */

@@ -15,7 +15,7 @@ function toMatchCondition(raw: ManifestMatchCondition): MatchCondition {
 }
 
 async function attachScripts(manifest: ExtensionManifestJson) {
-    const scripts = manifest.assets?.scripts ?? [];
+    const scripts = manifest.frontend?.scripts ?? manifest.assets?.scripts ?? [];
     for (const script of scripts) {
         try {
             if (script) {
@@ -38,7 +38,7 @@ function loadScript(url: string): Promise<void> {
 }
 
 async function attachStyles(manifest: ExtensionManifestJson) {
-    const styles = manifest.assets?.styles ?? [];
+    const styles = manifest.frontend?.styles ?? manifest.assets?.styles ?? [];
     for (const style of styles) {
         try {
             if (style) {
@@ -80,7 +80,6 @@ export async function loadRuntimeExtensions(): Promise<void> {
                 widgets: manifest.widgets.map((def) => ({
                     match: Array.isArray(def.match) ? def.match.map(toMatchCondition) : toMatchCondition(def.match),
                     customElement: def.custom_element,
-                    groupBy: def.group_by ?? undefined,
                 })),
             });
 

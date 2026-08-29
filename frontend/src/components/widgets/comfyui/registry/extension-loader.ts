@@ -5,8 +5,6 @@ import type { Component } from 'svelte';
 import { extensionManager } from '@/services/extension-manager';
 import { ComfyGridNode, ComfyGridWidget } from '@/states/model-state.svelte';
 
-export type GroupByKey = 'widget_class_name' | 'widget_name' | 'widget_type';
-
 /**
  * Match condition for extension widgets
  */
@@ -33,11 +31,6 @@ interface WidgetDefinition {
     component?: Component;
     /** Custom Element tag name to render (for external extensions) */
     customElement?: string;
-    /**
-     * Group widgets by this field and render once with all matching widgets.
-     * When set, the component receives `widgets: Widget[]` instead of `widget: Widget`.
-     */
-    groupBy?: GroupByKey;
 }
 
 /**
@@ -72,7 +65,6 @@ interface IgnoreCondition {
 export interface ExtensionMatchResult {
     component?: Component;
     customElement?: string;
-    groupBy?: GroupByKey;
 }
 
 const loadedExtensions: LoadedExtension[] = [];
@@ -108,10 +100,10 @@ export function shouldIgnore(node: ComfyGridNode): boolean {
 }
 
 /**
- * Find a matching extension with metadata (including groupBy)
+ * Find a matching extension with metadata
  * @param node - Node containing the widget
  * @param widget - Widget to find component for
- * @returns Match result with component and groupBy info
+ * @returns Match result with component or customElement info
  */
 export function matchExtensionWithMeta(node: ComfyGridNode, widget: ComfyGridWidget): ExtensionMatchResult | null {
     // Check dynamically registered node widgets from unified extensionManager
@@ -119,7 +111,6 @@ export function matchExtensionWithMeta(node: ComfyGridNode, widget: ComfyGridWid
         if (matchesConditions(reg.match, node, widget)) {
             return {
                 customElement: reg.element,
-                groupBy: reg.groupBy,
             };
         }
     }
@@ -130,7 +121,6 @@ export function matchExtensionWithMeta(node: ComfyGridNode, widget: ComfyGridWid
                 return {
                     component: widgetDef.component,
                     customElement: widgetDef.customElement,
-                    groupBy: widgetDef.groupBy,
                 };
             }
         }

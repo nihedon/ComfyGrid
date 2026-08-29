@@ -46,4 +46,3 @@ export async function loadExtensions() {
         logger.error('Failed to fetch extension JS:', error);
     }
 }
-

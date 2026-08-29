@@ -4,15 +4,14 @@
   "version": "1.0.0",
   "description": "LoRA list widget for PowerLoraLoader nodes",
   "frontend": {
-    "scripts": ["widget.js"],
+    "scripts": ["widget_lora.js", "widget_button.js"],
     "styles": ["style.css"],
-    "templates": ["template.html"]
+    "templates": ["template_lora.html"]
   },
   "widgets": [
     {
       "match": { "widget_class_name": "PowerLoraLoaderWidget" },
-      "custom_element": "power-lora-list",
-      "group_by": "widget_class_name"
+      "custom_element": "power-lora-item"
     },
     {
       "match": { "widget_class_name": "RgthreeBetterButtonWidget" },
