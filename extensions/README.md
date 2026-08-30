@@ -149,3 +149,9 @@ You can embed these standard ComfyGrid elements directly into your templates:
   ```html
   <cg-modal-combo-widget model-dir="models" model-subdirs="checkpoints"></cg-modal-combo-widget>
   ```
+
+- **`<cg-toggle-widget>`**: Switch-styled checkbox toggle.
+
+  ```html
+  <cg-toggle-widget label="Bypass"></cg-toggle-widget>
+  ```

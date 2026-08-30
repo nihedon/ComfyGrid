@@ -76,13 +76,15 @@ export async function loadRuntimeExtensions(): Promise<void> {
             await attachScripts(manifest.id ?? extensionId, manifest);
             await attachStyles(manifest.id ?? extensionId, manifest);
 
-            registerExtension({
-                name: manifest.name,
-                widgets: manifest.widgets.map((def) => ({
-                    match: Array.isArray(def.match) ? def.match.map(toMatchCondition) : toMatchCondition(def.match),
-                    customElement: def.custom_element,
-                })),
-            });
+            if (manifest.widgets && manifest.widgets.length > 0) {
+                registerExtension({
+                    name: manifest.name,
+                    widgets: manifest.widgets.map((def) => ({
+                        match: Array.isArray(def.match) ? def.match.map(toMatchCondition) : toMatchCondition(def.match),
+                        customElement: def.custom_element,
+                    })),
+                });
+            }
 
             for (const cond of manifest.ignore ?? []) {
                 registerIgnore({

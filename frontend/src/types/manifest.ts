@@ -27,6 +27,6 @@ export type ExtensionManifestJson = {
         scripts?: string[];
         styles?: string[];
     };
-    widgets: ManifestWidgetDef[];
+    widgets?: ManifestWidgetDef[];
     ignore?: ManifestIgnoreCondition[];
 };

@@ -151,11 +151,17 @@ export class ComfyGridWidget extends HTMLElement {
             const path = el.getAttribute('bind') || el.getAttribute('data-bind');
             if (!path) continue;
 
-            const isCombo = el.tagName.toLowerCase() === 'cg-modal-combo-widget';
+            const tagName = el.tagName.toLowerCase();
+            const isCombo = tagName === 'cg-modal-combo-widget';
+            const isToggle = tagName === 'cg-toggle-widget';
             this.#boundElements.push({ el, path, isCombo });
 
             if (isCombo) {
                 this.#setupComboElement(el, path);
+            } else if (isToggle) {
+                el.addEventListener('change', (e: any) => {
+                    this.setValue(path, e.detail?.checked ?? (el as any).checked);
+                });
             } else if (el instanceof HTMLInputElement) {
                 if (el.type === 'checkbox') {
                     el.addEventListener('change', () => {
@@ -289,6 +295,8 @@ export class ComfyGridWidget extends HTMLElement {
             const val = getNestedProperty(this.#widget, path);
             if (isCombo) {
                 this.#setupComboElement(el, path);
+            } else if (el.tagName.toLowerCase() === 'cg-toggle-widget') {
+                (el as any).checked = Boolean(val);
             } else if (el instanceof HTMLInputElement) {
                 if (el.type === 'checkbox') {
                     el.checked = Boolean(val);
