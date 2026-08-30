@@ -1,15 +1,12 @@
 class Bypasser extends (globalThis.ComfyGridWidget || HTMLElement) {
-  static extension = "bypasser";
-  static template = "template.html#bypasser-widget";
-
   onInit() {
-    const toggleEl = this.querySelector('[data-role="toggle"]');
-    if (toggleEl) {
-      toggleEl.addEventListener("change", (event) => {
-        const checked = Boolean(event.detail?.checked ?? event.target.checked);
-        this.#updateValue(checked);
-      });
-    }
+    this.querySelector('[data-role="toggle"]')?.addEventListener("change", (e) => {
+      const checked = Boolean(e.detail?.checked ?? e.target.checked);
+      if (this.widget?.value) {
+        this.widget.value.toggled = checked;
+        this.widget.comfyWidget?.doModeChange?.(checked);
+      }
+    });
   }
 
   onSync() {
@@ -25,18 +22,9 @@ class Bypasser extends (globalThis.ComfyGridWidget || HTMLElement) {
     const toggleEl = this.querySelector('[data-role="toggle"]');
     if (toggleEl) {
       toggleEl.label = widget.label ?? widget.name ?? "";
-      toggleEl.checked = Boolean(widget.value.toggled);
+      toggleEl.checked = Boolean(widget.value?.toggled);
     }
   }
-
-  #updateValue(checked) {
-    if (!this.widget) return;
-    this.widget.value.toggled = checked;
-    this.widget.comfyWidget.doModeChange(checked);
-    // this.save();
-  }
 }
 
-if (!customElements.get("bypasser-widget")) {
-  customElements.define("bypasser-widget", Bypasser);
-}
+(globalThis.ComfyGridWidget || customElements).define?.("bypasser-widget", Bypasser);

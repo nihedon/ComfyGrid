@@ -31,14 +31,15 @@ Define metadata and map target ComfyUI widgets to your Custom Elements:
   "description": "Custom widget extension for ComfyGrid",
   "frontend": {
     "scripts": ["widget.js"],
-    "styles": ["style.css"]
-  },
-  "widgets": [
-    {
-      "match": { "widget_class_name": "MyCustomComfyWidget" },
-      "custom_element": "my-custom-widget"
-    }
-  ]
+    "styles": ["style.css"],
+    "widgets": [
+      {
+        "match": { "widget_class_name": "MyCustomComfyWidget" },
+        "custom_element": "my-custom-widget",
+        "template": "template.html#my-custom-item"
+      }
+    ]
+  }
 }
 ```
 
@@ -91,9 +92,10 @@ Inherit from `ComfyGridWidget` to get zero-boilerplate lifecycle management, aut
 
 ```javascript
 class MyCustomWidget extends (globalThis.ComfyGridWidget || HTMLElement) {
-  static extension = "my-extension"; // Extension folder name
-  static template = "template.html#my-custom-widget"; // Template file and ID
-  static sortable = true; // Enable drag-and-drop reordering
+  // Optional overrides (defaults to "template.html#<tag-name>"):
+  // static extension = "my-extension";
+  // static template = "template.html#my-custom-widget";
+  // static sortable = true; // Enable drag-and-drop reordering
 
   /**
    * Called when DOM template is loaded and mounted.
@@ -119,7 +121,7 @@ class MyCustomWidget extends (globalThis.ComfyGridWidget || HTMLElement) {
   }
 }
 
-customElements.define("my-custom-widget", MyCustomWidget);
+(globalThis.ComfyGridWidget || customElements).define?.("my-custom-widget", MyCustomWidget);
 ```
 
 ### Available Properties & Methods on `ComfyGridWidget`

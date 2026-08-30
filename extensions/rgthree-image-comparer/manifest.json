@@ -5,12 +5,12 @@
   "description": "rgthree Image Comparer",
   "frontend": {
     "scripts": ["widget.js"],
-    "styles": []
-  },
-  "widgets": [
-    {
-      "match": { "widget_class_name": "RgthreeImageComparerWidget" },
-      "custom_element": "rgthree-image-comparer"
-    }
-  ]
+    "widgets": [
+      {
+        "match": { "widget_class_name": "RgthreeImageComparerWidget" },
+        "custom_element": "rgthree-image-comparer-widget",
+        "template": "template.html#rgthree-image-comparer"
+      }
+    ]
+  }
 }

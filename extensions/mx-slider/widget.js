@@ -1,7 +1,4 @@
 class MxSlider extends (globalThis.ComfyGridWidget || HTMLElement) {
-  static extension = "mx-slider";
-  static template = "template.html#mx-slider";
-
   onInit() {
     this.addEventListener("input", (event) => {
       const target = event.target;
@@ -23,17 +20,11 @@ class MxSlider extends (globalThis.ComfyGridWidget || HTMLElement) {
   }
 
   onSync() {
-    const node = this.node;
-    const comfyNode = this.comfyNode;
-    const props = node?.properties ?? comfyNode?.properties ?? {};
+    const props = this.node?.properties ?? this.comfyNode?.properties ?? {};
     const min = props.min ?? 0;
     const max = props.max ?? 1;
     const step = props.step ?? 0.01;
-    const value =
-      props.value ??
-      (comfyNode?.intpos?.x != null
-        ? min + comfyNode.intpos.x * (max - min)
-        : (this.widget?.value ?? 0));
+    const value = props.value ?? (this.comfyNode?.intpos?.x != null ? min + this.comfyNode.intpos.x * (max - min) : (this.widget?.value ?? 0));
 
     const root = this.querySelector('[data-role="root"]');
     if (root) {
@@ -71,6 +62,4 @@ class MxSlider extends (globalThis.ComfyGridWidget || HTMLElement) {
   }
 }
 
-if (!customElements.get("mx-slider")) {
-  customElements.define("mx-slider", MxSlider);
-}
+(globalThis.ComfyGridWidget || customElements).define?.("mx-slider-widget", MxSlider);

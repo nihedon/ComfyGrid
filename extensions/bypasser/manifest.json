@@ -1,16 +1,16 @@
 {
   "id": "bypasser",
-  "name": "bypasser",
+  "name": "Bypasser",
   "version": "1.0.0",
   "description": "Custom toggle widget for bypasser node",
   "frontend": {
     "scripts": ["widget.js"],
-    "styles": []
-  },
-  "widgets": [
-    {
-      "match": { "widget_class_name": "FastGroupsToggleRowWidget" },
-      "custom_element": "bypasser-widget"
-    }
-  ]
+    "widgets": [
+      {
+        "match": { "widget_class_name": "FastGroupsToggleRowWidget" },
+        "custom_element": "bypasser-widget",
+        "template": "template.html#bypasser"
+      }
+    ]
+  }
 }

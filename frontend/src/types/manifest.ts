@@ -6,26 +6,34 @@ export type ManifestMatchCondition = {
     widget_type?: string;
 };
 
-type ManifestWidgetDef = {
+export type ManifestWidgetDef = {
     match: ManifestMatchCondition | ManifestMatchCondition[];
     custom_element: string;
+    template?: string;
+    template_id?: string;
 };
 
-type ManifestIgnoreCondition = {
+export type ManifestIgnoreCondition = {
     comfy_class?: string;
     constructor_name?: string;
     widget_class_name?: string;
     widget_name?: string;
 };
 
-export type ExtensionManifestJson = {
-    id?: string;
+export type ExtensionManifest = {
+    id: string;
     name: string;
     version?: string;
     description?: string;
+    author?: string;
+    python?: {
+        install?: string;
+        entry?: string;
+    };
     frontend?: {
         scripts?: string[];
         styles?: string[];
+        widgets?: ManifestWidgetDef[];
     };
     widgets?: ManifestWidgetDef[];
     ignore?: ManifestIgnoreCondition[];

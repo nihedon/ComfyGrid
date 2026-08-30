@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import { getCustomElementTemplateInfo } from '@/components/widgets/comfyui/registry/extension-loader';
 
 const templateDocCache = (globalThis.__COMFYGRID_TEMPLATE_CACHE__ ??= new Map<string, Document>());
 
@@ -110,28 +111,49 @@ export class ComfyGridWidget extends HTMLElement {
         this.onInit();
     }
 
+    /**
+     * Registers a Custom Element subclass if not already defined.
+     */
+    static define(tagName: string, widgetClass: typeof ComfyGridWidget): void {
+        if (!customElements.get(tagName)) {
+            customElements.define(tagName, widgetClass);
+        }
+    }
+
     async #renderTemplate(): Promise<void> {
         const ctor = this.constructor as typeof ComfyGridWidget;
-        const templateSpec = ctor.template;
-        if (!templateSpec) return;
+        const tagName = this.tagName.toLowerCase();
+        const meta = getCustomElementTemplateInfo(tagName);
 
-        let fileName: string;
-        let templateId: string | null = null;
+        let extensionName = ctor.extension ?? meta?.extensionId ?? '';
+        let fileName: string | undefined = meta?.templateFile;
+        let templateId: string | undefined = meta?.templateId;
 
-        if (templateSpec.includes('#')) {
-            const [file, id] = templateSpec.split('#');
-            fileName = file || 'template.html';
-            templateId = id;
-        } else {
-            fileName = templateSpec;
+        // Allow class-level static template override if explicitly specified
+        if (ctor.template) {
+            if (ctor.template.includes('#')) {
+                const [file, id] = ctor.template.split('#');
+                fileName = file || fileName || 'template.html';
+                templateId = id;
+            } else {
+                fileName = ctor.template;
+            }
         }
 
-        const extensionName = ctor.extension || this.tagName.toLowerCase().split('-')[0] || '';
+        // If no template is configured in manifest or class, skip template rendering
+        if (!fileName || !templateId) {
+            return;
+        }
+
+        if (!extensionName) {
+            extensionName = tagName.replace(/-widget$/, '');
+        }
+
         const doc = await loadExtensionTemplate(extensionName, fileName);
-        const templateEl = templateId ? doc.getElementById(templateId) : doc.querySelector('template') || doc.body;
+        const templateEl = doc.getElementById(templateId);
 
         if (!templateEl) {
-            throw new Error(`Template not found: ${templateSpec}`);
+            throw new Error(`Template not found: #${templateId} in "${fileName}" (extension: "${extensionName}")`);
         }
 
         const lit = (globalThis as any).litHtml;

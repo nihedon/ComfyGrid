@@ -90,7 +90,9 @@ def list_extensions() -> list[dict]:
                 manifest_path = ext_dir / "manifest.json"
                 if manifest_path.exists():
                     manifest = orjson.loads(manifest_path.read_text(encoding="utf-8"))
-                    result.append({ext_dir.name: manifest})
+                    manifest.setdefault("id", ext_dir.name)
+                    manifest.setdefault("name", ext_dir.name)
+                    result.append(manifest)
             except Exception as e:
                 logging.error("Failed to process extension directory %s: %s", ext_dir, e)
     return result

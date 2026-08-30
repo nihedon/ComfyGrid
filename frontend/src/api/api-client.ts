@@ -1,6 +1,6 @@
 import type { Model } from '@/states/storage-state.svelte';
 import type { Job } from '@/types/job';
-import type { ExtensionManifestJson } from '@/types/manifest';
+import type { ExtensionManifest } from '@/types/manifest';
 import type { ImageInfo } from '@/types/model-shared';
 import type { SetupConfig } from '@/types/setup';
 import type { Version } from '@/types/verion';
@@ -200,7 +200,7 @@ class ComfyGridApiClient {
         });
     }
 
-    async getCustomNodes(): Promise<ApiResultJson<Record<string, ExtensionManifestJson>[]>> {
+    async getCustomNodes(): Promise<ApiResultJson<ExtensionManifest[]>> {
         return await fetchApiJson('/comfygrid/api/extensions');
     }
 
