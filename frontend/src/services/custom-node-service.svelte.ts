@@ -258,8 +258,7 @@ export function setupCustomNodeApi(): void {
             connectedCallback() {
                 if (!this.#container) {
                     const container = document.createElement('div');
-                    container.className =
-                        'form-switch form-check d-flex align-items-center justify-content-between p-0 w-100 m-0';
+                    container.className = 'form-switch form-check d-flex align-items-center justify-content-between p-0 w-100 m-0';
 
                     const labelEl = document.createElement('label');
                     labelEl.className = 'form-check-label text-truncate me-2 user-select-none';
@@ -280,9 +279,7 @@ export function setupCustomNodeApi(): void {
                             this.#widget.updateValue?.();
                             this.#widget.onDrawBackground?.();
                         }
-                        this.dispatchEvent(
-                            new CustomEvent('change', { bubbles: true, detail: { checked: inputEl.checked } }),
-                        );
+                        this.dispatchEvent(new CustomEvent('change', { bubbles: true, detail: { checked: inputEl.checked } }));
                     });
 
                     container.appendChild(labelEl);

@@ -97,11 +97,7 @@ export function matchExtensionWithMeta(node: ComfyGridNode, widget: ComfyGridWid
     return null;
 }
 
-function matchesConditions(
-    match: ManifestMatchCondition | ManifestMatchCondition[],
-    node: ComfyGridNode,
-    widget: ComfyGridWidget,
-): boolean {
+function matchesConditions(match: ManifestMatchCondition | ManifestMatchCondition[], node: ComfyGridNode, widget: ComfyGridWidget): boolean {
     const conditions = Array.isArray(match) ? match : [match];
     return conditions.some((cond) => matchesCondition(cond, node, widget));
 }

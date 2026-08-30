@@ -38,6 +38,13 @@
         --bs-backdrop-bg: var(--backdrop-bg) !important;
         --bs-backdrop-opacity: var(--backdrop-opacity) !important;
     }
+
+    /* Default display and width for ComfyGrid custom elements */
+    cg-button-widget,
+    cg-modal-combo-widget,
+    cg-toggle-widget {
+        width: 100%;
+    }
 }
 
 @layer utilities {

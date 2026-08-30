@@ -41,17 +41,17 @@ export function setNestedProperty(obj: any, path: string, value: any): void {
         }
         current = current[part];
     }
-    current[parts[parts.length - 1]] = value;
+    current[parts.at(-1)] = value;
 }
 
 /**
  * Base Web Component class for building ComfyGrid custom widgets with zero boilerplate.
  */
 export class ComfyGridWidget extends HTMLElement {
-    static extension?: string;
-    static template?: string; // e.g. "lora.html" or "lora.html#power-lora-item"
-    static sortable = false;
-    static sortHandle = '.cg-sort-handle, .comfygrid-lora-handle, [data-role="handle"], [data-sort-handle]';
+    static readonly extension?: string;
+    static readonly template?: string; // e.g. "lora.html" or "lora.html#power-lora-item"
+    static readonly sortable = false;
+    static readonly sortHandle = '.cg-sort-handle, .comfygrid-lora-handle, [data-role="handle"], [data-sort-handle]';
 
     #widget: any = null;
     #isInitialized = false;
@@ -170,7 +170,7 @@ export class ComfyGridWidget extends HTMLElement {
         const bindableNodes = this.querySelectorAll<HTMLElement>('[bind], [data-bind]');
 
         for (const el of bindableNodes) {
-            const path = el.getAttribute('bind') || el.getAttribute('data-bind');
+            const path = el.getAttribute('bind') || el.dataset.bind;
             if (!path) continue;
 
             const tagName = el.tagName.toLowerCase();
@@ -240,7 +240,7 @@ export class ComfyGridWidget extends HTMLElement {
     #setupAutoActions(): void {
         const actionNodes = this.querySelectorAll<HTMLElement>('[action], [data-action]');
         for (const el of actionNodes) {
-            const action = el.getAttribute('action') || el.getAttribute('data-action');
+            const action = el.getAttribute('action') || el.dataset.action;
             if (action === 'remove' || action === 'delete') {
                 el.addEventListener('click', () => {
                     this.removeSelf();
