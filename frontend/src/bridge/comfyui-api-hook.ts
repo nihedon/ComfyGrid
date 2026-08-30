@@ -2,6 +2,7 @@ import { workflowManager } from '@/managers/workflow-manager';
 import { appState } from '@/states/app-state.svelte';
 import type { ComfyWindow } from '@/states/comfyui-state.svelte';
 import type { ComfyApp, ComfyGraph, ComfyNode } from '@/types/comfy-model';
+import logger from '@/utils/logger';
 
 export class ComfyUiApiHook {
     static readonly #pendingTimers = new Map<string | number, number | ReturnType<typeof setTimeout>>();
@@ -35,13 +36,13 @@ export class ComfyUiApiHook {
         app.loadGraphData = async function (...args: any[]) {
             const orgRet = await orgLoadGraphData.apply(this, args);
             appState.comfyUiState.graphReady = true;
-
             if (appState.uiState.activePageId === 'grid') {
-                workflowManager.loadCurrentWorkflow();
+                workflowManager.loadCurrentWorkflow().catch((error) => {
+                    logger.error('Failed to load current workflow:', error);
+                });
             } else {
                 appState.uiState.needRefresh = true;
             }
-
             return orgRet;
         };
         anyApp.loadGraphData.__comfygrid__is_hooked__ = true;
@@ -70,7 +71,13 @@ export class ComfyUiApiHook {
         if (orgSetDirtyCanvas) {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             anyGraph.setDirtyCanvas = function (...args: any[]) {
-                return orgSetDirtyCanvas.apply(this, args);
+                const ret = orgSetDirtyCanvas.apply(this, args);
+                try {
+                    workflowManager.handleUpdateMode();
+                } catch (error) {
+                    logger.error('Failed to handle set dirty canvas:', error);
+                }
+                return ret;
             };
         }
         anyGraph.setDirtyCanvas.__comfygrid__is_hooked__ = true;

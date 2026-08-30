@@ -68,6 +68,7 @@ export class ComfyUiBridge {
 
         await waitOnDrawBackgroundAll(app.rootGraph);
 
+        ComfyUiApiHook.hookForGraphSetDirtyCanvas(app.rootGraph);
         for (const topNode of app.rootGraph.nodes) {
             ComfyUiApiHook.hookForWidgetCallback(topNode);
         }

@@ -7,6 +7,7 @@ import { ComfyGridGroup, ComfyGridNode } from '@/states/model-state.svelte';
 import type { BoardId } from '@/types/board';
 import type { ComfyGroup, ComfyNode } from '@/types/comfy-model';
 import type { FloatingPosition, LayoutType } from '@/types/layout';
+import type { ComfyNodeMode } from '@/types/model-shared';
 import logger from '@/utils/logger';
 
 function isGroupInGroup(child: ComfyGroup, parent: ComfyGroup): boolean {
@@ -165,7 +166,7 @@ class WorkflowManager {
         logger.info(`[WORKFLOW_LOG] handleWorkflow finish: graphId=${graphId}`);
     }
 
-    async handleUpdateNode(payload: { nodeId: string; silent?: boolean }) {
+    handleUpdateNode(payload: { nodeId: string; silent?: boolean }) {
         if (appState.uiState.activePageId !== 'grid') return;
         const { nodeId, silent } = payload;
 
@@ -176,6 +177,18 @@ class WorkflowManager {
                 setTimeout(() => {
                     notifyNodeChanged(node.id, node);
                 }, 100);
+            }
+        }
+    }
+
+    handleUpdateMode() {
+        if (appState.uiState.activePageId !== 'grid') return;
+        const app = appState.comfyUiState.app;
+        if (!app) return;
+        for (const comfyNode of app.rootGraph.nodes) {
+            const node = appState.workspaceState.getRealNode(String(comfyNode.id));
+            if (node) {
+                node.mode = comfyNode.mode as ComfyNodeMode;
             }
         }
     }
