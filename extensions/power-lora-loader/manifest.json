@@ -5,8 +5,7 @@
   "description": "LoRA list widget for PowerLoraLoader nodes",
   "frontend": {
     "scripts": ["lora.js", "add_button.js"],
-    "styles": ["style.css"],
-    "templates": ["lora.html"]
+    "styles": ["style.css"]
   },
   "widgets": [
     {

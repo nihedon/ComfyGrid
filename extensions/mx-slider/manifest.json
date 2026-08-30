@@ -5,8 +5,7 @@
   "description": "Custom slider widget for mxSlider node",
   "frontend": {
     "scripts": ["widget.js"],
-    "styles": [],
-    "templates": ["template.html"]
+    "styles": []
   },
   "widgets": [
     {

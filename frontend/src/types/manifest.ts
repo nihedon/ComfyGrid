@@ -14,16 +14,16 @@ type ManifestWidgetDef = {
 type ManifestIgnoreCondition = {
     comfy_class?: string;
     constructor_name?: string;
+    widget_class_name?: string;
+    widget_name?: string;
 };
 
 export type ExtensionManifestJson = {
+    id?: string;
     name: string;
+    version?: string;
+    description?: string;
     frontend?: {
-        scripts?: string[];
-        styles?: string[];
-        templates?: string[];
-    };
-    assets?: {
         scripts?: string[];
         styles?: string[];
     };

@@ -14,15 +14,15 @@ function toMatchCondition(raw: ManifestMatchCondition): MatchCondition {
     };
 }
 
-async function attachScripts(manifest: ExtensionManifestJson) {
-    const scripts = manifest.frontend?.scripts ?? manifest.assets?.scripts ?? [];
+async function attachScripts(extensionId: string, manifest: ExtensionManifestJson) {
+    const scripts = manifest.frontend?.scripts ?? [];
     for (const script of scripts) {
         try {
             if (script) {
-                await loadScript(`/comfygrid/api/extensions/${manifest.name}/assets/${script}`);
+                await loadScript(`/comfygrid/api/extensions/${extensionId}/assets/${script}`);
             }
         } catch (e) {
-            logger.error(`Failed to load ${script} for "${manifest.name}":`, e);
+            logger.error(`Failed to load ${script} for "${extensionId}":`, e);
         }
     }
 }
@@ -37,15 +37,15 @@ function loadScript(url: string): Promise<void> {
     });
 }
 
-async function attachStyles(manifest: ExtensionManifestJson) {
-    const styles = manifest.frontend?.styles ?? manifest.assets?.styles ?? [];
+async function attachStyles(extensionId: string, manifest: ExtensionManifestJson) {
+    const styles = manifest.frontend?.styles ?? [];
     for (const style of styles) {
         try {
             if (style) {
-                await loadStyle(`/comfygrid/api/extensions/${manifest.name}/assets/${style}`);
+                await loadStyle(`/comfygrid/api/extensions/${extensionId}/assets/${style}`);
             }
         } catch (e) {
-            logger.error(`Failed to load ${style} for "${manifest.name}":`, e);
+            logger.error(`Failed to load ${style} for "${extensionId}":`, e);
         }
     }
 }
@@ -71,9 +71,10 @@ export async function loadRuntimeExtensions(): Promise<void> {
 
     for (const extension of res.json) {
         try {
+            const extensionId = Object.keys(extension)[0];
             const manifest = Object.values(extension)[0];
-            await attachScripts(manifest);
-            await attachStyles(manifest);
+            await attachScripts(manifest.id ?? extensionId, manifest);
+            await attachStyles(manifest.id ?? extensionId, manifest);
 
             registerExtension({
                 name: manifest.name,

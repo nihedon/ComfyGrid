@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { mount, unmount } from 'svelte';
 import ModalComboWidget from '@/components/widgets/comfyui/features/ModalComboWidget.svelte';
+import { ComfyGridWidget as BaseComfyGridWidget } from '@/services/comfygrid-widget';
 import { appState } from '@/states/app-state.svelte';
 import type { ComfyGridNode, ComfyGridWidget } from '@/states/model-state.svelte';
 
@@ -10,10 +11,12 @@ type NodeChangeCallback = (node: unknown) => void;
 const subscriptions = new Map<string, Set<NodeChangeCallback>>();
 
 /**
- * Exposes `window.api` for use by external Custom Element extensions.
+ * Exposes `window.api` and `window.ComfyGridWidget` for use by external Custom Element extensions.
  * Must be called before mounting the Svelte app.
  */
 export function setupCustomNodeApi(): void {
+    (globalThis as any).ComfyGridWidget = BaseComfyGridWidget;
+
     if (!globalThis.api) {
         globalThis.api = {} as any;
     }

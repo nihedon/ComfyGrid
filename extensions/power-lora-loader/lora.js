@@ -7,12 +7,12 @@ function getApi() {
 
 async function loadTemplateDocument(extensionName) {
   const templateCache = (globalThis.__COMFYGRID_TEMPLATE_CACHE__ ??= new Map());
-  const cacheKey = `${extensionName}/template_lora.html`;
+  const cacheKey = `${extensionName}/lora.html`;
   if (templateCache.has(cacheKey)) {
     return templateCache.get(cacheKey);
   }
 
-  const response = await fetch(`/comfygrid/api/extensions/${extensionName}/assets/template_lora.html`);
+  const response = await fetch(`/comfygrid/api/extensions/${extensionName}/assets/lora.html`);
   if (!response.ok) {
     throw new Error(`Failed to load template for ${extensionName}`);
   }

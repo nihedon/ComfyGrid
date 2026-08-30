@@ -5,8 +5,7 @@
   "description": "rgthree Image Comparer",
   "frontend": {
     "scripts": ["widget.js"],
-    "styles": [],
-    "templates": ["template.html"]
+    "styles": []
   },
   "widgets": [
     {
