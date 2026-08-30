@@ -2,7 +2,7 @@ import { SvelteSet } from 'svelte/reactivity';
 import { getWidgetComponentWithMeta } from '@/components/widgets/comfyui/registry/widget-registry';
 import { workflowManager } from '@/managers/workflow-manager';
 import type { ComfyApp, ComfyGroup, ComfyNode, ComfyWidget } from '@/types/comfy-model';
-import type { ComfyNodeMode, ImageInfo, WidgetContext } from '@/types/model-shared';
+import { COMFY_NODE_MODE, type ComfyNodeMode, type ImageInfo, type WidgetContext } from '@/types/model-shared';
 import { appState } from './app-state.svelte';
 
 function safeClone<T>(obj: T): T {
@@ -76,6 +76,11 @@ export class ComfyGridGroup {
             if (diff !== 0) return diff;
             return a.title.localeCompare(b.title);
         } else {
+            const aMode = a.modeSet.has(COMFY_NODE_MODE.NORMAL) ? -1 : 1;
+            const bMode = b.modeSet.has(COMFY_NODE_MODE.NORMAL) ? -1 : 1;
+            if (aMode !== bMode) {
+                return aMode - bMode;
+            }
             return comparePositions(a, b);
         }
     }
