@@ -57,6 +57,25 @@
         @extend .justify-content-center;
         @extend .p-1;
     }
+    .model-info-icon-btn {
+        @extend .position-absolute;
+        @extend .end-0;
+        @extend .px-1;
+        @extend .text-muted;
+        @extend .text-decoration-none;
+        background-color: var(--bs-body-bg);
+        z-index: 5;
+        border: 0;
+        opacity: 0.8;
+        transition:
+            opacity 0.15s ease-in-out,
+            color 0.15s ease-in-out;
+        &:hover {
+            background-color: var(--bs-body-bg);
+            opacity: 1;
+            color: var(--bs-primary) !important;
+        }
+    }
 
     .nav.nav-tabs {
         align-items: flex-end !important;
