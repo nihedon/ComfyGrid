@@ -191,6 +191,15 @@ class ExecutionManager {
         appState.executionState.progress.value = 0;
         appState.executionState.progress.maxValue = 0;
         appState.executionState.progress.addExecutedNodeSet(jobId, nodeIds);
+
+        for (const rawId of payload.nodeIds ?? []) {
+            const cleanId = rawId.includes('.') ? rawId.split('.').at(-1) : rawId;
+            if (!cleanId) continue;
+            const node = appState.workspaceState.getRealNode(cleanId);
+            if (node?.isOutputNode) {
+                node.updateNode();
+            }
+        }
     }
 
     handleProgress(payload: { value: number; max: number }) {

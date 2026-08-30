@@ -76,64 +76,6 @@ export class ComfyUiApiHook {
         anyGraph.setDirtyCanvas.__comfygrid__is_hooked__ = true;
     }
 
-    static hookForNodeWidgetChanged(node: ComfyNode) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const anyNode = node as any;
-        if (!anyNode.onWidgetChanged || anyNode.onWidgetChanged.__comfygrid__is_hooked__) {
-            return;
-        }
-
-        const orgOnWidgetChanged = anyNode.onWidgetChanged;
-        if (orgOnWidgetChanged) {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            anyNode.onWidgetChanged = function (...args: any[]) {
-                const orgRet = orgOnWidgetChanged.apply(this, args);
-                ComfyUiApiHook.#handleUpdateNodeDebounce(String(node.id));
-                return orgRet;
-            };
-        }
-        anyNode.onWidgetChanged.__comfygrid__is_hooked__ = true;
-    }
-
-    static hookForNodeSetDirtyCanvas(node: ComfyNode) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const anyNode = node as any;
-        if (!anyNode.setDirtyCanvas || anyNode.setDirtyCanvas.__comfygrid__is_hooked__) {
-            return;
-        }
-
-        const orgSetDirtyCanvas = anyNode.setDirtyCanvas;
-        if (orgSetDirtyCanvas) {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            anyNode.setDirtyCanvas = function (...args: any[]) {
-                const orgRet = orgSetDirtyCanvas.apply(this, args);
-                ComfyUiApiHook.#handleUpdateNodeDebounce(String(node.id));
-                return orgRet;
-            };
-        }
-        anyNode.setDirtyCanvas.__comfygrid__is_hooked__ = true;
-    }
-
-    static hookForAddCustomWidget(node: ComfyNode) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const anyNode = node as any;
-        if (!anyNode.addCustomWidget || anyNode.addCustomWidget.__comfygrid__is_hooked__) {
-            return;
-        }
-
-        const orgAddCustomWidget = anyNode.addCustomWidget;
-        if (orgAddCustomWidget) {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            anyNode.addCustomWidget = function (...args: any[]) {
-                const orgRet = orgAddCustomWidget.apply(this, args);
-                ComfyUiApiHook.hookForWidgetCallback(node);
-                ComfyUiApiHook.#handleUpdateNodeDebounce(String(node.id));
-                return orgRet;
-            };
-        }
-        anyNode.addCustomWidget.__comfygrid__is_hooked__ = true;
-    }
-
     static hookForWidgetCallback(node: ComfyNode) {
         for (const widget of node.widgets ?? []) {
             if (widget.callback) {

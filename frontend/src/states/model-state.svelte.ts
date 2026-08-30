@@ -411,6 +411,9 @@ export class ComfyGridNode {
     get properties() {
         return this.#comfyNode.properties;
     }
+    get isOutputNode() {
+        return Boolean(this.#comfyNode.constructor.nodeData?.output_node);
+    }
 
     set title(title: string) {
         this.#title = title;
