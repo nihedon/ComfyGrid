@@ -103,51 +103,55 @@
       path = 'root',
       isLast = true,
     )}
-      <div class="json-node-line">
-        {#if isObject(val)}
-          {@const keys = Object.keys(val)}
-          {@const isArr = Array.isArray(val)}
-          {@const isExpanded = expandedPaths.has(path)}
-          {@const openChar = isArr ? '[' : '{'}
-          {@const closeChar = isArr ? ']' : '}'}
+      {#if isObject(val)}
+        {@const keys = Object.keys(val)}
+        {@const isArr = Array.isArray(val)}
+        {@const isExpanded = expandedPaths.has(path)}
+        {@const openChar = isArr ? '[' : '{'}
+        {@const closeChar = isArr ? ']' : '}'}
 
-          <span
-            class="json-toggle me-1 d-inline-flex align-items-center"
-            role="button"
-            tabindex="0"
-            onclick={() => togglePath(path)}
-            onkeydown={(e) => e.key === 'Enter' && togglePath(path)}
-          >
-            {#if isExpanded}
-              <ChevronDown size={14} />
-            {:else}
-              <ChevronRight size={14} />
-            {/if}
-          </span>
-
-          {#if keyName !== undefined}
-            <span class="json-key">{JSON.stringify(keyName)}</span><span class="json-separator"
-              >:
-            </span>
-          {/if}
-
-          <span class="json-bracket">{openChar}</span>
-
-          {#if !isExpanded}
+        <div class="json-node">
+          <div class="json-node-line d-flex align-items-center">
             <span
-              class="json-preview text-muted ms-1"
+              class="json-toggle"
               role="button"
               tabindex="0"
               onclick={() => togglePath(path)}
               onkeydown={(e) => e.key === 'Enter' && togglePath(path)}
             >
-              {isArr ? `${keys.length} items` : `${keys.length} keys`}
+              {#if isExpanded}
+                <ChevronDown size={14} />
+              {:else}
+                <ChevronRight size={14} />
+              {/if}
             </span>
-            <span class="json-bracket">{closeChar}</span>{#if !isLast}<span class="json-separator"
-                >,</span
-              >{/if}
-          {:else}
-            <div class="json-children ps-3 border-start ms-2">
+
+            {#if keyName !== undefined}
+              <span class="json-key">{JSON.stringify(keyName)}</span><span class="json-separator"
+                >:&nbsp;</span
+              >
+            {/if}
+
+            <span class="json-bracket">{openChar}</span>
+
+            {#if !isExpanded}
+              <span
+                class="json-preview text-muted ms-1"
+                role="button"
+                tabindex="0"
+                onclick={() => togglePath(path)}
+                onkeydown={(e) => e.key === 'Enter' && togglePath(path)}
+              >
+                {isArr ? `${keys.length} items` : `${keys.length} keys`}
+              </span>
+              <span class="json-bracket">{closeChar}</span>{#if !isLast}<span class="json-separator"
+                  >,</span
+                >{/if}
+            {/if}
+          </div>
+
+          {#if isExpanded}
+            <div class="json-children">
               {#each keys as k, i (k)}
                 {@render node(
                   (val as Record<string, unknown>)[k],
@@ -157,18 +161,22 @@
                 )}
               {/each}
             </div>
-            <div class="json-node-close">
+            <div class="json-node-line d-flex align-items-center">
+              <span class="json-toggle-spacer"></span>
               <span class="json-bracket">{closeChar}</span>{#if !isLast}<span class="json-separator"
                   >,</span
                 >{/if}
             </div>
           {/if}
-        {:else}
-          <span class="json-indent"></span>
+        </div>
+      {:else}
+        <div class="json-node-line d-flex align-items-center">
+          <span class="json-toggle-spacer"></span>
+
           {#if keyName !== undefined}
             <span class="json-key">{JSON.stringify(keyName)}</span><span class="json-separator"
-              >:
-            </span>
+              >:&nbsp;</span
+            >
           {/if}
 
           {#if typeof val === 'string'}
@@ -184,8 +192,8 @@
           {/if}
 
           {#if !isLast}<span class="json-separator">,</span>{/if}
-        {/if}
-      </div>
+        </div>
+      {/if}
     {/snippet}
 
     {@render node(value, undefined, 'root', true)}
@@ -197,11 +205,38 @@
     background-color: var(--bs-body-bg);
   }
 
+  .json-node-line {
+    min-height: 1.5rem;
+    line-height: 1.5rem;
+  }
+
+  .json-toggle,
+  .json-toggle-spacer {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.25rem;
+    height: 1.25rem;
+    flex-shrink: 0;
+    margin-right: 0.25rem;
+  }
+
   .json-toggle {
     cursor: pointer;
     user-select: none;
-    font-size: 0.75rem;
-    color: var(--bs-secondary);
+    color: rgba(var(--bs-body-color-rgb), 0.3);
+    border-radius: 3px;
+
+    &:hover {
+      background-color: rgba(var(--bs-secondary-rgb), 0.8);
+      color: var(--bs-body-color);
+    }
+  }
+
+  .json-children {
+    padding-left: 1.25rem;
+    margin-left: 0.6rem;
+    border-left: 1px dashed var(--bs-border-color);
   }
 
   .json-key {
