@@ -1,6 +1,6 @@
 <script lang="ts">
   import { tick } from 'svelte';
-  import { Languages, Loader2, Settings, TriangleAlert } from '@lucide/svelte';
+  import { Check, Languages, Loader2, Settings, TriangleAlert } from '@lucide/svelte';
   import { t } from '@/i18n/i18n';
   import { callLayoutChangedCallbacks } from '@/services/callback-service';
   import { saveLayoutObject } from '@/services/gridstack-service';
@@ -146,6 +146,11 @@
     <span class="badge text-bg-danger ms-2 fs-7 d-inline-flex align-items-center gap-1">
       <TriangleAlert size={14} />
       {$t('widget.translate.failed')}
+    </span>
+  {:else if isTranslate && !widget.isDirty && widget.rawValue && widget.rawValue.trim() !== ''}
+    <span class="badge text-bg-success ms-2 fs-7 d-inline-flex align-items-center gap-1">
+      <Check size={14} />
+      {$t('widget.translate.completed')}
     </span>
   {/if}
   <ul class="dropdown-menu">

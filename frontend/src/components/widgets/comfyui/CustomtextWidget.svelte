@@ -164,13 +164,7 @@
       if (widget.rawValue === undefined || widget.rawValue === null) {
         widget.rawValue = widget.value ?? '';
       }
-      widget.isDirty = true;
       registerOrUnregisterPending();
-      const timing = appState.optionState.get('ComfyGrid.ollama.translate_timing') ?? 'on_generate';
-      const text = widget.rawValue ?? '';
-      if (timing === 'on_blur' && text.trim()) {
-        triggerTranslation(text);
-      }
     } else {
       if (widget.rawValue !== undefined && widget.rawValue === widget.value) {
         widget.rawValue = undefined;
@@ -180,24 +174,28 @@
     }
   });
 
+  let previousOllamaConfig: string | null = null;
   const currentOllamaConfig = $derived(
     `${layout.getTranslateModel(widget.id) ?? appState.optionState.get('ComfyGrid.ollama.model') ?? ''}::${layout.getTranslateSystem(widget.id) ?? appState.optionState.get('ComfyGrid.ollama.system') ?? ''}`,
   );
 
   $effect(() => {
-    void currentOllamaConfig;
+    const config = currentOllamaConfig;
     untrack(() => {
-      widget.isDirty = true;
-      const text = widget.rawValue ?? '';
-      if (isTranslate && text.trim()) {
-        const timing =
-          appState.optionState.get('ComfyGrid.ollama.translate_timing') ?? 'on_generate';
-        if (timing === 'on_generate') {
-          registerOrUnregisterPending();
-        } else {
-          triggerTranslation(text);
+      if (previousOllamaConfig !== null && previousOllamaConfig !== config) {
+        widget.isDirty = true;
+        const text = widget.rawValue ?? '';
+        if (isTranslate && text.trim()) {
+          const timing =
+            appState.optionState.get('ComfyGrid.ollama.translate_timing') ?? 'on_generate';
+          if (timing === 'on_generate') {
+            registerOrUnregisterPending();
+          } else {
+            triggerTranslation(text);
+          }
         }
       }
+      previousOllamaConfig = config;
     });
   });
 
