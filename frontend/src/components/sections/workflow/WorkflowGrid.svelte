@@ -139,7 +139,7 @@
               <Folder size={48} class="text-warning" />
             {:else if item.has_thumbnail}
               <img
-                src={`/comfygrid/api/workflows/thumbnail?path=${encodeURIComponent(item.path)}`}
+                src={`/comfygrid/api/workflows/thumbnail?path=${encodeURIComponent(item.path)}&t=${workflowState.thumbnailTimestamp}`}
                 alt={item.name}
                 class="w-100 h-100 object-fit-cover"
               />

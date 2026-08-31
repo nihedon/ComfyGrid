@@ -1,6 +1,8 @@
 import { comfyGridApiClient } from '@/api/api-client';
+import { ComfyUiCanvas } from '@/bridge/comfyui-canvas';
 import { workflowManager } from '@/managers/workflow-manager';
 import { appState } from '@/states/app-state.svelte';
+import type { ComfyApp } from '@/types/comfy-model';
 import type { WorkflowItem } from '@/types/workflow';
 
 export class WorkflowState {
@@ -14,6 +16,7 @@ export class WorkflowState {
     renamingPath = $state<string | null>(null);
     renamingInput = $state<string>('');
     renamingPane = $state<'tree' | 'main' | null>(null);
+    thumbnailTimestamp = $state<number>(Date.now());
 
     folders = $derived.by(() => {
         const folderPaths: string[] = [''];
@@ -145,7 +148,28 @@ export class WorkflowState {
                 appState.uiState.activePageId = 'grid';
                 appState.uiState.needRefresh = false;
                 await workflowManager.loadCurrentWorkflow();
+
+                // Capture workflow canvas thumbnail in background
+                void this.captureAndSaveThumbnail(item, app);
             }
+        }
+    }
+
+    async captureAndSaveThumbnail(item: WorkflowItem, app: ComfyApp) {
+        try {
+            if (!app.canvas) return;
+            await ComfyUiCanvas.fitGraphToCanvas(app.canvas);
+            await new Promise((resolve) => setTimeout(resolve, 150));
+            const dataUrl = await ComfyUiCanvas.captureGraphCanvas(app.canvas);
+            if (typeof dataUrl === 'string' && dataUrl.startsWith('data:image/')) {
+                const res = await comfyGridApiClient.saveWorkflowThumbnail(item.path, dataUrl);
+                if (res.ok) {
+                    item.has_thumbnail = true;
+                    this.thumbnailTimestamp = Date.now();
+                }
+            }
+        } catch (e) {
+            console.error('Failed to capture workflow thumbnail:', e);
         }
     }
 }

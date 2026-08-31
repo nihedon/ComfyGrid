@@ -20,16 +20,6 @@
     const app = appState.comfyUiState.app;
     if (!app) return;
 
-    const test = false;
-    if (test) {
-      ComfyUiCanvas.handleGraphDataLoaded(app, async () => {
-        ComfyUiCanvas.fitGraphToCanvas(app.canvas);
-        await new Promise((resolve) => setTimeout(resolve, 100));
-        const imageUrl = await ComfyUiCanvas.captureGraphCanvas(app.canvas);
-        console.info(imageUrl);
-      });
-    }
-
     item.tab.click();
     if (uiState.activePageId !== 'grid' && uiState.activePageId !== 'comfyui') {
       uiState.needRefresh = true;
