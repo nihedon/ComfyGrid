@@ -132,6 +132,7 @@ class OptionManager {
     setOpts(key: string, val: any) {
         this.#opts.set(key, val);
     }
+
     set forms(forms: Record<string, FormInfo>) {
         this.#forms.clear();
         for (const [key, value] of Object.entries(forms)) {
@@ -141,6 +142,7 @@ class OptionManager {
     setForms(key: string, val: FormInfo) {
         this.#forms.set(key, val);
     }
+
     set extForms(extForms: Record<string, { name: string; forms: Record<string, FormInfo> }>) {
         this.#extForms.clear();
         for (const [key, extForm] of Object.entries(extForms)) {

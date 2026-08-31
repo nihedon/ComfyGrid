@@ -7,7 +7,7 @@ class WorkspaceInfo(BaseModel):
     name: str
     script_path: str
     python_path: str
-    comfyui_port: int | None = None
+    comfyui_port: int
     comfyui_args: str = ""
 
 

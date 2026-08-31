@@ -43,7 +43,14 @@ class FileManager {
                     return;
                 }
 
-                const layout = json.comfygrid ? (typeof json.comfygrid === 'string' ? JSON.parse(json.comfygrid) : json.comfygrid) : undefined;
+                let layout = undefined;
+                if (json.comfygrid) {
+                    if (typeof json.comfygrid === 'string') {
+                        layout = JSON.parse(json.comfygrid);
+                    } else {
+                        layout = json.comfygrid;
+                    }
+                }
 
                 let workflowLoaded = false;
                 if (keySize > 1) {
@@ -80,7 +87,15 @@ class FileManager {
             let workflowLoaded = false;
 
             const comfygridData = metadata.comfygrid;
-            const layout = comfygridData ? (typeof comfygridData === 'string' ? JSON.parse(comfygridData) : comfygridData) : undefined;
+
+            let layout = undefined;
+            if (comfygridData) {
+                if (typeof comfygridData === 'string') {
+                    layout = JSON.parse(comfygridData);
+                } else {
+                    layout = comfygridData;
+                }
+            }
 
             if (metadata.workflow) {
                 try {

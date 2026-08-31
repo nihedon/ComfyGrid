@@ -1,4 +1,4 @@
-type PageId = 'grid' | 'comfyui' | 'model' | 'image-info' | 'settings';
+type PageId = 'grid' | 'comfyui' | 'workflow' | 'model' | 'image-info' | 'settings';
 
 class UIState {
     #activePageId: PageId = $state('grid');
@@ -10,7 +10,7 @@ class UIState {
     get activePageId(): PageId {
         return this.#activePageId;
     }
-    set activePageId(activePageId: 'grid' | 'comfyui' | 'model' | 'image-info' | 'settings') {
+    set activePageId(activePageId: PageId) {
         this.#activePageId = activePageId;
     }
 

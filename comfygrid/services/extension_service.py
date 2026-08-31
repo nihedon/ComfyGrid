@@ -113,4 +113,3 @@ def get_custom_asset_path(name: str, asset_path: str) -> Path | None:
             continue
 
     return None
-
