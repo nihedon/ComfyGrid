@@ -1,5 +1,6 @@
 <script lang="ts">
   import { Check, Workflow } from '@lucide/svelte';
+  import { ComfyUiCanvas } from '@/bridge/comfyui-canvas';
   import { appState } from '@/states/app-state.svelte';
   import type { WorkflowTabItem } from '@/states/comfyui-bridge.svelte';
 
@@ -14,6 +15,21 @@
   }
 
   function handleSelectTab(item: WorkflowTabItem) {
+    if (item.selected) return;
+
+    const app = appState.comfyUiState.app;
+    if (!app) return;
+
+    const test = false;
+    if (test) {
+      ComfyUiCanvas.handleGraphDataLoaded(app, async () => {
+        ComfyUiCanvas.fitGraphToCanvas(app.canvas);
+        await new Promise((resolve) => setTimeout(resolve, 100));
+        const imageUrl = await ComfyUiCanvas.captureGraphCanvas(app.canvas);
+        console.info(imageUrl);
+      });
+    }
+
     item.tab.click();
     if (uiState.activePageId !== 'grid' && uiState.activePageId !== 'comfyui') {
       uiState.needRefresh = true;

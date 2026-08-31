@@ -6,7 +6,15 @@ interface ComfyInputNodeSlot extends INodeInputSlot {
 }
 
 export interface ComfyCanvas extends LGraphCanvas {
-    animateToBounds: (rectangle: number[]) => void;
+    graph: ComfyGraph;
+    animateToBounds: (
+        rectangle: number[],
+        param?: {
+            duration?: number;
+            zoom?: number;
+            easing?: 'linear' | 'easeInQuad' | 'easeOutQuad' | 'easeInOutQuad';
+        },
+    ) => void;
 }
 
 export interface ComfyApp {
