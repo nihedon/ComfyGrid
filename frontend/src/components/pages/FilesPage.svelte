@@ -99,9 +99,9 @@
 </script>
 
 <div
-  id="model-page"
+  id="files-page"
   class="h-100 px-1"
-  style:display={uiState.activePageId === 'model' ? '' : 'none'}
+  style:display={uiState.activePageId === 'files' ? '' : 'none'}
 >
   <div class="h-100 vstack px-1">
     <ul class="nav nav-tabs sticky-top pt-2" style="background-color: var(--bs-body-bg);">

@@ -21,6 +21,7 @@
 
   const folderTree = $derived.by(() => {
     const root: FolderNode = { path: '', name: 'Workflow', children: [] };
+    // eslint-disable-next-line svelte/prefer-svelte-reactivity
     const map = new Map<string, FolderNode>();
     map.set('', root);
 
@@ -57,6 +58,7 @@
     } else {
       expandedFolders.add(folderPath);
     }
+    // eslint-disable-next-line svelte/prefer-svelte-reactivity
     expandedFolders = new Set(expandedFolders);
   }
 

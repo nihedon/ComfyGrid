@@ -1,6 +1,15 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { LayoutGrid, List, RefreshCw, Search } from '@lucide/svelte';
+  import {
+    ArrowDownAZ,
+    ArrowDownWideNarrow,
+    ArrowUpNarrowWide,
+    CalendarPlus,
+    LayoutGrid,
+    List,
+    RefreshCw,
+    Search,
+  } from '@lucide/svelte';
   import { workflowState } from '@/states/workflow-state.svelte';
   import WorkflowGrid from '../sections/workflow/WorkflowGrid.svelte';
   import WorkflowList from '../sections/workflow/WorkflowList.svelte';
@@ -28,7 +37,7 @@
 
         <!-- Breadcrumbs -->
         <nav aria-label="breadcrumb" class="ms-2">
-          <ol class="breadcrumb mb-0 fs-7">
+          <ol class="breadcrumb mb-0 py-1 px-3 fs-7">
             <li
               class="breadcrumb-item"
               class:active={!workflowState.selectedFolder && !workflowState.isFavoriteView}
@@ -73,42 +82,87 @@
         </nav>
       </div>
 
-      <div class="d-flex align-items-center gap-2">
+      <ul class="navbar-nav d-flex flex-row gap-2 align-items-center">
         <!-- Search Input -->
-        <div class="input-group input-group-sm" style="width: 220px;">
-          <span class="input-group-text">
-            <Search size={14} class="text-body-secondary" />
-          </span>
-          <input
-            type="text"
-            class="form-control"
-            placeholder="Search workflows..."
-            bind:value={workflowState.searchQuery}
-          />
-        </div>
+        <li class="nav-item">
+          <div class="input-group input-group-sm" style="width: 220px;">
+            <span class="input-group-text">
+              <Search size={14} class="text-body-secondary" />
+            </span>
+            <input
+              type="text"
+              class="form-control"
+              placeholder="Search workflows..."
+              bind:value={workflowState.searchQuery}
+            />
+          </div>
+        </li>
+
+        <!-- Sort Method Switcher -->
+        <li class="nav-item">
+          <div class="btn-group btn-group" role="group">
+            <button
+              type="button"
+              class="btn btn-outline-primary btn-icon"
+              class:active={workflowState.sortMethod === 'name'}
+              onclick={() => workflowState.changeSortType('name')}
+              title="Sort by Name"
+            >
+              <ArrowDownAZ size={14} />
+            </button>
+            <button
+              type="button"
+              class="btn btn-outline-primary btn-icon"
+              class:active={workflowState.sortMethod === 'created'}
+              onclick={() => workflowState.changeSortType('created')}
+              title="Sort by Created Time"
+            >
+              <CalendarPlus size={14} />
+            </button>
+          </div>
+        </li>
+
+        <!-- Sort Order Toggle -->
+        <li class="nav-item">
+          <button
+            type="button"
+            class="btn btn-sm btn-outline-primary btn-icon"
+            onclick={() => workflowState.toggleSortOrder()}
+            title={workflowState.sortAsc ? 'Ascending' : 'Descending'}
+            aria-label="Sort order"
+          >
+            {#if workflowState.sortAsc}
+              <ArrowUpNarrowWide size={14} />
+            {:else}
+              <ArrowDownWideNarrow size={14} />
+            {/if}
+          </button>
+        </li>
 
         <!-- View Mode Switcher -->
-        <div class="btn-group btn-group-sm" role="group">
-          <button
-            type="button"
-            class="btn btn-outline-secondary"
-            class:active={workflowState.viewMode === 'grid'}
-            onclick={() => (workflowState.viewMode = 'grid')}
-            title="Grid view"
-          >
-            <LayoutGrid size={14} />
-          </button>
-          <button
-            type="button"
-            class="btn btn-outline-secondary"
-            class:active={workflowState.viewMode === 'list'}
-            onclick={() => (workflowState.viewMode = 'list')}
-            title="List view"
-          >
-            <List size={14} />
-          </button>
-        </div>
-      </div>
+        <li class="nav-item">
+          <div class="btn-group btn-group" role="group">
+            <button
+              type="button"
+              class="btn btn-primary btn-icon"
+              class:active={workflowState.viewMode === 'grid'}
+              onclick={() => (workflowState.viewMode = 'grid')}
+              title="Grid view"
+            >
+              <LayoutGrid size={14} />
+            </button>
+            <button
+              type="button"
+              class="btn btn-primary btn-icon"
+              class:active={workflowState.viewMode === 'list'}
+              onclick={() => (workflowState.viewMode = 'list')}
+              title="List view"
+            >
+              <List size={14} />
+            </button>
+          </div>
+        </li>
+      </ul>
     </div>
   </div>
 

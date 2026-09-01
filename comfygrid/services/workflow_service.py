@@ -103,12 +103,14 @@ def list_workflows(comfyui_path: Path | str) -> dict[str, Any]:
 
         for dir_name in sorted(dirs):
             dir_rel_path = f"{rel_dir}/{dir_name}".strip("/")
+            dir_stat = (root_path / dir_name).stat()
             items.append({
                 "type": "folder",
                 "name": dir_name,
                 "path": dir_rel_path,
                 "parent": rel_dir,
-                "modified": int(root_path.stat().st_mtime * 1000),
+                "created": int(getattr(dir_stat, "st_birthtime", dir_stat.st_ctime) * 1000),
+                "modified": int(dir_stat.st_mtime * 1000),
                 "is_favorite": False,
             })
 
@@ -130,14 +132,16 @@ def list_workflows(comfyui_path: Path | str) -> dict[str, Any]:
 
             thumb_rel = f"{file_rel_path}.webp"
             has_thumb = (thumbnails_dir / thumb_rel).is_file()
+            file_stat = file_path.stat()
 
             items.append({
                 "type": "file",
                 "name": file_name,
                 "path": file_rel_path,
                 "parent": rel_dir,
-                "size": file_path.stat().st_size,
-                "modified": int(file_path.stat().st_mtime * 1000),
+                "size": file_stat.st_size,
+                "created": int(getattr(file_stat, "st_birthtime", file_stat.st_ctime) * 1000),
+                "modified": int(file_stat.st_mtime * 1000),
                 "node_count": node_count,
                 "has_thumbnail": has_thumb,
                 "is_favorite": file_rel_path in favs,

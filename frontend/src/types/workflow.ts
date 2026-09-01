@@ -1,4 +1,5 @@
 export type WorkflowItemType = 'folder' | 'file';
+export type WorkflowSortType = 'name' | 'created';
 
 export interface WorkflowItem {
     type: WorkflowItemType;
@@ -6,6 +7,7 @@ export interface WorkflowItem {
     path: string;
     parent: string;
     size?: number;
+    created?: number;
     modified: number;
     node_count?: number;
     has_thumbnail?: boolean;

@@ -1,4 +1,4 @@
-type PageId = 'grid' | 'comfyui' | 'model' | 'image-info' | 'settings';
+type PageId = 'grid' | 'comfyui' | 'files' | 'image-info' | 'settings';
 
 class UIState {
     #activePageId: PageId = $state('grid');

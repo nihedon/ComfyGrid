@@ -3,7 +3,7 @@ import { ComfyUiCanvas } from '@/bridge/comfyui-canvas';
 import { workflowManager } from '@/managers/workflow-manager';
 import { appState } from '@/states/app-state.svelte';
 import type { ComfyApp } from '@/types/comfy-model';
-import type { WorkflowItem } from '@/types/workflow';
+import type { WorkflowItem, WorkflowSortType } from '@/types/workflow';
 
 export class WorkflowState {
     items = $state<WorkflowItem[]>([]);
@@ -11,6 +11,8 @@ export class WorkflowState {
     selectedPath = $state<string | null>(null);
     isFavoriteView = $state<boolean>(false);
     searchQuery = $state<string>('');
+    sortMethod = $state<WorkflowSortType>('name');
+    sortAsc = $state<boolean>(true);
     viewMode = $state<'grid' | 'list'>('grid');
     isLoading = $state<boolean>(false);
     renamingPath = $state<string | null>(null);
@@ -34,7 +36,7 @@ export class WorkflowState {
 
     currentFolderItems = $derived.by(() => {
         const query = this.searchQuery.trim().toLowerCase();
-        return this.items.filter((item) => {
+        const filtered = this.items.filter((item) => {
             if (query && !item.name.toLowerCase().includes(query)) {
                 return false;
             }
@@ -43,7 +45,35 @@ export class WorkflowState {
             }
             return item.parent === this.selectedFolder;
         });
+
+        const folders = filtered.filter((item) => item.type === 'folder');
+        const files = filtered.filter((item) => item.type === 'file');
+
+        const sortFn = (a: WorkflowItem, b: WorkflowItem) => {
+            let diff = 0;
+            if (this.sortMethod === 'name') {
+                diff = a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' });
+            } else if (this.sortMethod === 'created') {
+                const aTime = a.created ?? a.modified ?? 0;
+                const bTime = b.created ?? b.modified ?? 0;
+                diff = aTime - bTime;
+            }
+            return this.sortAsc ? diff : -diff;
+        };
+
+        folders.sort(sortFn);
+        files.sort(sortFn);
+
+        return [...folders, ...files];
     });
+
+    changeSortType(type: WorkflowSortType) {
+        this.sortMethod = type;
+    }
+
+    toggleSortOrder() {
+        this.sortAsc = !this.sortAsc;
+    }
 
     async fetchWorkflows() {
         this.isLoading = true;
