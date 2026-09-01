@@ -15,6 +15,7 @@
     FolderOpen,
     FolderTree,
     RotateCw,
+    Search,
     Star,
     Trash2,
   } from '@lucide/svelte';
@@ -39,13 +40,13 @@
     dir,
     subdirs,
     valueSet,
-    action,
+    action = null,
     focusSelectedModel = false,
   }: {
     dir: ModelTypes;
     subdirs: ReadonlyArray<string>;
     valueSet?: ReadonlySet<string>;
-    action: ((model: Model) => void) | null;
+    action?: ((model: Model) => void) | null;
     focusSelectedModel?: boolean;
   } = $props();
 
@@ -393,14 +394,19 @@
           </select>
         </li>
       {/if}
-      <li class="nav-item" style="width: 200px;">
-        <input
-          type="search"
-          class="form-control"
-          name="filter"
-          bind:value={filterText}
-          placeholder="Filter {dir}..."
-        />
+      <li class="nav-item" style="width: 220px;">
+        <div class="input-group input-group-sm">
+          <span class="input-group-text">
+            <Search size={14} class="text-body-secondary" />
+          </span>
+          <input
+            type="search"
+            class="form-control"
+            name="filter"
+            bind:value={filterText}
+            placeholder="Filter {dir}..."
+          />
+        </div>
       </li>
       <li class="nav-item">
         <div class="btn-group" role="group">

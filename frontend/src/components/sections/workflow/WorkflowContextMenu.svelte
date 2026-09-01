@@ -41,7 +41,11 @@
   }
 
   async function handleCreateFolder() {
-    const parent = item ? (item.type === 'folder' ? item.path : item.parent) : (targetFolder ?? workflowState.selectedFolder);
+    const parent = item
+      ? item.type === 'folder'
+        ? item.path
+        : item.parent
+      : (targetFolder ?? workflowState.selectedFolder);
     const folderName = window.prompt('Enter new folder name:');
     if (folderName?.trim()) {
       await workflowState.createFolder(folderName.trim(), parent);
@@ -100,7 +104,10 @@
         <span>{item.is_favorite ? 'Remove Favorite' : 'Add to Favorites'}</span>
       </button>
     {:else}
-      <button class="dropdown-item d-flex align-items-center gap-2 py-1 fs-6" onclick={handleCreateFolder}>
+      <button
+        class="dropdown-item d-flex align-items-center gap-2 py-1 fs-6"
+        onclick={handleCreateFolder}
+      >
         <FolderPlus size={14} />
         <span>New Folder</span>
       </button>
@@ -116,13 +123,19 @@
         <span>Rename</span>
       </button>
       <div class="dropdown-divider my-1"></div>
-      <button class="dropdown-item d-flex align-items-center gap-2 py-1 fs-6 text-danger" onclick={handleDelete}>
+      <button
+        class="dropdown-item d-flex align-items-center gap-2 py-1 fs-6 text-danger"
+        onclick={handleDelete}
+      >
         <Trash2 size={14} />
         <span>Delete</span>
       </button>
     {/if}
   {:else}
-    <button class="dropdown-item d-flex align-items-center gap-2 py-1 fs-6" onclick={handleCreateFolder}>
+    <button
+      class="dropdown-item d-flex align-items-center gap-2 py-1 fs-6"
+      onclick={handleCreateFolder}
+    >
       <FolderPlus size={14} />
       <span>New Folder</span>
     </button>

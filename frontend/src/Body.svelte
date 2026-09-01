@@ -4,7 +4,6 @@
   import ImageInfoPage from '@/components/pages/ImageInfoPage.svelte';
   import ModelPage from '@/components/pages/ModelPage.svelte';
   import SettingsPage from '@/components/pages/SettingsPage.svelte';
-  import WorkflowPage from '@/components/pages/WorkflowPage.svelte';
   import { loadPages } from '@/services/pages-service';
   import { appState } from '@/states/app-state.svelte';
 
@@ -31,10 +30,6 @@
       </div>
     {/each}
   {/await}
-
-  {#if uiState.activePageId === 'workflow'}
-    <WorkflowPage />
-  {/if}
 
   {#if uiState.activePageId === 'model'}
     <ModelPage />

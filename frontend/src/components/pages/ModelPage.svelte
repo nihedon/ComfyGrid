@@ -7,19 +7,23 @@
   import InnerTab from '../common/InnerTab.svelte';
   import InnerTabContainer from '../common/InnerTabContainer.svelte';
   import ModelList from '../common/ModelList.svelte';
+  import WorkflowPage from './WorkflowPage.svelte';
 
   type ModelTabDefine = {
     title: string;
-    subdirs: string[];
-    action: (model: Model) => void;
+    subdirs?: string[];
+    action?: (model: Model) => void;
   };
 
   const uiState = appState.uiState;
   const workspaceState = appState.workspaceState;
 
-  let activeTabId: string = $state('models');
+  let activeTabId: string = $state('workflows');
 
   let tabs: { [key: string]: ModelTabDefine } = {
+    workflows: {
+      title: 'Workflows',
+    },
     models: {
       title: 'Models',
       subdirs: ['checkpoints', 'unet', 'diffusion_models'],
@@ -107,9 +111,13 @@
     </ul>
     <div class="vstack overflow-y-hidden py-2">
       <InnerTabContainer>
-        {#key activeTabId}
-          <ModelList dir="models" subdirs={activeTab.subdirs} action={activeTab.action} />
-        {/key}
+        {#if activeTabId === 'workflows'}
+          <WorkflowPage />
+        {:else if activeTab?.subdirs}
+          {#key activeTabId}
+            <ModelList dir="models" subdirs={activeTab.subdirs} action={activeTab.action} />
+          {/key}
+        {/if}
       </InnerTabContainer>
     </div>
   </div>
