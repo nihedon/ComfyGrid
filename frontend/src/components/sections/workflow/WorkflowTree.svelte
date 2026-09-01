@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { ChevronDown, ChevronRight, Folder, FolderOpen, Star } from '@lucide/svelte';
+  import { ChevronDown, ChevronRight, Folder, FolderOpen, Heart } from '@lucide/svelte';
   import { workflowState } from '@/states/workflow-state.svelte';
   import type { WorkflowItem } from '@/types/workflow';
   import WorkflowContextMenu from './WorkflowContextMenu.svelte';
@@ -128,7 +128,7 @@
         workflowState.selectedPath = null;
       }}
     >
-      <Star size={16} class="me-2 text-warning flex-shrink-0" fill="currentColor" />
+      <Heart size={16} class="me-2 text-danger flex-shrink-0" fill="currentColor" />
       <span class="text-truncate flex-grow-1 fs-6">Favorites</span>
       {#if workflowState.favoriteCount > 0}
         <span class="badge rounded-pill text-bg-secondary fs-8">

@@ -36,18 +36,21 @@ export class WorkflowState {
 
     currentFolderItems = $derived.by(() => {
         const query = this.searchQuery.trim().toLowerCase();
-        const filtered = this.items.filter((item) => {
+        const files = this.items.filter((item) => {
+            if (item.type !== 'file') {
+                return false;
+            }
             if (query && !item.name.toLowerCase().includes(query)) {
                 return false;
             }
             if (this.isFavoriteView) {
-                return item.type === 'file' && item.is_favorite;
+                return item.is_favorite;
             }
-            return item.parent === this.selectedFolder;
+            if (!this.selectedFolder) {
+                return true;
+            }
+            return item.parent === this.selectedFolder || item.path.startsWith(this.selectedFolder + '/');
         });
-
-        const folders = filtered.filter((item) => item.type === 'folder');
-        const files = filtered.filter((item) => item.type === 'file');
 
         const sortFn = (a: WorkflowItem, b: WorkflowItem) => {
             let diff = 0;
@@ -61,10 +64,9 @@ export class WorkflowState {
             return this.sortAsc ? diff : -diff;
         };
 
-        folders.sort(sortFn);
         files.sort(sortFn);
 
-        return [...folders, ...files];
+        return files;
     });
 
     changeSortType(type: WorkflowSortType) {

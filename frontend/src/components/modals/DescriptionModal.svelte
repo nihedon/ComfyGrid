@@ -237,7 +237,7 @@
               onclick={() => (tempFavorite = !tempFavorite)}
             >
               {#if tempFavorite}
-                <Heart size={18} class="text-warning" fill="currentColor" />
+                <Heart size={18} class="text-danger" fill="currentColor" />
               {:else}
                 <Heart size={18} />
               {/if}

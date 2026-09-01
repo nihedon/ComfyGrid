@@ -1,33 +1,15 @@
 <script lang="ts">
-  import { Folder, Star, Workflow } from '@lucide/svelte';
+  import { Heart, Workflow } from '@lucide/svelte';
   import { workflowState } from '@/states/workflow-state.svelte';
   import type { WorkflowItem } from '@/types/workflow';
   import WorkflowContextMenu from './WorkflowContextMenu.svelte';
 
-  let dragOverFolder = $state<string | null>(null);
   let contextMenu = $state<{ item: WorkflowItem | null; x: number; y: number } | null>(null);
 
   function handleDragStart(e: DragEvent, item: WorkflowItem) {
     if (e.dataTransfer) {
       e.dataTransfer.setData('text/plain', item.path);
       e.dataTransfer.effectAllowed = 'move';
-    }
-  }
-
-  function handleFolderDragOver(e: DragEvent, folderPath: string) {
-    e.preventDefault();
-    if (e.dataTransfer) {
-      e.dataTransfer.dropEffect = 'move';
-    }
-    dragOverFolder = folderPath;
-  }
-
-  function handleFolderDrop(e: DragEvent, targetFolder: string) {
-    e.preventDefault();
-    dragOverFolder = null;
-    const sourcePath = e.dataTransfer?.getData('text/plain');
-    if (sourcePath && sourcePath !== targetFolder) {
-      workflowState.move(sourcePath, targetFolder);
     }
   }
 
@@ -58,12 +40,7 @@
 
   function handleCardDblClick(item: WorkflowItem) {
     if (workflowState.renamingPath === item.path) return;
-    if (item.type === 'folder') {
-      workflowState.selectedFolder = item.path;
-      workflowState.isFavoriteView = false;
-    } else {
-      workflowState.loadWorkflowToComfyUI(item);
-    }
+    workflowState.loadWorkflowToComfyUI(item);
   }
 
   function handleToggleFavorite(e: MouseEvent, item: WorkflowItem) {
@@ -98,56 +75,45 @@
       {@const isRenaming =
         workflowState.renamingPath === item.path && workflowState.renamingPane === 'main'}
       {@const isSelected = workflowState.selectedPath === item.path}
-      {@const isFolder = item.type === 'folder'}
-      {@const isOver = dragOverFolder === item.path}
 
       <div class="col">
         <!-- svelte-ignore a11y_no_static_element_interactions -->
         <!-- svelte-ignore a11y_click_events_have_key_events -->
         <div
           class="card h-100 shadow-sm workflow-card cursor-pointer border position-relative"
-          class:border-primary={isSelected}
-          class:border-3={isSelected}
-          class:bg-primary-subtle={isOver}
+          class:selected={isSelected}
           draggable={!isRenaming}
           ondragstart={(e) => handleDragStart(e, item)}
-          ondragover={(e) => isFolder && handleFolderDragOver(e, item.path)}
-          ondragleave={() => isFolder && (dragOverFolder = null)}
-          ondrop={(e) => isFolder && handleFolderDrop(e, item.path)}
           oncontextmenu={(e) => handleItemContextMenu(e, item)}
           onclick={(e) => handleCardClick(e, item)}
           ondblclick={() => handleCardDblClick(item)}
         >
-          <!-- Favorite button (files only) -->
-          {#if !isFolder}
-            <button
-              class="btn btn-sm btn-icon position-absolute top-0 end-0 m-1 z-2 border-0 bg-transparent text-warning p-1"
-              class:opacity-25={!item.is_favorite}
-              class:opacity-100={item.is_favorite}
-              onclick={(e) => handleToggleFavorite(e, item)}
-              title={item.is_favorite ? 'Remove from favorites' : 'Add to favorites'}
-            >
-              <Star size={18} fill={item.is_favorite ? 'currentColor' : 'none'} />
-            </button>
-          {/if}
+          <!-- Favorite button -->
+          <button
+            class="btn btn-sm btn-icon position-absolute top-0 end-0 m-1 z-2 border-0 bg-transparent text-danger p-1"
+            class:opacity-25={!item.is_favorite}
+            class:opacity-100={item.is_favorite}
+            onclick={(e) => handleToggleFavorite(e, item)}
+            title={item.is_favorite ? 'Remove from favorites' : 'Add to favorites'}
+          >
+            <Heart size={18} fill={item.is_favorite ? 'currentColor' : 'none'} />
+          </button>
 
           <div
             class="card-img-top bg-body-tertiary d-flex align-items-center justify-content-center overflow-hidden position-relative"
-            style="height: 140px;"
+            style="height: 160px;"
           >
-            {#if isFolder}
-              <Folder size={48} class="text-warning" />
-            {:else if item.has_thumbnail}
+            {#if item.has_thumbnail}
               <img
                 src={`/comfygrid/api/workflows/thumbnail?path=${encodeURIComponent(item.path)}&t=${workflowState.thumbnailTimestamp}`}
                 alt={item.name}
-                class="w-100 h-100 object-fit-cover"
+                class="w-100 h-100 object-fit-contain"
               />
             {:else}
               <Workflow size={40} class="text-body-secondary opacity-50" />
             {/if}
 
-            {#if item.node_count !== undefined && !isFolder}
+            {#if item.node_count !== undefined}
               <span class="badge text-bg-dark position-absolute bottom-0 end-0 m-2 opacity-75 fs-7">
                 {item.node_count} nodes
               </span>
@@ -208,6 +174,9 @@
     transition:
       transform 0.15s ease,
       box-shadow 0.15s ease;
+    &.selected {
+      box-shadow: 0 0 0 3px var(--bs-primary) !important;
+    }
   }
   .workflow-card:hover {
     transform: translateY(-2px);

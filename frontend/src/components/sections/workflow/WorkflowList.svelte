@@ -1,33 +1,15 @@
 <script lang="ts">
-  import { Folder, Star, Workflow } from '@lucide/svelte';
+  import { Heart } from '@lucide/svelte';
   import { workflowState } from '@/states/workflow-state.svelte';
   import type { WorkflowItem } from '@/types/workflow';
   import WorkflowContextMenu from './WorkflowContextMenu.svelte';
 
-  let dragOverFolder = $state<string | null>(null);
   let contextMenu = $state<{ item: WorkflowItem | null; x: number; y: number } | null>(null);
 
   function handleDragStart(e: DragEvent, item: WorkflowItem) {
     if (e.dataTransfer) {
       e.dataTransfer.setData('text/plain', item.path);
       e.dataTransfer.effectAllowed = 'move';
-    }
-  }
-
-  function handleFolderDragOver(e: DragEvent, folderPath: string) {
-    e.preventDefault();
-    if (e.dataTransfer) {
-      e.dataTransfer.dropEffect = 'move';
-    }
-    dragOverFolder = folderPath;
-  }
-
-  function handleFolderDrop(e: DragEvent, targetFolder: string) {
-    e.preventDefault();
-    dragOverFolder = null;
-    const sourcePath = e.dataTransfer?.getData('text/plain');
-    if (sourcePath && sourcePath !== targetFolder) {
-      workflowState.move(sourcePath, targetFolder);
     }
   }
 
@@ -40,6 +22,7 @@
 
   function handleBackgroundContextMenu(e: MouseEvent) {
     e.preventDefault();
+    workflowState.selectedPath = null;
     contextMenu = { item: null, x: e.clientX, y: e.clientY };
   }
 
@@ -58,12 +41,7 @@
 
   function handleRowDblClick(item: WorkflowItem) {
     if (workflowState.renamingPath === item.path) return;
-    if (item.type === 'folder') {
-      workflowState.selectedFolder = item.path;
-      workflowState.isFavoriteView = false;
-    } else {
-      workflowState.loadWorkflowToComfyUI(item);
-    }
+    workflowState.loadWorkflowToComfyUI(item);
   }
 
   function handleToggleFavorite(e: MouseEvent, item: WorkflowItem) {
@@ -81,7 +59,7 @@
 
 <svelte:window
   onkeydown={(e) => {
-    if (e.key === 'F2' && workflowState.selectedPath) {
+    if (e.key === 'F2' && workflowState.selectedPath && !workflowState.renamingPath) {
       const item = workflowState.currentFolderItems.find(
         (i) => i.path === workflowState.selectedPath,
       );
@@ -104,7 +82,6 @@
     <thead class="table-light">
       <tr>
         <th style="width: 36px;"></th>
-        <th style="width: 40px;"></th>
         <th>Name</th>
         <th style="width: 120px;">Nodes</th>
         <th style="width: 120px;">Size</th>
@@ -116,41 +93,26 @@
         {@const isRenaming =
           workflowState.renamingPath === item.path && workflowState.renamingPane === 'main'}
         {@const isSelected = workflowState.selectedPath === item.path}
-        {@const isFolder = item.type === 'folder'}
-        {@const isOver = dragOverFolder === item.path}
 
         <tr
           class="cursor-pointer"
           class:table-active={isSelected}
-          class:table-primary={isOver}
           draggable={!isRenaming}
           ondragstart={(e) => handleDragStart(e, item)}
-          ondragover={(e) => isFolder && handleFolderDragOver(e, item.path)}
-          ondragleave={() => isFolder && (dragOverFolder = null)}
-          ondrop={(e) => isFolder && handleFolderDrop(e, item.path)}
           oncontextmenu={(e) => handleItemContextMenu(e, item)}
           onclick={(e) => handleRowClick(e, item)}
           ondblclick={() => handleRowDblClick(item)}
         >
           <td class="text-center p-0 ps-2">
-            {#if !isFolder}
-              <button
-                class="btn btn-sm btn-link p-0 text-warning text-decoration-none"
-                class:opacity-25={!item.is_favorite}
-                class:opacity-100={item.is_favorite}
-                onclick={(e) => handleToggleFavorite(e, item)}
-                title={item.is_favorite ? 'Remove from favorites' : 'Add to favorites'}
-              >
-                <Star size={16} fill={item.is_favorite ? 'currentColor' : 'none'} />
-              </button>
-            {/if}
-          </td>
-          <td class="text-center">
-            {#if isFolder}
-              <Folder size={18} class="text-warning" />
-            {:else}
-              <Workflow size={18} class="text-primary" />
-            {/if}
+            <button
+              class="btn btn-sm btn-link p-0 text-danger text-decoration-none"
+              class:opacity-25={!item.is_favorite}
+              class:opacity-100={item.is_favorite}
+              onclick={(e) => handleToggleFavorite(e, item)}
+              title={item.is_favorite ? 'Remove from favorites' : 'Add to favorites'}
+            >
+              <Heart size={16} fill={item.is_favorite ? 'currentColor' : 'none'} />
+            </button>
           </td>
           <td>
             {#if isRenaming}
@@ -175,7 +137,7 @@
               </span>
             {/if}
           </td>
-          <td>{item.node_count !== undefined && !isFolder ? `${item.node_count} nodes` : '-'}</td>
+          <td>{item.node_count !== undefined ? `${item.node_count} nodes` : '-'}</td>
           <td>{formatBytes(item.size)}</td>
           <td class="text-body-secondary">{new Date(item.modified).toLocaleString()}</td>
         </tr>

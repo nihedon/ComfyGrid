@@ -18,7 +18,7 @@ export class Model {
     url?: string = '';
     nsfw: boolean = false;
     rate?: number = 0;
-    favorite: boolean = false;
+    favorite = $state(false);
     trainedWords: string[] = [];
     modified: number = 0;
     created: number = 0;

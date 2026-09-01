@@ -7,7 +7,7 @@
     CalendarPlus,
     LayoutGrid,
     List,
-    RefreshCw,
+    RotateCw,
     Search,
   } from '@lucide/svelte';
   import { workflowState } from '@/states/workflow-state.svelte';
@@ -22,70 +22,12 @@
 
 <div class="d-flex flex-column h-100 bg-body">
   <!-- Toolbar -->
-  <div class="navbar navbar-light bg-light">
-    <div class="container-fluid justify-content-between">
-      <div class="d-flex align-items-center gap-2">
-        <button
-          class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1"
-          onclick={() => workflowState.fetchWorkflows()}
-          disabled={workflowState.isLoading}
-          title="Refresh"
-        >
-          <RefreshCw size={14} class={workflowState.isLoading ? 'spin' : ''} />
-          <span>Refresh</span>
-        </button>
-
-        <!-- Breadcrumbs -->
-        <nav aria-label="breadcrumb" class="ms-2">
-          <ol class="breadcrumb mb-0 py-1 px-3 fs-7">
-            <li
-              class="breadcrumb-item"
-              class:active={!workflowState.selectedFolder && !workflowState.isFavoriteView}
-            >
-              <!-- svelte-ignore a11y_invalid_attribute -->
-              <a
-                href="#"
-                onclick={(e) => {
-                  e.preventDefault();
-                  workflowState.isFavoriteView = false;
-                  workflowState.selectedFolder = '';
-                }}
-              >
-                Workflow
-              </a>
-            </li>
-            {#if workflowState.isFavoriteView}
-              <li class="breadcrumb-item active text-warning fw-semibold">Favorites</li>
-            {:else if workflowState.selectedFolder}
-              {@const parts = workflowState.selectedFolder.split('/')}
-              {#each parts as part, i (`${part}-${i}`)}
-                {@const currentPath = parts.slice(0, i + 1).join('/')}
-                <li class="breadcrumb-item" class:active={i === parts.length - 1}>
-                  {#if i === parts.length - 1}
-                    {part}
-                  {:else}
-                    <!-- svelte-ignore a11y_invalid_attribute -->
-                    <a
-                      href="#"
-                      onclick={(e) => {
-                        e.preventDefault();
-                        workflowState.selectedFolder = currentPath;
-                      }}
-                    >
-                      {part}
-                    </a>
-                  {/if}
-                </li>
-              {/each}
-            {/if}
-          </ol>
-        </nav>
-      </div>
-
+  <nav class="navbar navbar-light bg-light">
+    <div class="container-fluid justify-content-end">
       <ul class="navbar-nav d-flex flex-row gap-2 align-items-center">
         <!-- Search Input -->
-        <li class="nav-item">
-          <div class="input-group input-group-sm" style="width: 220px;">
+        <li class="nav-item" style="width: 220px;">
+          <div class="input-group">
             <span class="input-group-text">
               <Search size={14} class="text-body-secondary" />
             </span>
@@ -100,24 +42,24 @@
 
         <!-- Sort Method Switcher -->
         <li class="nav-item">
-          <div class="btn-group btn-group" role="group">
+          <div class="btn-group" role="group">
             <button
               type="button"
-              class="btn btn-outline-primary btn-icon"
+              class="btn btn-sm btn-outline-primary btn-icon"
               class:active={workflowState.sortMethod === 'name'}
               onclick={() => workflowState.changeSortType('name')}
               title="Sort by Name"
             >
-              <ArrowDownAZ size={14} />
+              <ArrowDownAZ size={16} />
             </button>
             <button
               type="button"
-              class="btn btn-outline-primary btn-icon"
+              class="btn btn-sm btn-outline-primary btn-icon"
               class:active={workflowState.sortMethod === 'created'}
               onclick={() => workflowState.changeSortType('created')}
               title="Sort by Created Time"
             >
-              <CalendarPlus size={14} />
+              <CalendarPlus size={16} />
             </button>
           </div>
         </li>
@@ -132,39 +74,52 @@
             aria-label="Sort order"
           >
             {#if workflowState.sortAsc}
-              <ArrowUpNarrowWide size={14} />
+              <ArrowUpNarrowWide size={16} />
             {:else}
-              <ArrowDownWideNarrow size={14} />
+              <ArrowDownWideNarrow size={16} />
             {/if}
           </button>
         </li>
 
         <!-- View Mode Switcher -->
         <li class="nav-item">
-          <div class="btn-group btn-group" role="group">
+          <div class="btn-group" role="group">
             <button
               type="button"
-              class="btn btn-primary btn-icon"
+              class="btn btn-sm btn-outline-primary btn-icon"
               class:active={workflowState.viewMode === 'grid'}
               onclick={() => (workflowState.viewMode = 'grid')}
               title="Grid view"
             >
-              <LayoutGrid size={14} />
+              <LayoutGrid size={16} />
             </button>
             <button
               type="button"
-              class="btn btn-primary btn-icon"
+              class="btn btn-sm btn-outline-primary btn-icon"
               class:active={workflowState.viewMode === 'list'}
               onclick={() => (workflowState.viewMode = 'list')}
               title="List view"
             >
-              <List size={14} />
+              <List size={16} />
             </button>
           </div>
         </li>
+
+        <!-- Refresh Button -->
+        <li class="nav-item">
+          <button
+            type="button"
+            class="btn btn-sm btn-primary btn-icon"
+            aria-label="Reload workflows"
+            disabled={workflowState.isLoading}
+            onclick={() => workflowState.fetchWorkflows()}
+          >
+            <RotateCw size={16} class={workflowState.isLoading ? 'spin' : ''} />
+          </button>
+        </li>
       </ul>
     </div>
-  </div>
+  </nav>
 
   <!-- Content (Sidebar + Main) -->
   <div class="d-flex flex-grow-1 overflow-hidden">

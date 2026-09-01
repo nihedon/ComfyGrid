@@ -94,9 +94,18 @@
   });
 </script>
 
-<div class="frosted-glass rounded-2 position-absolute fs-7 top-0 start-0 px-3 text-white">
-  {model.path.substring(0, model.path.lastIndexOf('\\')).replaceAll('\\', ' / ')}
-</div>
+{#if model.path.includes('\\') || model.path.includes('/')}
+  {@const dirPath = (
+    model.path.includes('\\')
+      ? model.path.substring(0, model.path.lastIndexOf('\\'))
+      : model.path.substring(0, model.path.lastIndexOf('/'))
+  ).replaceAll('\\', ' / ')}
+  {#if dirPath}
+    <div class="frosted-glass rounded-2 position-absolute fs-7 top-0 start-0 px-2 text-white">
+      {dirPath}
+    </div>
+  {/if}
+{/if}
 
 {@render children()}
 
