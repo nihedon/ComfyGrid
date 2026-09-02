@@ -84,7 +84,6 @@
   let showNsfw = $state(optionState.get('ComfyGrid.ui.show_nsfw'));
   let favoriteOnly = $state(false);
 
-  const favoriteCount = $derived(modelList.filter((m: Model) => m.favorite).length);
   const sortAsc = $derived<boolean>(optionState.get(`ComfyGrid.ui.${dir}_sort_asc`) ?? true);
   const sortMethod = $derived<SortType>(optionState.get(`ComfyGrid.ui.${dir}_sort`) ?? 'path');
 
@@ -372,20 +371,24 @@
             bind:checked={favoriteOnly}
           />
           <label
-            class="btn btn-sm btn-outline-primary"
+            class="btn btn-sm btn-outline-primary py-0"
             for="favoriteOnlySwitch"
             style="width: 70px;">Favorite</label
           >
         </li>
         <li class="nav-item">
           <input class="btn-check" type="checkbox" id="showNsfwSwitch" bind:checked={showNsfw} />
-          <label class="btn btn-sm btn-outline-primary" for="showNsfwSwitch" style="width: 70px;">
+          <label
+            class="btn btn-sm btn-outline-primary py-0"
+            for="showNsfwSwitch"
+            style="width: 70px;"
+          >
             {showNsfw ? 'ALL' : 'NSFW'}
           </label>
         </li>
       {/if}
       <li class="nav-item" style="width: 220px;">
-        <div class="input-group">
+        <div class="input-group input-group-sm">
           <span class="input-group-text">
             <Search size={14} class="text-body-secondary" />
           </span>

@@ -132,6 +132,9 @@
 </div>
 
 <style lang="scss">
+  .input-group {
+    flex-wrap: nowrap !important;
+  }
   .auto-complete-form-container {
     position: relative;
     flex-grow: 1;

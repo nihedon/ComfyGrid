@@ -84,10 +84,27 @@ def toggle_favorite(comfyui_path: Path | str, item_path: str, is_favorite: bool 
     return new_state
 
 
+def _find_thumbnail_paths(workflow_file: Path) -> list[Path]:
+    if not workflow_file.is_file():
+        return []
+    parent = workflow_file.parent
+    stem = workflow_file.stem
+    name = workflow_file.name
+
+    candidates = [
+        parent / f"{stem}.webp",
+        parent / f"{stem}.png",
+        parent / f"{stem}.jpg",
+        parent / f"{stem}.jpeg",
+        parent / f"{name}.webp",
+        parent / f"{name}.png",
+    ]
+    return [p for p in candidates if p.is_file() and p != workflow_file]
+
+
 def list_workflows(comfyui_path: Path | str) -> dict[str, Any]:
     base_dir = get_workflows_dir(comfyui_path)
     thumbnails_dir = base_dir / ".thumbnails"
-    thumbnails_dir.mkdir(exist_ok=True)
     favs = get_favorites(comfyui_path)
 
     items: list[dict[str, Any]] = []
@@ -130,8 +147,10 @@ def list_workflows(comfyui_path: Path | str) -> dict[str, Any]:
             except Exception:
                 pass
 
-            thumb_rel = f"{file_rel_path}.webp"
-            has_thumb = (thumbnails_dir / thumb_rel).is_file()
+            has_thumb = (
+                len(_find_thumbnail_paths(file_path)) > 0
+                or (thumbnails_dir / f"{file_rel_path}.webp").is_file()
+            )
             file_stat = file_path.stat()
 
             items.append({
@@ -169,10 +188,44 @@ def rename_item(comfyui_path: Path | str, old_path: str, new_name: str) -> str:
     if target.exists():
         raise FileExistsError(f"Target already exists: {new_name}")
 
+    thumbnails_to_rename: list[tuple[Path, Path]] = []
+    if source.is_file():
+        new_target_path = Path(new_name)
+        new_stem = new_target_path.stem
+
+        for thumb in _find_thumbnail_paths(source):
+            if thumb.name.startswith(source.name):
+                new_thumb_name = thumb.name.replace(source.name, new_name, 1)
+            else:
+                new_thumb_name = f"{new_stem}{thumb.suffix}"
+            target_thumb = source.parent / new_thumb_name
+            thumbnails_to_rename.append((thumb, target_thumb))
+
     source.rename(target)
+
+    for old_thumb, new_thumb in thumbnails_to_rename:
+        try:
+            if new_thumb.exists():
+                new_thumb.unlink()
+            if old_thumb.exists():
+                old_thumb.rename(new_thumb)
+        except Exception as e:
+            logger.warning("Failed to rename thumbnail %s -> %s: %s", old_thumb, new_thumb, e)
+
+    legacy_old_thumb = base_dir / ".thumbnails" / f"{old_path}.webp"
+    if legacy_old_thumb.is_file():
+        try:
+            new_rel_parent = Path(old_path).parent
+            legacy_new_thumb = base_dir / ".thumbnails" / (new_rel_parent / f"{new_name}.webp").as_posix()
+            legacy_new_thumb.parent.mkdir(parents=True, exist_ok=True)
+            if legacy_new_thumb.exists():
+                legacy_new_thumb.unlink()
+            legacy_old_thumb.rename(legacy_new_thumb)
+        except Exception as e:
+            logger.warning("Failed to rename legacy thumbnail: %s", e)
+
     new_rel_path = target.relative_to(base_dir).as_posix()
 
-    # Update favorites index if renamed
     favs = get_favorites(comfyui_path)
     if old_path in favs:
         favs.remove(old_path)
@@ -196,10 +249,36 @@ def move_item(comfyui_path: Path | str, source_path: str, target_dir_path: str) 
     if target.exists():
         raise FileExistsError(f"Item already exists in target directory: {source.name}")
 
+    thumbnails_to_move: list[tuple[Path, Path]] = []
+    if source.is_file():
+        for thumb in _find_thumbnail_paths(source):
+            target_thumb = target_dir / thumb.name
+            thumbnails_to_move.append((thumb, target_thumb))
+
     shutil.move(str(source), str(target))
+
+    for old_thumb, new_thumb in thumbnails_to_move:
+        try:
+            if new_thumb.exists():
+                new_thumb.unlink()
+            if old_thumb.exists():
+                shutil.move(str(old_thumb), str(new_thumb))
+        except Exception as e:
+            logger.warning("Failed to move thumbnail %s -> %s: %s", old_thumb, new_thumb, e)
+
+    legacy_old_thumb = base_dir / ".thumbnails" / f"{source_path}.webp"
+    if legacy_old_thumb.is_file():
+        try:
+            legacy_new_thumb = base_dir / ".thumbnails" / target_dir_path / f"{source.name}.webp"
+            legacy_new_thumb.parent.mkdir(parents=True, exist_ok=True)
+            if legacy_new_thumb.exists():
+                legacy_new_thumb.unlink()
+            shutil.move(str(legacy_old_thumb), str(legacy_new_thumb))
+        except Exception as e:
+            logger.warning("Failed to move legacy thumbnail: %s", e)
+
     new_rel_path = target.relative_to(base_dir).as_posix()
 
-    # Update favorites index if moved
     favs = get_favorites(comfyui_path)
     if source_path in favs:
         favs.remove(source_path)
@@ -218,9 +297,20 @@ def delete_item(comfyui_path: Path | str, item_path: str) -> None:
     if target.is_dir():
         shutil.rmtree(target)
     else:
+        for thumb in _find_thumbnail_paths(target):
+            try:
+                thumb.unlink(missing_ok=True)
+            except Exception as e:
+                logger.warning("Failed to delete thumbnail %s: %s", thumb, e)
         target.unlink()
 
-    # Remove from favorites index if deleted
+    legacy_thumb = base_dir / ".thumbnails" / f"{item_path}.webp"
+    if legacy_thumb.is_file():
+        try:
+            legacy_thumb.unlink(missing_ok=True)
+        except Exception:
+            pass
+
     favs = get_favorites(comfyui_path)
     if item_path in favs:
         favs.remove(item_path)
@@ -238,16 +328,20 @@ def get_workflow_content(comfyui_path: Path | str, item_path: str) -> dict[str, 
 
 def save_workflow_thumbnail(comfyui_path: Path | str, item_path: str, image_bytes: bytes) -> None:
     base_dir = get_workflows_dir(comfyui_path)
-    thumbnails_dir = base_dir / ".thumbnails"
-    thumb_path = thumbnails_dir / f"{item_path}.webp"
-    thumb_path.parent.mkdir(parents=True, exist_ok=True)
+    target = _safe_resolve(base_dir, item_path)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    thumb_path = target.with_suffix(".webp")
     thumb_path.write_bytes(image_bytes)
 
 
 def get_workflow_thumbnail_path(comfyui_path: Path | str, item_path: str) -> Path | None:
     base_dir = get_workflows_dir(comfyui_path)
-    thumbnails_dir = base_dir / ".thumbnails"
-    thumb_path = thumbnails_dir / f"{item_path}.webp"
-    if thumb_path.is_file():
-        return thumb_path
+    target = _safe_resolve(base_dir, item_path)
+    thumbs = _find_thumbnail_paths(target)
+    if thumbs:
+        return thumbs[0]
+
+    legacy_thumb = base_dir / ".thumbnails" / f"{item_path}.webp"
+    if legacy_thumb.is_file():
+        return legacy_thumb
     return None

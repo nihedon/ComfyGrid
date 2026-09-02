@@ -115,7 +115,13 @@ async def get_workflow_thumbnail(path: str = Query(...), comfy_service: ComfyUIS
     thumb_path = workflow_service.get_workflow_thumbnail_path(comfy_service.comfyui_path, path)
     if not thumb_path or not thumb_path.is_file():
         raise HTTPException(status_code=404, detail="Thumbnail not found")
-    return FileResponse(thumb_path, media_type="image/webp")
+    media_type = "image/webp"
+    suffix = thumb_path.suffix.lower()
+    if suffix == ".png":
+        media_type = "image/png"
+    elif suffix in [".jpg", ".jpeg"]:
+        media_type = "image/jpeg"
+    return FileResponse(thumb_path, media_type=media_type)
 
 
 @router.post("/workflows/thumbnail")

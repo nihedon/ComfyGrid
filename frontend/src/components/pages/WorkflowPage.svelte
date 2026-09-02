@@ -27,7 +27,7 @@
       <ul class="navbar-nav d-flex flex-row gap-2 align-items-center">
         <!-- Search Input -->
         <li class="nav-item" style="width: 220px;">
-          <div class="input-group">
+          <div class="input-group input-group-sm">
             <span class="input-group-text">
               <Search size={14} class="text-body-secondary" />
             </span>
