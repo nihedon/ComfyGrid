@@ -3,6 +3,7 @@ import * as bootstrap from 'bootstrap';
 import 'gridstack/dist/gridstack-all.js';
 import jQuery from 'jquery';
 import { loadRuntimeExtensions } from '@/components/widgets/comfyui/registry/runtime-loader';
+import { ensurePromptPilotModelsLoaded } from '@/features/prompt-pilot/services/loader-service';
 import { setupCustomNodeApi } from '@/services/custom-node-service.svelte';
 import { ComfyUIHealthCheckService } from '@/services/healthcheck-service';
 import { appState } from '@/states/app-state.svelte';
@@ -56,6 +57,9 @@ comfyUiHealthCheck.connect();
 setupCustomNodeApi();
 
 loadRuntimeExtensions();
+
+// Preload PromptPilot models (Danbooru tags and LoRAs) on page open
+void ensurePromptPilotModelsLoaded();
 
 mount(App, {
     target: document.getElementById('comfygrid'),

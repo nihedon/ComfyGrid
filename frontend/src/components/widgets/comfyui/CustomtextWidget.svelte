@@ -2,12 +2,12 @@
   import { onDestroy, untrack } from 'svelte';
   import { LayoutDashboard } from '@lucide/svelte';
   import { comfyGridApiClient } from '@/api/api-client';
+  import CodeEditor from '@/components/common/CodeEditor.svelte';
   import { t } from '@/i18n/i18n';
   import { saveLayoutObject, updateBoardFloatingState } from '@/services/gridstack-service';
   import { translationManager } from '@/services/translation-service.svelte';
   import { appState } from '@/states/app-state.svelte';
   import type { ComfyGridWidget } from '@/states/model-state.svelte';
-  import { keyupEditAttention } from '../../../helpers/edit-attention';
   import TextareaCategory from './features/TextareaCategory.svelte';
 
   let {
@@ -204,15 +204,6 @@
     translationManager.unregister(widget.id);
   });
 
-  function keydown(e: KeyboardEvent) {
-    if (e.ctrlKey) {
-      if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
-        keyupEditAttention(e, textareaElement);
-        textareaElement.dispatchEvent(new Event('change', { bubbles: true }));
-      }
-    }
-  }
-
   async function toggleFloating() {
     const current = layout.floatingWidgets.get(widget.id);
     layout.setFloatingWidgets(widget.id, current ? '' : 'Global');
@@ -232,12 +223,31 @@
 </script>
 
 {#snippet textarea()}
-  {#if isTranslate}
+  {#if isPromptGroup}
+    {#if isTranslate}
+      <CodeEditor
+        rows={options.isFloating ? 1 : 6}
+        readonly={widget.readonly}
+        placeholder={widget.placeholder}
+        bind:value={widget.rawValue}
+        oninput={handleInput}
+        onblur={handleBlur}
+      />
+    {:else}
+      <CodeEditor
+        rows={options.isFloating ? 1 : 6}
+        readonly={widget.readonly}
+        placeholder={widget.placeholder}
+        bind:value={widget.value}
+        oninput={handleInput}
+        onblur={handleBlur}
+      />
+    {/if}
+  {:else if isTranslate}
     <textarea
       class="flex-grow-1 form-control overflow-y-scroll rounded-top-0"
       class:positive-prompt={isPositivePrompt}
       class:prompt={isPromptGroup}
-      onkeydown={keydown}
       oninput={handleInput}
       onblur={handleBlur}
       rows={options.isFloating ? 1 : 6}
@@ -251,7 +261,6 @@
       class="flex-grow-1 form-control overflow-y-scroll rounded-top-0"
       class:positive-prompt={isPositivePrompt}
       class:prompt={isPromptGroup}
-      onkeydown={keydown}
       oninput={handleInput}
       rows={options.isFloating ? 1 : 6}
       style:min-height={options.isFloating ? '0' : undefined}

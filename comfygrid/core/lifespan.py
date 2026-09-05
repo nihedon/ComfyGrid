@@ -13,6 +13,7 @@ from comfygrid.infrastructure.database import initialize_db
 from comfygrid.services import job_service
 from comfygrid.services.comfyui import ComfyUIService
 from comfygrid.services.setup_service import install_caddy, start_caddy_proxy
+from comfygrid.services.tag_service import ensure_tag_models_generated
 
 
 def create_lifespan(settings: AppSettings):
@@ -28,6 +29,7 @@ def create_lifespan(settings: AppSettings):
             logging.warning("Failed to initialize job service: %s", e)
         comfy_service = ComfyUIService(app)
         log_processor_task = asyncio.create_task(comfy_service.process_startup_logs())
+        asyncio.create_task(asyncio.to_thread(ensure_tag_models_generated))
 
         client = httpx.AsyncClient(timeout=30.0)
         app.state.client = client

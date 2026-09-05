@@ -177,3 +177,5 @@ release/
 *.db
 *.db-shm
 *.db-wal
+data/
+*.gz
