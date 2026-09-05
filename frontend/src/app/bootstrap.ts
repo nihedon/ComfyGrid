@@ -19,7 +19,6 @@ globalThis.bootstrap = bootstrap;
 
 await import('bootstrap-autocomplete');
 await import('bootstrap-contextmenu');
-await import('jquery-ui/dist/jquery-ui.js');
 const litHtml = await import('lit-html');
 const litUnsafeHtml = await import('lit-html/directives/unsafe-html.js');
 globalThis.litHtml = {

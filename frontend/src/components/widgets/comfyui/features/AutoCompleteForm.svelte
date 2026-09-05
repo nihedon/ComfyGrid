@@ -221,6 +221,13 @@
       workspaceState.deleteErrorWidget(widget.node.id, widget.id);
     }
   });
+
+  $effect(() => {
+    const stringVal = widget.value != null ? String(widget.value) : '';
+    if (inputDomEl && document.activeElement !== inputDomEl && inputDomEl.value !== stringVal) {
+      inputDomEl.value = stringVal;
+    }
+  });
 </script>
 
 <input

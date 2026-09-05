@@ -45,6 +45,13 @@
     cg-toggle-widget {
         width: 100%;
     }
+
+    .cg-drop-target-above {
+        border-top: 2px solid var(--bs-primary, #0d6efd) !important;
+    }
+    .cg-drop-target-below {
+        border-bottom: 2px solid var(--bs-primary, #0d6efd) !important;
+    }
 }
 
 @layer utilities {

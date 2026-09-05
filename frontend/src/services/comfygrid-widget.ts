@@ -52,6 +52,7 @@ export class ComfyGridWidget extends HTMLElement {
     static readonly template?: string; // e.g. "lora.html" or "lora.html#power-lora-item"
     static readonly sortable = false;
     static readonly sortHandle = '.cg-sort-handle, .comfygrid-lora-handle, [data-role="handle"], [data-sort-handle]';
+    static #draggedWidget: ComfyGridWidget | null = null;
 
     #widget: any = null;
     #isInitialized = false;
@@ -83,13 +84,15 @@ export class ComfyGridWidget extends HTMLElement {
     connectedCallback() {
         if (this.#widget && !this.#isInitialized) {
             void this.init();
+        } else if (this.#isInitialized) {
+            this.sync();
+            this.#subscribeNodeChanges();
         }
     }
 
     disconnectedCallback() {
         this.#unsubscribe?.();
         this.#unsubscribe = null;
-        this.#isInitialized = false;
         this.onDestroy();
     }
 
@@ -250,48 +253,96 @@ export class ComfyGridWidget extends HTMLElement {
     }
 
     #setupSortable(): void {
-        const container = this.closest('.widget-stack');
-        const $ = (globalThis as any).jQuery;
-        if (!container || !$?.fn?.sortable) return;
+        const ctor = this.constructor as typeof ComfyGridWidget;
+        if (!ctor.sortable) return;
 
-        if (!container.classList.contains('ui-sortable')) {
-            const ctor = this.constructor as typeof ComfyGridWidget;
-            const tagName = this.tagName.toLowerCase();
+        const handle = this.querySelector(ctor.sortHandle) as HTMLElement | null;
+        if (!handle) return;
 
-            $(container).sortable({
-                items: tagName,
-                handle: ctor.sortHandle,
-                axis: 'y',
-                cursor: 'grabbing',
-                tolerance: 'pointer',
-                distance: 4,
-                update: () => {
-                    const comfyNode = this.comfyNode;
-                    if (!comfyNode?.widgets) return;
+        handle.style.cursor = 'grab';
 
-                    const renderedItems = Array.from(container.querySelectorAll(tagName)) as ComfyGridWidget[];
-                    const sortedComfyWidgets: any[] = [];
+        handle.addEventListener('mouseenter', () => {
+            this.setAttribute('draggable', 'true');
+        });
+        handle.addEventListener('mouseleave', () => {
+            if (ComfyGridWidget.#draggedWidget !== this) {
+                this.removeAttribute('draggable');
+            }
+        });
 
-                    for (const item of renderedItems) {
-                        if (item.comfyWidget) {
-                            sortedComfyWidgets.push(item.comfyWidget);
-                        }
-                    }
+        this.addEventListener('dragstart', (e: DragEvent) => {
+            if (!this.comfyWidget) {
+                e.preventDefault();
+                return;
+            }
+            ComfyGridWidget.#draggedWidget = this;
+            this.style.opacity = '0.4';
+            if (e.dataTransfer) {
+                e.dataTransfer.effectAllowed = 'move';
+                e.dataTransfer.setData('text/plain', '');
+            }
+        });
 
-                    $(container).sortable('cancel');
-
-                    let sortedIndex = 0;
-                    comfyNode.widgets = comfyNode.widgets.map((w: any) => {
-                        if (sortedComfyWidgets.includes(w)) {
-                            return sortedComfyWidgets[sortedIndex++];
-                        }
-                        return w;
-                    });
-
-                    this.node?.updateNode();
-                },
+        this.addEventListener('dragend', () => {
+            this.removeAttribute('draggable');
+            this.style.opacity = '';
+            ComfyGridWidget.#draggedWidget = null;
+            document.querySelectorAll('.cg-drop-target-above, .cg-drop-target-below').forEach((el) => {
+                el.classList.remove('cg-drop-target-above', 'cg-drop-target-below');
             });
-        }
+        });
+
+        this.addEventListener('dragover', (e: DragEvent) => {
+            const dragged = ComfyGridWidget.#draggedWidget;
+            if (!dragged || dragged === this || dragged.tagName !== this.tagName) return;
+            e.preventDefault();
+            if (e.dataTransfer) {
+                e.dataTransfer.dropEffect = 'move';
+            }
+
+            const rect = this.getBoundingClientRect();
+            const midY = rect.top + rect.height / 2;
+            if (e.clientY < midY) {
+                this.classList.add('cg-drop-target-above');
+                this.classList.remove('cg-drop-target-below');
+            } else {
+                this.classList.add('cg-drop-target-below');
+                this.classList.remove('cg-drop-target-above');
+            }
+        });
+
+        this.addEventListener('dragleave', () => {
+            this.classList.remove('cg-drop-target-above', 'cg-drop-target-below');
+        });
+
+        this.addEventListener('drop', (e: DragEvent) => {
+            e.preventDefault();
+            this.classList.remove('cg-drop-target-above', 'cg-drop-target-below');
+
+            const dragged = ComfyGridWidget.#draggedWidget;
+            if (!dragged || dragged === this || !this.comfyNode?.widgets) return;
+
+            const sourceWidget = dragged.comfyWidget;
+            const targetWidget = this.comfyWidget;
+            if (!sourceWidget || !targetWidget) return;
+
+            const widgets = this.comfyNode.widgets;
+            const sourceIndex = widgets.indexOf(sourceWidget);
+            let targetIndex = widgets.indexOf(targetWidget);
+            if (sourceIndex === -1 || targetIndex === -1) return;
+
+            const rect = this.getBoundingClientRect();
+            const isBelow = e.clientY >= rect.top + rect.height / 2;
+
+            widgets.splice(sourceIndex, 1);
+            targetIndex = widgets.indexOf(targetWidget);
+            if (isBelow) {
+                targetIndex += 1;
+            }
+            widgets.splice(targetIndex, 0, sourceWidget);
+
+            this.node?.updateNode();
+        });
     }
 
     #subscribeNodeChanges(): void {
@@ -359,9 +410,20 @@ export class ComfyGridWidget extends HTMLElement {
      * Removes this widget from its parent node.
      */
     removeSelf(): void {
-        if (!this.comfyNode || this.#widget?.index == null) return;
-        this.comfyNode.widgets.splice(this.#widget.index, 1);
-        this.node?.updateNode();
+        if (!this.comfyNode) return;
+        const targetWidget = this.comfyWidget;
+        if (targetWidget) {
+            const targetIndex = this.comfyNode.widgets.indexOf(targetWidget);
+            if (targetIndex !== -1) {
+                this.comfyNode.widgets.splice(targetIndex, 1);
+                this.node?.updateNode();
+                return;
+            }
+        }
+        if (this.#widget?.index != null) {
+            this.comfyNode.widgets.splice(this.#widget.index, 1);
+            this.node?.updateNode();
+        }
     }
 
     // Lifecycle hooks for subclasses

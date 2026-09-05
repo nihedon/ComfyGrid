@@ -52,7 +52,6 @@
         "es-toolkit": "^1.50.0",
         "gridstack": "~12.3.3",
         "jquery": "^4.0.0",
-        "jquery-ui": "^1.14.2",
         "lit-html": "^3.3.3",
         "loglevel": "^1.9.2",
         "lucide-static": "^1.33.0",
