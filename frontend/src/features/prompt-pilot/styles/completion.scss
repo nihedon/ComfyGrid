@@ -1,0 +1,257 @@
+// Danbooru Category Colors
+:root {
+    --danbooru-cat-0: oklch(69.5% 0.155 257.73); // general (blue)
+    --danbooru-cat-1: oklch(69.5% 0.155 28.82); // artist (red)
+    --danbooru-cat-3: oklch(69.5% 0.155 327.73); // copyright (magenta)
+    --danbooru-cat-4: oklch(69.5% 0.155 144.81); // character (green)
+    --danbooru-cat-5: oklch(69.5% 0.155 61.7); // meta (orange)
+    --danbooru-cat-lora: oklch(75% 0.15 300); // lora
+}
+
+[data-bs-theme='light'] {
+    --danbooru-cat-0: oklch(45% 0.18 257.73); // general (blue)
+    --danbooru-cat-1: oklch(45% 0.18 28.82); // artist (red)
+    --danbooru-cat-3: oklch(45% 0.18 327.73); // copyright (magenta)
+    --danbooru-cat-4: oklch(40% 0.18 144.81); // character (green)
+    --danbooru-cat-5: oklch(45% 0.18 61.7); // meta (orange)
+    --danbooru-cat-lora: oklch(45% 0.18 300); // lora
+}
+
+// CodeMirror Autocomplete Tooltip Overrides
+.cm-tooltip.cm-tooltip-autocomplete {
+    background-color: var(--bs-body-bg, #212529) !important;
+    border: 1px solid var(--bs-border-color, #495057) !important;
+    border-radius: 6px !important;
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4) !important;
+    font-size: 0.875rem !important;
+    max-width: 640px !important;
+    overflow: hidden !important;
+    z-index: 99999 !important;
+    display: flex !important;
+    flex-direction: column !important;
+
+    // Tab Bar Header
+    .pilot-tab-container {
+        display: flex;
+        align-items: center;
+        background-color: var(--bs-tertiary-bg, #2b3035);
+        border-bottom: 1px solid var(--bs-border-color, #495057);
+        padding: 3px 6px 0;
+        gap: 3px;
+        user-select: none;
+
+        .pilot-tab {
+            background: transparent;
+            border: 1px solid transparent;
+            border-bottom: none;
+            color: var(--bs-secondary-color, #adb5bd);
+            font-weight: 600;
+            padding: 3px 8px;
+            border-radius: 4px 4px 0 0;
+            cursor: pointer;
+            transition: all 0.12s ease;
+
+            &:hover {
+                color: var(--bs-body-color, #fff);
+                background-color: rgba(255, 255, 255, 0.06);
+            }
+
+            &.selected {
+                color: var(--bs-body-color, #fff);
+                background-color: var(--bs-body-bg, #212529);
+                border-color: var(--bs-border-color, #495057);
+                border-bottom-color: var(--bs-body-bg, #212529);
+                margin-bottom: -1px;
+            }
+
+            &.group-0.selected {
+                border-top: 2px solid var(--danbooru-cat-0);
+                color: var(--danbooru-cat-0);
+            }
+            &.group-1.selected {
+                border-top: 2px solid var(--danbooru-cat-1);
+                color: var(--danbooru-cat-1);
+            }
+            &.group-3.selected {
+                border-top: 2px solid var(--danbooru-cat-3);
+                color: var(--danbooru-cat-3);
+            }
+            &.group-4.selected {
+                border-top: 2px solid var(--danbooru-cat-4);
+                color: var(--danbooru-cat-4);
+            }
+            &.group-5.selected {
+                border-top: 2px solid var(--danbooru-cat-5);
+                color: var(--danbooru-cat-5);
+            }
+        }
+    }
+
+    ul {
+        max-height: 280px !important;
+        padding: 4px 0 !important;
+        margin: 0 !important;
+
+        li.pilot-option {
+            padding: 2px 2px 2px 8px !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: space-between !important;
+            gap: 2px !important;
+            border-radius: 4px !important;
+            margin: 0 4px !important;
+            min-height: 20px !important;
+
+            // Category colored text
+            &.cat-0 .cm-completionLabel {
+                color: var(--danbooru-cat-0) !important;
+            }
+            &.cat-1 .cm-completionLabel {
+                color: var(--danbooru-cat-1) !important;
+            }
+            &.cat-3 .cm-completionLabel {
+                color: var(--danbooru-cat-3) !important;
+            }
+            &.cat-4 .cm-completionLabel {
+                color: var(--danbooru-cat-4) !important;
+            }
+            &.cat-5 .cm-completionLabel {
+                color: var(--danbooru-cat-5) !important;
+            }
+            &.cat-lora .cm-completionLabel {
+                color: var(--danbooru-cat-lora) !important;
+            }
+
+            .cm-completionDetail {
+                color: var(--bs-secondary-color, #6c757d) !important;
+                font-variant-numeric: tabular-nums !important;
+                margin-left: auto !important;
+            }
+
+            .pilot-wiki-container {
+                display: inline-flex !important;
+                align-items: center !important;
+                justify-content: flex-start !important;
+                width: 18px !important;
+                min-width: 18px !important;
+                gap: 2px !important;
+                flex-shrink: 0 !important;
+                margin-left: 6px !important;
+
+                .pilot-wiki-icon {
+                    display: inline-flex !important;
+                    align-items: center !important;
+                    justify-content: center !important;
+                    cursor: pointer !important;
+                    opacity: 0.65 !important;
+                    padding: 2px !important;
+                    border-radius: 3px !important;
+                    transition:
+                        opacity 0.15s ease,
+                        transform 0.15s ease,
+                        background-color 0.15s ease !important;
+
+                    .pilot-source-icon {
+                        width: 14px !important;
+                        height: 14px !important;
+                        object-fit: contain !important;
+                        vertical-align: middle !important;
+                        display: block !important;
+                    }
+
+                    &:hover {
+                        opacity: 1 !important;
+                        transform: scale(1.15);
+                        background-color: rgba(255, 255, 255, 0.15) !important;
+                    }
+                }
+            }
+
+            &.pilot-notice {
+                color: var(--bs-secondary-color, #adb5bd) !important;
+                font-style: italic !important;
+                cursor: default !important;
+                pointer-events: none !important;
+                justify-content: center !important;
+                padding: 8px 12px !important;
+                background: transparent !important;
+                user-select: none !important;
+
+                &[aria-selected] {
+                    background-color: transparent !important;
+                    color: var(--bs-secondary-color, #adb5bd) !important;
+
+                    .cm-completionLabel {
+                        color: var(--bs-secondary-color, #adb5bd) !important;
+                        font-weight: normal !important;
+                    }
+                }
+
+                .cm-completionLabel {
+                    color: var(--bs-secondary-color, #adb5bd) !important;
+                    font-weight: normal !important;
+                }
+            }
+
+            &[aria-selected]:not(.pilot-notice) {
+                background-color: var(--bs-primary, #0d6efd) !important;
+                color: #ffffff !important;
+
+                &.cat-0 {
+                    background-color: var(--danbooru-cat-0) !important;
+                }
+                &.cat-1 {
+                    background-color: var(--danbooru-cat-1) !important;
+                }
+                &.cat-3 {
+                    background-color: var(--danbooru-cat-3) !important;
+                }
+                &.cat-4 {
+                    background-color: var(--danbooru-cat-4) !important;
+                }
+                &.cat-5 {
+                    background-color: var(--danbooru-cat-5) !important;
+                }
+                &.cat-lora {
+                    background-color: var(--danbooru-cat-lora) !important;
+                }
+
+                .cm-completionLabel {
+                    color: #ffffff !important;
+                    font-weight: 600;
+                }
+
+                .cm-completionDetail {
+                    color: rgba(255, 255, 255, 0.95) !important;
+                }
+
+                .pilot-wiki-icon {
+                    opacity: 0.95 !important;
+                }
+            }
+        }
+    }
+
+    // Category Filtering Rules (Instantly filters without closing the tooltip)
+    &[data-active-category='0'] ul li.pilot-option:not(.cat-0):not(.pilot-notice) {
+        display: none !important;
+    }
+    &[data-active-category='1'] ul li.pilot-option:not(.cat-1):not(.pilot-notice) {
+        display: none !important;
+    }
+    &[data-active-category='3'] ul li.pilot-option:not(.cat-3):not(.pilot-notice) {
+        display: none !important;
+    }
+    &[data-active-category='4'] ul li.pilot-option:not(.cat-4):not(.pilot-notice) {
+        display: none !important;
+    }
+    &[data-active-category='5'] ul li.pilot-option:not(.cat-5):not(.pilot-notice) {
+        display: none !important;
+    }
+
+    // Expand wiki container width if any item has multiple icons
+    &:has(.pilot-wiki-icon:nth-child(2)) ul li.pilot-option .pilot-wiki-container {
+        width: 40px !important;
+        min-width: 40px !important;
+    }
+}

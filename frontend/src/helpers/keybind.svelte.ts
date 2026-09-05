@@ -4,8 +4,9 @@ import { appState } from '@/states/app-state.svelte';
 import logger from '@/utils/logger';
 
 function handleKeyDown(e: KeyboardEvent) {
-    if (e.ctrlKey) {
+    if (e.ctrlKey || e.metaKey) {
         if (e.key === 'Enter') {
+            e.preventDefault();
             appState.executionState.execute();
         }
     }

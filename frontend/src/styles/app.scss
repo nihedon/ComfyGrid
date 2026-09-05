@@ -26,7 +26,9 @@
         --backdrop-opacity: 1;
         --error-border-width: 1.5px;
     }
-    textarea {
+    textarea,
+    .cm-content {
+        font-size: 1rem !important;
         line-height: 1.1 !important;
         font-family: 'Fira Code', monospace, Consolas, 'Courier New' !important;
     }

@@ -125,3 +125,87 @@ default = "You are an AI artist."
 type = "dropdown"
 choices = ["on_generate", "on_blur", "manual"]
 default = "on_generate"
+
+[ComfyGrid.prompt_pilot.enabled]
+type = "checkbox"
+default = true
+
+[ComfyGrid.prompt_pilot.tag_source]
+type = "dropdown"
+choices = ["danbooru.donmai.us", "e621.net", "all"]
+default = "danbooru.donmai.us"
+
+[ComfyGrid.prompt_pilot.post_count_threshold]
+type = "slider"
+default = "10"
+minimum = "10"
+maximum = "1000"
+step = "10"
+
+[ComfyGrid.prompt_pilot.max_results_group0]
+type = "slider"
+default = "30"
+minimum = "0"
+maximum = "100"
+step = "5"
+
+[ComfyGrid.prompt_pilot.max_results_group1]
+type = "slider"
+default = "10"
+minimum = "0"
+maximum = "100"
+step = "5"
+
+[ComfyGrid.prompt_pilot.max_results_group3]
+type = "slider"
+default = "10"
+minimum = "0"
+maximum = "100"
+step = "5"
+
+[ComfyGrid.prompt_pilot.max_results_group4]
+type = "slider"
+default = "10"
+minimum = "0"
+maximum = "100"
+step = "5"
+
+[ComfyGrid.prompt_pilot.max_results_group5]
+type = "slider"
+default = "10"
+minimum = "0"
+maximum = "100"
+step = "5"
+
+[ComfyGrid.prompt_pilot.max_results_groupcustom]
+type = "slider"
+default = "20"
+minimum = "0"
+maximum = "100"
+step = "5"
+
+[ComfyGrid.prompt_pilot.max_results_grouplora]
+type = "slider"
+default = "50"
+minimum = "0"
+maximum = "200"
+step = "5"
+
+[ComfyGrid.prompt_pilot.word_coloring]
+type = "dropdown"
+choices = ["none", "word", "category"]
+default = "word"
+
+[ComfyGrid.prompt_pilot.tag_delimiter]
+type = "dropdown"
+choices = ["auto", "space", "underscore"]
+default = "auto"
+
+[ComfyGrid.prompt_pilot.always_underscore_tags]
+type = "textarea"
+default = "score_9, score_8_up, score_8, score_7_up, score_7, score_6_up, score_6, score_5_up, score_5, score_4_up, score_4\nsource_pony, source_furry, source_cartoon, source_anime\nrating_safe, rating_questionable, rating_explicit"
+
+[ComfyGrid.prompt_pilot.always_space_tags]
+type = "textarea"
+default = ""
+

@@ -82,6 +82,9 @@ def prepare_launch_dependencies(comfy_service) -> None:
     install_recommended_extensions()
     comfy_service.install_grid_extension()
     load_extensions()
+    from comfygrid.services.tag_service import ensure_tag_models_generated
+
+    ensure_tag_models_generated()
 
 
 def install_ffmpeg(progress_callback: Callable[[int, int], None]) -> None:
