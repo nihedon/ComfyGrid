@@ -11,8 +11,8 @@ export class Model {
     name: string = '';
     category: string = '';
     extension: string = '';
-    description?: string = '';
-    has_description: boolean = false;
+    description?: string = $state('');
+    has_description: boolean = $state(false);
     retrieved: boolean = false;
     preview?: string = '';
     url?: string = '';
