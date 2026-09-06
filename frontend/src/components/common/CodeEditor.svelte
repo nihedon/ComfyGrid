@@ -1,9 +1,21 @@
 <script lang="ts">
   import { onMount, untrack } from 'svelte';
+  import { closeBrackets, closeBracketsKeymap } from '@codemirror/autocomplete';
   import { defaultKeymap, history, historyKeymap } from '@codemirror/commands';
-  import { highlightSelectionMatches } from '@codemirror/search';
+  import {
+    highlightSelectionMatches,
+    search,
+    searchKeymap,
+    selectNextOccurrence,
+    selectSelectionMatches,
+  } from '@codemirror/search';
   import { EditorState } from '@codemirror/state';
-  import { EditorView, placeholder as cmPlaceholder, keymap } from '@codemirror/view';
+  import {
+    EditorView,
+    placeholder as cmPlaceholder,
+    drawSelection,
+    keymap,
+  } from '@codemirror/view';
   import { promptPilotCompletion } from '@/features/prompt-pilot';
   import { ensurePromptPilotModelsLoaded } from '@/features/prompt-pilot/services/loader-service';
   import { appState } from '@/states/app-state.svelte';
@@ -13,6 +25,7 @@
     promptHighlightPlugin,
     reconfigureHighlightEffect,
   } from './code-editor/prompt-highlighter';
+  import { CustomSearchPanel } from './code-editor/search-panel';
 
   let {
     value = $bindable(''),
@@ -45,6 +58,13 @@
       doc: value ?? '',
       extensions: [
         history(),
+        drawSelection(),
+        closeBrackets(),
+        search({
+          top: true,
+          createPanel: (v) => new CustomSearchPanel(v),
+        }),
+        EditorState.allowMultipleSelections.of(true),
         keymap.of([
           {
             key: 'Ctrl-Enter',
@@ -54,6 +74,17 @@
             key: 'Mod-Enter',
             run: () => true,
           },
+          {
+            key: 'Mod-d',
+            run: selectNextOccurrence,
+            preventDefault: true,
+          },
+          {
+            key: 'Mod-Shift-l',
+            run: selectSelectionMatches,
+          },
+          ...closeBracketsKeymap,
+          ...searchKeymap,
           ...promptAttentionKeymap,
           ...defaultKeymap,
           ...historyKeymap,
@@ -67,7 +98,8 @@
         highlightSelectionMatches({
           minSelectionLength: 1,
         }),
-        EditorView.updateListener.of((update) => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        EditorView.updateListener.of((update: any) => {
           if (update.docChanged) {
             isInternalChange = true;
             const newDoc = update.state.doc.toString();
@@ -79,10 +111,12 @@
           }
         }),
         EditorView.domEventHandlers({
-          blur: (event) => {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          blur: (event: any) => {
             if (onblur) onblur(event);
           },
-          keydown: (event) => {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          keydown: (event: any) => {
             if (onkeydown) onkeydown(event);
           },
         }),
@@ -187,7 +221,6 @@
       width: 100%;
       height: 100%;
       min-height: var(--cm-min-height);
-      font-size: 0.875rem;
       font-family: var(--bs-font-monospace, monospace);
       background-color: var(--bs-body-bg);
       color: var(--bs-body-color);
@@ -224,6 +257,29 @@
       border-radius: 2px !important;
       font-weight: bold !important;
     }
+
+    :global(.cm-cursor),
+    :global(.cm-dropCursor) {
+      border-left-color: var(--bs-body-color) !important;
+    }
+
+    :global(.cm-selectionBackground) {
+      background-color: rgba(var(--bs-primary-rgb, 13, 110, 253), 0.25) !important;
+    }
+  }
+
+  :global(.cm-panels) {
+    background-color: var(--bs-body-bg) !important;
+    color: var(--bs-body-color) !important;
+    border-color: var(--bs-border-color) !important;
+  }
+
+  :global(.cm-custom-search-panel input.form-control) {
+    font-size: 0.8rem;
+  }
+
+  :global(.cm-custom-search-panel .btn-icon:hover) {
+    color: var(--bs-body-color) !important;
   }
 
   :global(.cm-line) {
