@@ -52,48 +52,51 @@
     return groups.flatMap((g) => [...g.nodes, ...collectAllNodes(g.children)]);
   }
 
-  const positivePromptTextarea = $derived.by(() => {
+  const positivePromptWidget = $derived.by(() => {
     return collectAllNodes(workspaceState.groups)
       .flatMap((n) => n.widgets)
-      .find((w) => w.id === workspaceState.layout.positivePromptWidgetId)?.textarea;
+      .find((w) => w.id === workspaceState.layout.positivePromptWidgetId);
   });
 
   function appendKeywordToPrompt(model: Model) {
-    const name = model.name;
-    const textarea = positivePromptTextarea;
-    if (!textarea) {
+    const widget = positivePromptWidget;
+    if (!widget) {
       alert($t('alert_no_positive_prompt_selected'));
       return;
-    } else {
-      textarea.value += `, embedding:${name}`;
-      textarea.dispatchEvent(new Event('input', { bubbles: true }));
-      toastState.addToast({
-        type: 'success',
-        message: $t('toast.append_embedding_tag_to_positive_prompt'),
-      });
     }
+    const name = model.name;
+    const current = String(widget.value ?? '').trim();
+    widget.value = current ? `${current}, embedding:${name}` : `embedding:${name}`;
+    widget.updateValue({ value: widget.value });
+    toastState.addToast({
+      type: 'success',
+      message: $t('toast.append_embedding_tag_to_positive_prompt'),
+    });
   }
 
   function appendModelTagToPrompt(tag: string, model: Model) {
-    const name = model.name;
-    const textarea = positivePromptTextarea;
-    if (!textarea) {
+    const widget = positivePromptWidget;
+    if (!widget) {
       alert($t('alert_no_positive_prompt_selected'));
       return;
+    }
+    const normalizedPath = model.path.replaceAll('\\', '/');
+    const modelTag = normalizedPath.replace(/\.[^/.]+$/, '');
+    const current = String(widget.value ?? '').trim();
+    const tagText = `<${tag}:${modelTag}:1.0>`;
+    widget.value = current ? `${current} ${tagText}` : tagText;
+    widget.updateValue({ value: widget.value });
+
+    if (tag === 'lora') {
+      toastState.addToast({
+        type: 'success',
+        message: $t('toast.append_lora_tag_to_positive_prompt'),
+      });
     } else {
-      textarea.value += ` <${tag}:${name}:1>`;
-      textarea.dispatchEvent(new Event('input', { bubbles: true }));
-      if (tag === 'lora') {
-        toastState.addToast({
-          type: 'success',
-          message: $t('toast.append_lora_tag_to_positive_prompt'),
-        });
-      } else {
-        toastState.addToast({
-          type: 'success',
-          message: $t('toast.append_hypernetwork_tag_to_positive_prompt'),
-        });
-      }
+      toastState.addToast({
+        type: 'success',
+        message: $t('toast.append_hypernetwork_tag_to_positive_prompt'),
+      });
     }
   }
 </script>

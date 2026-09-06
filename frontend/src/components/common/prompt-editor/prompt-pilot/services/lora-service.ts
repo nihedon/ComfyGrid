@@ -1,27 +1,37 @@
+import { ensureAllModels } from '@/services/models-service';
 import { appState } from '@/states/app-state.svelte';
-import type { ItemProps, LoraModel, ResponseData } from '../types';
+import type { ItemProps, LoraModel } from '../types';
 
-let loraModels: LoraModel[] = [];
-
-export function initializeLoraModels(resData: ResponseData | undefined): void {
-    if (!resData || !resData.loraModels) {
-        return;
+function getLoraModels(): LoraModel[] {
+    if (appState.storageState.models.size === 0) {
+        void ensureAllModels();
     }
-    loraModels = [];
-    Object.entries(resData.loraModels).forEach(([loraName, data]) => {
-        loraModels.push({
-            value: loraName,
-            searchWords: data.search_words || [loraName],
-            previewFile: data.preview_file || '',
+
+    const loras: LoraModel[] = [];
+    for (const model of appState.storageState.models.values()) {
+        if (model.category !== 'loras') continue;
+
+        const normalizedPath = model.path.replaceAll('\\', '/');
+        const valueWithoutExt = normalizedPath.replace(/\.[^/.]+$/, '');
+        const searchWords = new Set<string>([valueWithoutExt, model.name, ...valueWithoutExt.split('/'), ...(model.trainedWords ?? [])]);
+
+        loras.push({
+            value: valueWithoutExt,
+            searchWords: [...searchWords],
+            previewFile: model.preview || '',
+            model,
         });
-    });
+    }
+
+    return loras;
 }
 
 export function searchLora(query: string, maxResults?: number): ItemProps[] {
     const limit = maxResults ?? Number(appState.optionState.get('ComfyGrid.prompt_pilot.max_results_grouplora') ?? 50);
+    const loraModels = getLoraModels();
     const queries = query
         .toLowerCase()
-        .split(/[ _-]/g)
+        .split(/[ _\-/]/g)
         .filter((q) => q.trim() !== '');
 
     if (queries.length === 0) {
@@ -35,6 +45,7 @@ export function searchLora(query: string, maxResults?: number): ItemProps[] {
             consequentTagModel: null,
             isOfficial: false,
             previewFile: lora.previewFile || null,
+            model: lora.model,
         }));
     }
 
@@ -42,7 +53,7 @@ export function searchLora(query: string, maxResults?: number): ItemProps[] {
     loraModels.forEach((lora) => {
         const matchWordSet = new Set<string>();
         for (const word of lora.searchWords) {
-            const flatWord = word.replace(/[ _-]/g, '').toLowerCase();
+            const flatWord = word.replace(/[ _\-/]/g, '').toLowerCase();
             queries.forEach((q) => {
                 if (flatWord.includes(q)) {
                     matchWordSet.add(q);
@@ -60,6 +71,7 @@ export function searchLora(query: string, maxResults?: number): ItemProps[] {
                 consequentTagModel: null,
                 isOfficial: false,
                 previewFile: lora.previewFile || null,
+                model: lora.model,
             };
             resultSet.push(props);
         }
@@ -87,7 +99,7 @@ function compare(self: ItemProps, other: ItemProps, query: string, queries: stri
 
 function matchStarts(obj: ItemProps, queries: string[]): boolean {
     for (const q of queries) {
-        for (const title of obj.value.split(/[ _-]/g)) {
+        for (const title of obj.value.split(/[ _\-/]/g)) {
             if (title.toLowerCase().startsWith(q)) {
                 return true;
             }

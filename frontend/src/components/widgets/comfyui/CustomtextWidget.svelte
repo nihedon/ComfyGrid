@@ -224,25 +224,14 @@
 
 {#snippet textarea()}
   {#if isPromptGroup}
-    {#if isTranslate}
-      <PromptEditor
-        rows={options.isFloating ? 1 : 6}
-        readonly={widget.readonly}
-        placeholder={widget.placeholder}
-        bind:value={widget.rawValue}
-        oninput={handleInput}
-        onblur={handleBlur}
-      />
-    {:else}
-      <PromptEditor
-        rows={options.isFloating ? 1 : 6}
-        readonly={widget.readonly}
-        placeholder={widget.placeholder}
-        bind:value={widget.value}
-        oninput={handleInput}
-        onblur={handleBlur}
-      />
-    {/if}
+    <PromptEditor
+      rows={options.isFloating ? 1 : 6}
+      readonly={widget.readonly}
+      placeholder={widget.placeholder}
+      bind:value={widget.value}
+      oninput={handleInput}
+      onblur={handleBlur}
+    />
   {:else if isTranslate}
     <textarea
       class="flex-grow-1 form-control overflow-y-scroll rounded-top-0"

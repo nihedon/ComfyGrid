@@ -2,7 +2,6 @@ import { gunzipSync } from 'fflate';
 import { appState } from '@/states/app-state.svelte';
 import type { ResponseData } from '../types';
 import { getCachedDictionary, setCachedDictionary } from './cache-service';
-import { initializeLoraModels } from './lora-service';
 import { initializeTagModels } from './tag-service';
 
 let loadedSource: string | null = null;
@@ -131,14 +130,12 @@ export async function ensurePromptPilotModelsLoaded(tagSource?: string): Promise
                 if (sources.length === 0) return false;
 
                 initializeTagModels(sources);
-                if (danbooruData) initializeLoraModels(danbooruData);
             } else {
                 const source = targetSource === 'e621.net' ? 'e621' : 'danbooru';
                 const data = await fetchSourceData(targetSource);
                 if (!data) return false;
 
                 initializeTagModels([{ data, source }]);
-                initializeLoraModels(data);
             }
 
             loadedSource = targetSource;

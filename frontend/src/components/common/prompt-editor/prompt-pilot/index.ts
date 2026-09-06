@@ -122,8 +122,12 @@ function createCompletionItem(
         detail: postCountFormatted,
         source: item.source,
         sources: item.sources,
+        model: item.model,
         apply: (view, _completion, fromPos, toPos) => {
             activeCategory = 'all';
+            if (appState.popoverState.visible) {
+                appState.popoverState.hidePopover();
+            }
 
             const replaceLength = toPos - fromPos;
             const tr = view.state.changeByRange((range) => {
@@ -186,9 +190,74 @@ function applyCategoryFilter(tooltip: HTMLElement, categoryId: string): void {
     }
 }
 
-function ensureTabBar(view: EditorView, isLora: boolean): void {
+function attachTooltipListeners(tooltip: HTMLElement, view: EditorView): void {
+    if (tooltip.dataset.pilotListenersAttached) return;
+    tooltip.dataset.pilotListenersAttached = 'true';
+
+    tooltip.addEventListener('mouseover', (e) => {
+        const li = (e.target as HTMLElement).closest<HTMLLIElement>('li.cat-lora');
+        if (!li) {
+            const nonLora = (e.target as HTMLElement).closest<HTMLLIElement>('li.pilot-option');
+            if (nonLora && appState.popoverState.visible) {
+                appState.popoverState.hidePopover();
+            }
+            return;
+        }
+
+        const labelEl = li.querySelector('.cm-completionLabel');
+        const label = labelEl?.textContent?.trim();
+        if (!label) return;
+
+        const model = Array.from(appState.storageState.models.values()).find(
+            (m) => m.category === 'loras' && (m.name === label || m.path.replaceAll('\\', '/').replace(/\.[^/.]+$/, '') === label),
+        );
+        if (model) {
+            const showNsfw = Boolean(appState.optionState.get('ComfyGrid.ui.show_nsfw'));
+            if (showNsfw || !model.nsfw) {
+                appState.popoverState.showModelPopover(tooltip, model, 'models');
+            }
+        }
+    });
+
+    tooltip.addEventListener('mouseleave', () => {
+        updateLoraPopover(view);
+    });
+}
+
+function updateLoraPopover(view: EditorView): void {
+    const tooltip = view.dom.ownerDocument.querySelector<HTMLElement>('.cm-tooltip-autocomplete');
+    if (!tooltip) {
+        if (appState.popoverState.visible) {
+            appState.popoverState.hidePopover();
+        }
+        return;
+    }
+
+    const rect = tooltip.getBoundingClientRect();
+    if (rect.width === 0 || rect.height === 0 || (rect.top === 0 && rect.left === 0)) {
+        requestAnimationFrame(() => updateLoraPopover(view));
+        return;
+    }
+
+    const selected = selectedCompletion(view.state) as PilotCompletion | null;
+    if (selected?.model) {
+        const showNsfw = Boolean(appState.optionState.get('ComfyGrid.ui.show_nsfw'));
+        if (showNsfw || !selected.model.nsfw) {
+            appState.popoverState.showModelPopover(tooltip, selected.model, 'models');
+            return;
+        }
+    }
+
+    if (appState.popoverState.visible) {
+        appState.popoverState.hidePopover();
+    }
+}
+
+function ensureTabBar(view: EditorView, isLora?: boolean): void {
     const tooltip = view.dom.ownerDocument.querySelector<HTMLElement>('.cm-tooltip-autocomplete');
     if (!tooltip) return;
+
+    attachTooltipListeners(tooltip, view);
 
     let tabContainer = tooltip.querySelector<HTMLDivElement>('.pilot-tab-container');
     if (!tabContainer) {
@@ -224,7 +293,10 @@ function ensureTabBar(view: EditorView, isLora: boolean): void {
         tooltip.insertBefore(tabContainer, tooltip.firstChild);
     }
 
-    if (isLora) {
+    const hasLoraOption = tooltip.querySelector('li.cat-lora') !== null;
+    const isLoraMode = isLora ?? hasLoraOption;
+
+    if (isLoraMode) {
         tabContainer.style.display = 'none';
         delete tooltip.dataset.activeCategory;
     } else {
@@ -352,6 +424,7 @@ const promptPilotSource: CompletionSource = async (context: CompletionContext): 
     requestAnimationFrame(() => {
         if (context.view) {
             ensureTabBar(context.view, isLora);
+            updateLoraPopover(context.view);
         }
     });
 
@@ -377,13 +450,23 @@ const tabSyncPlugin = ViewPlugin.fromClass(
 
             if (this.wasActive && !isActive) {
                 activeCategory = 'all';
+                if (appState.popoverState.visible) {
+                    appState.popoverState.hidePopover();
+                }
             }
             this.wasActive = isActive;
 
             if (isActive) {
                 requestAnimationFrame(() => {
-                    ensureTabBar(this.view, false);
+                    ensureTabBar(this.view);
+                    updateLoraPopover(this.view);
                 });
+            }
+        }
+
+        destroy() {
+            if (appState.popoverState.visible) {
+                appState.popoverState.hidePopover();
             }
         }
     },

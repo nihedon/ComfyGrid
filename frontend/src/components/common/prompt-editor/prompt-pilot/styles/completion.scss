@@ -5,7 +5,6 @@
     --danbooru-cat-3: oklch(69.5% 0.155 327.73); // copyright (magenta)
     --danbooru-cat-4: oklch(69.5% 0.155 144.81); // character (green)
     --danbooru-cat-5: oklch(69.5% 0.155 61.7); // meta (orange)
-    --danbooru-cat-lora: oklch(75% 0.15 300); // lora
 }
 
 [data-bs-theme='light'] {
@@ -14,7 +13,6 @@
     --danbooru-cat-3: oklch(45% 0.18 327.73); // copyright (magenta)
     --danbooru-cat-4: oklch(40% 0.18 144.81); // character (green)
     --danbooru-cat-5: oklch(45% 0.18 61.7); // meta (orange)
-    --danbooru-cat-lora: oklch(45% 0.18 300); // lora
 }
 
 // CodeMirror Autocomplete Tooltip Overrides
@@ -118,9 +116,6 @@
             &.cat-5 .cm-completionLabel {
                 color: var(--danbooru-cat-5) !important;
             }
-            &.cat-lora .cm-completionLabel {
-                color: var(--danbooru-cat-lora) !important;
-            }
 
             .cm-completionDetail {
                 color: var(--bs-secondary-color, #6c757d) !important;
@@ -155,7 +150,6 @@
                         width: 14px !important;
                         height: 14px !important;
                         object-fit: contain !important;
-                        vertical-align: middle !important;
                         display: block !important;
                     }
 
@@ -211,9 +205,6 @@
                 }
                 &.cat-5 {
                     background-color: var(--danbooru-cat-5) !important;
-                }
-                &.cat-lora {
-                    background-color: var(--danbooru-cat-lora) !important;
                 }
 
                 .cm-completionLabel {

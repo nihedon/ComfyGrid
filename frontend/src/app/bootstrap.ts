@@ -58,7 +58,7 @@ setupCustomNodeApi();
 
 loadRuntimeExtensions();
 
-// Preload PromptPilot models (Danbooru tags and LoRAs) on page open
+// Preload PromptPilot tag dictionaries on page open
 void ensurePromptPilotModelsLoaded();
 
 mount(App, {
