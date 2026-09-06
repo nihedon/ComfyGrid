@@ -4,8 +4,6 @@
 
 @layer base, utilities, components;
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
-
 @layer base {
     html {
         font-size: 0.84em;
@@ -26,11 +24,14 @@
         --backdrop-opacity: 1;
         --error-border-width: 1.5px;
     }
-    textarea,
+    textarea {
+        font-family: 'Inter', sans-serif !important;
+    }
     .cm-content {
         font-size: 1rem !important;
-        line-height: 1.1 !important;
+        line-height: 1.15 !important;
         font-family: 'Fira Code', monospace, Consolas, 'Courier New' !important;
+        font-variant-ligatures: none !important;
     }
     .grid-stack-item textarea {
         resize: none !important;
