@@ -1,7 +1,7 @@
 import { RangeSetBuilder, StateEffect } from '@codemirror/state';
 import { Decoration, type DecorationSet, EditorView, ViewPlugin, type ViewUpdate } from '@codemirror/view';
-import { getTagModel } from '@/features/prompt-pilot/services/tag-service';
 import { appState } from '@/states/app-state.svelte';
+import { getTagModel } from './prompt-pilot/services/tag-service';
 
 export const reconfigureHighlightEffect = StateEffect.define<void>();
 
