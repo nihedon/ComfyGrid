@@ -124,7 +124,7 @@
 
   // Theme change: triggered when the color theme setting of options changes
   $effect(() => {
-    const theme = optionState.opts.get('ComfyGrid.ui.color_theme');
+    const theme = optionState.opts.get('ComfyGrid.theme.color_theme');
     if (!theme) {
       return;
     }

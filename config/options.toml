@@ -3,11 +3,6 @@ type = "dropdown"
 choices = ["auto", "en", "ja"]
 default = "auto"
 
-[ComfyGrid.ui.color_theme]
-type = "dropdown"
-choices = ["auto", "light", "dark"]
-default = "auto"
-
 [ComfyGrid.ui.show_nsfw]
 type = "checkbox"
 default = true
@@ -56,6 +51,11 @@ step = "8"
 type = "radio"
 default = "top"
 choices = ["none", "top", "left"]
+
+[ComfyGrid.theme.color_theme]
+type = "dropdown"
+choices = ["auto", "light", "dark"]
+default = "auto"
 
 [ComfyGrid.system_monitor.cpu]
 type = "checkbox"

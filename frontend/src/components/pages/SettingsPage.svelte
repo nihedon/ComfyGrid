@@ -134,7 +134,7 @@
                   class="list-group-item list-group-item-action py-1 ps-3 border-0 small rounded"
                   href="#opt_{id}_{section.id}"
                 >
-                  <span>{section.label.replaceAll('_', ' ')}</span>
+                  <span class="text-capitalize">{section.label.replaceAll('_', ' ')}</span>
                 </a>
               {/if}
             {/each}
