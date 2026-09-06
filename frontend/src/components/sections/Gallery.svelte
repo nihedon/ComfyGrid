@@ -38,6 +38,16 @@
     optionState.get('ComfyGrid.ui.gallery_image_max_size') as number,
   );
 
+  const isDeletable = $derived.by(() => {
+    const job = galleryState.currentGalleryJob;
+    if (!job) return false;
+    if (job.completed && !job.hasPreviewNode) return true;
+
+    const isLatestJob = galleryState.currentJobIndex === galleryState.galleryJobs.length - 1;
+    const isPreviewJob = job.hasPreviewNode || !job.completed || job.isPreview;
+    return isPreviewJob && !isLatestJob;
+  });
+
   function getMetadata(): Record<string, string> {
     return galleryState.currentGalleryJob?.metadata ?? {};
   }
@@ -299,7 +309,7 @@
                 >SAVED</span
               >
             {/if}
-            {#if galleryState.currentGalleryJob.completed && !galleryState.currentGalleryJob.hasPreviewNode}
+            {#if isDeletable}
               <button
                 class="delete-button btn btn-danger position-absolute d-flex justify-content-center align-items-center fs-6 z-1 p-1"
                 aria-label="delete"
