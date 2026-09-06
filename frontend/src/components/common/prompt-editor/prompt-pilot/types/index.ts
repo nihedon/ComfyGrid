@@ -1,4 +1,5 @@
 import type { Completion } from '@codemirror/autocomplete';
+import type { Model } from '@/states/storage-state.svelte';
 
 export type TagSourceType = 'danbooru' | 'e621' | 'both';
 
@@ -6,6 +7,7 @@ export interface PilotCompletion extends Completion {
     source?: TagSourceType;
     sources?: TagSourceType[];
     item?: ItemProps;
+    model?: Model;
 }
 
 export interface TagModel {
@@ -25,6 +27,7 @@ export interface LoraModel {
     value: string;
     searchWords: string[];
     previewFile?: string | null;
+    model?: Model;
 }
 
 export interface ItemProps {
@@ -39,6 +42,7 @@ export interface ItemProps {
     previewFile: string | null;
     source?: TagSourceType;
     sources?: TagSourceType[];
+    model?: Model;
 }
 
 export interface Word {

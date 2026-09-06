@@ -18,6 +18,7 @@
   } from '@codemirror/view';
   import { appState } from '@/states/app-state.svelte';
   import { bracketMatchingPlugin } from './prompt-editor/bracket-matching';
+  import { loraHoverPlugin } from './prompt-editor/lora-hover';
   import { promptAttentionKeymap } from './prompt-editor/prompt-attention';
   import {
     promptHighlightPlugin,
@@ -95,6 +96,7 @@
         promptHighlightPlugin,
         bracketMatchingPlugin,
         promptPilotCompletion(),
+        loraHoverPlugin(),
         highlightSelectionMatches({
           minSelectionLength: 1,
         }),
@@ -293,12 +295,12 @@
 
   :global(.cm-prompt-bracket) {
     color: var(--prompt-bracket-color) !important;
-    font-weight: bold !important;
+    font-weight: 500 !important;
   }
 
   :global(.cm-prompt-weight) {
     color: var(--prompt-weight-color) !important;
-    font-weight: bold !important;
+    font-weight: 500 !important;
   }
 
   :global(.cm-prompt-comma) {
