@@ -16,16 +16,16 @@
     drawSelection,
     keymap,
   } from '@codemirror/view';
-  import { promptPilotCompletion } from '@/features/prompt-pilot';
-  import { ensurePromptPilotModelsLoaded } from '@/features/prompt-pilot/services/loader-service';
   import { appState } from '@/states/app-state.svelte';
-  import { bracketMatchingPlugin } from './code-editor/bracket-matching';
-  import { promptAttentionKeymap } from './code-editor/prompt-attention';
+  import { bracketMatchingPlugin } from './prompt-editor/bracket-matching';
+  import { promptAttentionKeymap } from './prompt-editor/prompt-attention';
   import {
     promptHighlightPlugin,
     reconfigureHighlightEffect,
-  } from './code-editor/prompt-highlighter';
-  import { CustomSearchPanel } from './code-editor/search-panel';
+  } from './prompt-editor/prompt-highlighter';
+  import { promptPilotCompletion } from './prompt-editor/prompt-pilot';
+  import { ensurePromptPilotModelsLoaded } from './prompt-editor/prompt-pilot/services/loader-service';
+  import { CustomSearchPanel } from './prompt-editor/search-panel';
 
   let {
     value = $bindable(''),

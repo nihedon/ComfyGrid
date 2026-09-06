@@ -2,7 +2,7 @@
   import { onDestroy, untrack } from 'svelte';
   import { LayoutDashboard } from '@lucide/svelte';
   import { comfyGridApiClient } from '@/api/api-client';
-  import CodeEditor from '@/components/common/CodeEditor.svelte';
+  import PromptEditor from '@/components/common/PromptEditor.svelte';
   import { t } from '@/i18n/i18n';
   import { saveLayoutObject, updateBoardFloatingState } from '@/services/gridstack-service';
   import { translationManager } from '@/services/translation-service.svelte';
@@ -225,7 +225,7 @@
 {#snippet textarea()}
   {#if isPromptGroup}
     {#if isTranslate}
-      <CodeEditor
+      <PromptEditor
         rows={options.isFloating ? 1 : 6}
         readonly={widget.readonly}
         placeholder={widget.placeholder}
@@ -234,7 +234,7 @@
         onblur={handleBlur}
       />
     {:else}
-      <CodeEditor
+      <PromptEditor
         rows={options.isFloating ? 1 : 6}
         readonly={widget.readonly}
         placeholder={widget.placeholder}

@@ -124,24 +124,32 @@ function createCompletionItem(
         sources: item.sources,
         apply: (view, _completion, fromPos, toPos) => {
             activeCategory = 'all';
-            let startPos = fromPos;
-            let endPos = toPos;
 
-            if (isLora) {
-                const nextChar = view.state.doc.sliceString(toPos, toPos + 1);
-                if (nextChar === '>') {
-                    endPos = toPos + 1;
+            const replaceLength = toPos - fromPos;
+            const tr = view.state.changeByRange((range) => {
+                let startPos = range.empty ? Math.max(0, range.from - replaceLength) : range.from;
+                let endPos = range.to;
+
+                if (isLora) {
+                    const nextChar = view.state.doc.sliceString(endPos, endPos + 1);
+                    if (nextChar === '>') {
+                        endPos = endPos + 1;
+                    }
+                } else if (isArtist) {
+                    if (startPos > 0 && view.state.doc.sliceString(startPos - 1, startPos) === '@' && !needPrependComma && !needPrependSpace) {
+                        startPos = startPos - 1;
+                    }
                 }
-            } else if (isArtist) {
-                // If there is already an '@' right before startPos, expand startPos so we don't end up with @@
-                if (startPos > 0 && view.state.doc.sliceString(startPos - 1, startPos) === '@' && !needPrependComma && !needPrependSpace) {
-                    startPos = startPos - 1;
-                }
-            }
+
+                return {
+                    changes: { from: startPos, to: endPos, insert: insertText },
+                    range: EditorSelection.cursor(startPos + insertText.length),
+                };
+            });
 
             view.dispatch({
-                changes: { from: startPos, to: endPos, insert: insertText },
-                selection: { anchor: startPos + insertText.length },
+                ...tr,
+                userEvent: 'input.complete',
             });
         },
     };
