@@ -1,10 +1,10 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
+  import { Copy, Info, Link, Tag } from '@lucide/svelte';
   import { comfyGridApiClient } from '@/api/api-client';
   import { appState } from '@/states/app-state.svelte';
   import type { Model } from '@/states/storage-state.svelte';
   import logger from '@/utils/logger';
-  import { Copy, Info, Link, Tag } from '@lucide/svelte';
   import SelectablePopover from './SelectablePopover.svelte';
 
   let {
@@ -94,9 +94,18 @@
   });
 </script>
 
-<div class="frosted-glass rounded-2 position-absolute fs-7 top-0 start-0 px-3 text-white">
-  {model.path.substring(0, model.path.lastIndexOf('\\')).replaceAll('\\', ' / ')}
-</div>
+{#if model.path.includes('\\') || model.path.includes('/')}
+  {@const dirPath = (
+    model.path.includes('\\')
+      ? model.path.substring(0, model.path.lastIndexOf('\\'))
+      : model.path.substring(0, model.path.lastIndexOf('/'))
+  ).replaceAll('\\', ' / ')}
+  {#if dirPath}
+    <div class="frosted-glass rounded-2 position-absolute fs-7 top-0 start-0 px-2 text-white">
+      {dirPath}
+    </div>
+  {/if}
+{/if}
 
 {@render children()}
 
@@ -173,6 +182,7 @@
     background-color: #20202070;
     -webkit-text-stroke: 2px #000000a0;
     paint-order: stroke;
+    z-index: 100;
   }
 
   .menu-icon a {

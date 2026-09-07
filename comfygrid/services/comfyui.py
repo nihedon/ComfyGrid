@@ -36,7 +36,7 @@ def strip_ansi(text: str) -> str:
 
 def rel_to_abs(base_path: str, path: str) -> str:
     if path is None:
-        return None
+        raise ValueError("path is None")
     if os.path.isabs(path):
         return path
     return os.path.abspath(Path(base_path, path))
@@ -48,7 +48,7 @@ class ComfyUIService:
     proc = None
     url = None
     started: bool = False
-    mode: Literal["launch", "connect"] = None
+    mode: Literal["launch", "connect"]
     comfyui_path: str = ""
     python_path: str = ""
     comfyui_port: int = DEFAULT_COMFYUI_PORT
@@ -57,7 +57,7 @@ class ComfyUIService:
     comfyui_args: str = ""
     output_directory: str = ""
     startup_log_clients: list = []
-    startup_log_queue: Queue = None
+    startup_log_queue: Queue
 
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
@@ -101,7 +101,8 @@ class ComfyUIService:
         )
 
         if active_workspace:
-            self.comfyui_path = active_workspace.get("script_path", "")
+            script_path = active_workspace.get("script_path", "")
+            self.comfyui_path = os.path.dirname(script_path) if script_path.endswith(".py") else script_path
             self.python_path = active_workspace.get("python_path", "")
             self.comfyui_port = active_workspace.get("comfyui_port", DEFAULT_COMFYUI_PORT)
             self.comfyui_args = active_workspace.get("comfyui_args", "")
@@ -143,14 +144,7 @@ class ComfyUIService:
 
         logger.info(f"[ComfyUIService] Copying hook folder to {grid_dest_path}")
         try:
-            if getattr(sys, "frozen", False):
-                exe_path = sys.executable
-                if "_MEI" in str(exe_path):
-                    base_path = Path(sys.argv[0]).resolve().parent
-                else:
-                    base_path = Path(exe_path).parent
-            else:
-                base_path = Path.cwd()
+            base_path = Path.cwd()
             hook_src_path = Path(base_path, "hook")
             shutil.copytree(hook_src_path, grid_dest_path, dirs_exist_ok=True)
         except Exception as e:

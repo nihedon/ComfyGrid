@@ -6,23 +6,23 @@ export type ModelTypes = (typeof modelTypes)[number];
 export type ModelDirs = 'models' | 'input';
 
 export class Model {
-    path: string = $state('');
-    full_path: string = $state('');
-    name: string = $state('');
-    category: string = $state('');
-    extension: string = $state('');
-    description?: string = $state();
+    path: string = '';
+    full_path: string = '';
+    name: string = '';
+    category: string = '';
+    extension: string = '';
+    description?: string = $state('');
     has_description: boolean = $state(false);
-    retrieved: boolean = $state(false);
-    preview?: string = $state();
-    url?: string = $state();
-    nsfw: boolean = $state(false);
-    rate?: number = $state();
-    favorite: boolean = $state(false);
-    trainedWords: string[] = $state([]);
-    modified: number = $state(0);
-    created: number = $state(0);
-    size: number;
+    retrieved: boolean = false;
+    preview?: string = '';
+    url?: string = '';
+    nsfw: boolean = false;
+    rate?: number = 0;
+    favorite = $state(false);
+    trainedWords: string[] = [];
+    modified: number = 0;
+    created: number = 0;
+    size: number = 0;
 
     constructor(data: Partial<Model>) {
         Object.assign(this, data);

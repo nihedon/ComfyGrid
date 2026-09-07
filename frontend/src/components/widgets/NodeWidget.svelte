@@ -92,15 +92,11 @@
   });
 
   type RenderItem =
-    | { type: 'single'; widget: ComfyGridWidget; component: Component }
-    | { type: 'single-ce'; widget: ComfyGridWidget; customElement: string }
-    | { type: 'grouped'; widgets: ComfyGridWidget[]; component: Component; groupKey: string }
-    | { type: 'grouped-ce'; widgets: ComfyGridWidget[]; customElement: string; groupKey: string };
+    | { id: string; type: 'single'; widget: ComfyGridWidget; component: Component }
+    | { id: string; type: 'single-ce'; widget: ComfyGridWidget; customElement: string };
 
   const renderableWidgets = $derived.by((): RenderItem[] => {
     const items: RenderItem[] = [];
-    // eslint-disable-next-line svelte/prefer-svelte-reactivity
-    const renderedGroups = new Set<string>();
 
     for (const w of containsWidgets) {
       // Skip if input is set or if floating conditions don't match
@@ -111,67 +107,33 @@
       const matchResult = getWidgetComponentWithMeta(node, w);
       if (!matchResult) continue;
 
-      if (matchResult.groupBy) {
-        let groupValue: string;
-        if (matchResult.groupBy === 'widget_class_name') {
-          groupValue = w.className;
-        } else if (matchResult.groupBy === 'widget_name') {
-          groupValue = w.name;
-        } else {
-          groupValue = w.type;
-        }
-
-        const groupKey = `${matchResult.groupBy}:${groupValue}`;
-
-        if (!renderedGroups.has(groupKey)) {
-          renderedGroups.add(groupKey);
-          const groupedWidgets = containsWidgets.filter((gw) => {
-            switch (matchResult.groupBy) {
-              case 'widget_class_name':
-                return gw.className === w.className;
-              case 'widget_name':
-                return gw.name === w.name;
-              case 'widget_type':
-                return gw.type === w.type;
-              default:
-                return false;
-            }
-          });
-          if (matchResult.customElement) {
-            items.push({
-              type: 'grouped-ce',
-              widgets: groupedWidgets,
-              customElement: matchResult.customElement,
-              groupKey,
-            });
-          } else if (matchResult.component) {
-            items.push({
-              type: 'grouped',
-              widgets: groupedWidgets,
-              component: matchResult.component,
-              groupKey,
-            });
-          }
-        }
-      } else {
-        if (matchResult.customElement) {
-          items.push({
-            type: 'single-ce',
-            widget: w,
-            customElement: matchResult.customElement,
-          });
-        } else if (matchResult.component) {
-          items.push({
-            type: 'single',
-            widget: w,
-            component: matchResult.component,
-          });
-        }
+      if (matchResult.customElement) {
+        items.push({
+          id: w.id,
+          type: 'single-ce',
+          widget: w,
+          customElement: matchResult.customElement,
+        });
+      } else if (matchResult.component) {
+        items.push({
+          id: w.id,
+          type: 'single',
+          widget: w,
+          component: matchResult.component,
+        });
       }
     }
-
     return items;
   });
+
+  function bindCustomElementProps(el: HTMLElement, props: Record<string, unknown>) {
+    Object.assign(el, props);
+    return {
+      update(newProps: Record<string, unknown>) {
+        Object.assign(el, newProps);
+      },
+    };
+  }
 
   const nodeColorOpts = $derived(appState.optionState.get('ComfyGrid.ui.node_color'));
 
@@ -313,7 +275,7 @@
 </script>
 
 <div
-  class="node-widget card grid-stack-item-content overflow-hidden shadow-sm"
+  class="node-widget"
   class:executing={appState.executionState.runningNodeId == node.id}
   class:normal={node.mode === COMFY_NODE_MODE.NORMAL}
   class:mute={node.mode === COMFY_NODE_MODE.MUTE}
@@ -325,7 +287,7 @@
 >
   <div class="card-header" class:mute={node.mode === COMFY_NODE_MODE.MUTE}>
     {#if !isTitleEditing}
-      <div class="d-flex align-items-center gap-2">
+      <div class="card-header-left">
         {#if !widget}
           {#if !node.isNote}
             <NodeModeSelector
@@ -336,7 +298,7 @@
           {#if alwaysShowFocusButton || isInvalid}
             <button
               type="button"
-              class={`btn btn-xs btn-${isInvalid ? 'danger' : 'secondary'} btn-icon`}
+              class={`btn btn-xs btn-icon btn-${isInvalid ? 'danger' : 'secondary'}`}
               title={$t('node.focus')}
               onclick={focusNodeInComfyUI}
             >
@@ -355,7 +317,7 @@
           {#if appState.isDebugMode}
             <button
               type="button"
-              class="btn btn-xs btn-outline-secondary btn-icon"
+              class="btn btn-xs btn-icon btn-outline-secondary"
               title={node.id}
               onclick={(e) => {
                 e.stopPropagation();
@@ -380,7 +342,7 @@
     {#if !isTitleEditing}
       <!-- svelte-ignore a11y_no_static_element_interactions -->
       <span
-        class="node-title text-truncate fs-6"
+        class="node-title"
         class:floating={isFloating}
         title="{title} ({node.id})"
         ondblclick={() => {
@@ -407,7 +369,7 @@
       />
     {/if}
     {#if !isTitleEditing}
-      <div class="d-flex align-items-center gap-1">
+      <div class="card-header-right">
         {#if isFloating && otherBoardId}
           <button
             type="button"
@@ -439,28 +401,18 @@
   </div>
   {#if !node.collapsed && containsWidgets.length > 0 && containsDrawableWidget}
     <div
-      class="widget-stack {node.type} {nodeStyle}"
+      class="widget-stack {nodeStyle}"
       class:py-1={!widget && !isTextareaOnly}
       class:px-2={!widget && !isTextareaOnly}
+      data-type={node.type}
     >
-      {#each renderableWidgets as item, index (index)}
-        {#if item.type === 'grouped'}
-          <item.component {node} widgets={item.widgets} options={{ isFloating, isTextareaOnly }} />
-        {:else if item.type === 'single'}
+      {#each renderableWidgets as item (item.id)}
+        {#if item.type === 'single'}
           <item.component widget={item.widget} options={{ isFloating, isTextareaOnly }} />
-        {:else if item.type === 'grouped-ce'}
-          <svelte:element
-            this={item.customElement}
-            {...{
-              node: node,
-              widgets: item.widgets,
-              options: { isFloating, isTextareaOnly },
-            }}
-          />
         {:else if item.type === 'single-ce'}
           <svelte:element
             this={item.customElement}
-            {...{
+            use:bindCustomElementProps={{
               widget: item.widget,
               options: { isFloating, isTextareaOnly },
             }}

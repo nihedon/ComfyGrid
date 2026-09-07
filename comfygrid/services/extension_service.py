@@ -8,26 +8,13 @@ from pathlib import Path
 import orjson
 
 from comfygrid.services.git import update_git_repository
-import comfygrid.infrastructure.plugin_dependencies  # Force PyInstaller to bundle this
-import modules.shared  # Force PyInstaller to bundle this for extensions
-import modules.script_callbacks  # Force PyInstaller to bundle this for extensions
-import modules.options  # Force PyInstaller to bundle this for extensions
 
 plugin_folders = []
-if getattr(sys, "frozen", False):
-    exe_path = sys.executable
-    if "_MEI" in str(exe_path):
-        PROJECT_ROOT = Path(sys.argv[0]).resolve().parent
-    else:
-        PROJECT_ROOT = Path(exe_path).parent
-else:
-    PROJECT_ROOT = Path(__file__).resolve().parents[2]
-
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
 EXTENSIONS_DIR = PROJECT_ROOT / "extensions"
-CUSTOM_EXTENSIONS_DIR = PROJECT_ROOT / "custom_nodes"
 
 
-def load_extensions():
+def load_extensions(app=None):
     base = EXTENSIONS_DIR
     if not base.is_dir():
         logging.warning("Extensions directory not found: %s", base)
@@ -41,75 +28,88 @@ def load_extensions():
         if (ext_dir / ".git").exists() and os.getenv("COMFYGRID_EXTENSION_UPDATE", "True").lower() == "true":
             update_git_repository(str(ext_dir))
 
-        install_py = ext_dir / "install.py"
-        scripts_init = ext_dir / "scripts" / "__init__.py"
+        manifest_path = ext_dir / "manifest.json"
+        manifest = {}
+        if manifest_path.is_file():
+            try:
+                manifest = orjson.loads(manifest_path.read_text(encoding="utf-8"))
+            except Exception as e:
+                logging.error("Failed to parse manifest %s: %s", manifest_path, e)
 
-        if scripts_init.is_file():
-            if install_py.is_file():
-                try:
-                    logging.info("Running installer: %s", install_py)
-                    env = os.environ.copy()
-                    env["PYTHONPATH"] = project_root + os.pathsep + env.get("PYTHONPATH", "")
-                    if getattr(sys, "frozen", False):
-                        import runpy
-                        runpy.run_path(str(install_py))
-                    else:
-                        subprocess.run([sys.executable, str(install_py)], env=env, check=True)
-                except Exception as e:
-                    logging.error("Failed to run installer %s: %s", install_py, e)
-                    continue
+        # 1. Execute python install script if defined in manifest or exists as install.py
+        py_config = manifest.get("python", {})
+        install_script = py_config.get("install") or ("install.py" if (ext_dir / "install.py").is_file() else None)
 
-            rel_pkg = scripts_init.parent.relative_to(PROJECT_ROOT)
+        if install_script and (ext_dir / install_script).is_file():
+            install_path = ext_dir / install_script
+            try:
+                logging.info("Running installer: %s", install_path)
+                env = os.environ.copy()
+                env["PYTHONPATH"] = project_root + os.pathsep + env.get("PYTHONPATH", "")
+                subprocess.run([sys.executable, str(install_path)], env=env, check=True)
+            except Exception as e:
+                logging.error("Failed to run installer %s: %s", install_path, e)
+                continue
+
+        # 2. Load python entry module if defined in manifest or fallback to __init__.py
+        entry_script = py_config.get("entry")
+        py_init = None
+        if entry_script and (ext_dir / entry_script).is_file():
+            py_init = ext_dir / entry_script
+        elif (ext_dir / "__init__.py").is_file():
+            py_init = ext_dir / "__init__.py"
+        elif (ext_dir / "scripts" / "__init__.py").is_file():
+            py_init = ext_dir / "scripts" / "__init__.py"
+
+        if py_init:
+            rel_pkg = py_init.parent.relative_to(PROJECT_ROOT)
             mod_name = ".".join(rel_pkg.parts)
             try:
-                importlib.import_module(mod_name)
-                folder = str(PROJECT_ROOT / Path(*rel_pkg.parts[:-1]))
-                if folder not in plugin_folders:
-                    plugin_folders.append(folder)
-                logging.info("Loaded plugin module: %s", mod_name)
+                mod = importlib.import_module(mod_name)
+                if app and hasattr(mod, "setup"):
+                    mod.setup(app)
+                logging.info("Loaded extension module: %s", mod_name)
             except Exception as e:
-                logging.error("Failed to load plugin module %s: %s", mod_name, e)
+                logging.error("Failed to load extension module %s: %s", mod_name, e)
                 continue
 
+        folder = str(ext_dir)
+        if folder not in plugin_folders:
+            plugin_folders.append(folder)
 
-def list_custom_nodes() -> list[dict]:
-    if not CUSTOM_EXTENSIONS_DIR.exists():
-        return []
 
+def list_extensions() -> list[dict]:
     result = []
-    try:
-        entries = list(CUSTOM_EXTENSIONS_DIR.iterdir())
-    except Exception as e:
-        logging.error("Failed to list custom nodes directory %s: %s", CUSTOM_EXTENSIONS_DIR, e)
-        return []
+    dirs_to_scan = [EXTENSIONS_DIR]
 
-    for ext_dir in sorted(entries):
-        try:
-            if not ext_dir.is_dir():
-                continue
-            manifest_path = ext_dir / "manifest.json"
-            if manifest_path.exists():
-                manifest = orjson.loads(manifest_path.read_text(encoding="utf-8"))
-                result.append({ext_dir.name: manifest})
-        except Exception as e:
-            logging.error("Failed to process custom node directory %s: %s", ext_dir, e)
+    for base_dir in dirs_to_scan:
+        if not base_dir.exists():
+            continue
+        for ext_dir in sorted([p for p in base_dir.iterdir() if p.is_dir()]):
+            try:
+                manifest_path = ext_dir / "manifest.json"
+                if manifest_path.exists():
+                    manifest = orjson.loads(manifest_path.read_text(encoding="utf-8"))
+                    manifest.setdefault("id", ext_dir.name)
+                    manifest.setdefault("name", ext_dir.name)
+                    result.append(manifest)
+            except Exception as e:
+                logging.error("Failed to process extension directory %s: %s", ext_dir, e)
     return result
-
-
-def get_custom_widget_path(name: str) -> Path | None:
-    return get_custom_asset_path(name, "widget.js")
 
 
 def get_custom_asset_path(name: str, asset_path: str) -> Path | None:
     if ".." in Path(asset_path).parts:
         return None
 
-    extension_dir = (CUSTOM_EXTENSIONS_DIR / name).resolve()
-    path = (extension_dir / asset_path).resolve()
+    for base_dir in [EXTENSIONS_DIR]:
+        extension_dir = (base_dir / name).resolve()
+        path = (extension_dir / asset_path).resolve()
+        try:
+            path.relative_to(extension_dir)
+            if path.is_file():
+                return path
+        except ValueError:
+            continue
 
-    try:
-        path.relative_to(extension_dir)
-    except ValueError:
-        return None
-
-    return path if path.is_file() else None
+    return None

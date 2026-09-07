@@ -66,9 +66,7 @@
     <label class="d-flex justify-contents-between" for={optionKey}>
       {label}
       {#if hint}
-        <span title={hint} class="ms-1 d-inline-flex align-items-center"
-          ><Info size={14} /></span
-        >
+        <span title={hint} class="ms-1 d-inline-flex align-items-center"><Info size={14} /></span>
       {/if}
     </label>
   </div>
@@ -141,8 +139,7 @@
       rows={formInfo.lines ?? 4}
       placeholder={formInfo.placeholder ?? ''}
       value={currentValue as string}
-      onchange={handleInputChange}
-    ></textarea>
+      onchange={handleInputChange}></textarea>
   </div>
 {:else if formInfo.type === 'number'}
   <div class="vstack">

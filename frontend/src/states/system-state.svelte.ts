@@ -28,19 +28,38 @@ interface Snapshot {
     gpu: GpuInfo;
 }
 
+interface SystemHistory {
+    cpu: number[];
+    ram: number[];
+    gpu: number[];
+    vram: number[];
+    temp: number[];
+}
+
+interface SystemData {
+    cpu: CpuInfo;
+    ram: RamInfo;
+    gpu: GpuInfo;
+    history: SystemHistory;
+}
+
 class SystemState {
     #connected: boolean = false;
     #eventSource: EventSource = null;
     #activeCount: number = 0;
 
-    #cpu: CpuInfo = $state({ total: 0, per_core: [], freq_mhz: null });
-    #ram: RamInfo = $state({ used_gb: 0, total_gb: 0, pct: 0 });
-    #gpu: GpuInfo = $state({ available: false });
-    readonly #cpuHistory: number[] = $state(mkHistory());
-    readonly #ramHistory: number[] = $state(mkHistory());
-    readonly #gpuHistory: number[] = $state(mkHistory());
-    readonly #vramHistory: number[] = $state(mkHistory());
-    readonly #tempHistory: number[] = $state(mkHistory());
+    #stats = $state<SystemData>({
+        cpu: { total: 0, per_core: [], freq_mhz: null },
+        ram: { used_gb: 0, total_gb: 0, pct: 0 },
+        gpu: { available: false },
+        history: {
+            cpu: mkHistory(),
+            ram: mkHistory(),
+            gpu: mkHistory(),
+            vram: mkHistory(),
+            temp: mkHistory(),
+        },
+    });
 
     #error = $state<string | null>(null);
 
@@ -48,28 +67,28 @@ class SystemState {
         return this.#connected;
     }
     get cpu() {
-        return this.#cpu;
+        return this.#stats.cpu;
     }
     get ram() {
-        return this.#ram;
+        return this.#stats.ram;
     }
     get gpu() {
-        return this.#gpu;
+        return this.#stats.gpu;
     }
     get cpuHistory() {
-        return this.#cpuHistory;
+        return this.#stats.history.cpu;
     }
     get ramHistory() {
-        return this.#ramHistory;
+        return this.#stats.history.ram;
     }
     get gpuHistory() {
-        return this.#gpuHistory;
+        return this.#stats.history.gpu;
     }
     get vramHistory() {
-        return this.#vramHistory;
+        return this.#stats.history.vram;
     }
     get tempHistory() {
-        return this.#tempHistory;
+        return this.#stats.history.temp;
     }
     get error() {
         return this.#error;
@@ -91,19 +110,20 @@ class SystemState {
         };
         this.#eventSource.onmessage = (e: MessageEvent) => {
             const d: Snapshot = JSON.parse(e.data);
-            this.#cpu = d.cpu;
-            this.#ram = d.ram;
-            this.#gpu = d.gpu;
-            this.#cpuHistory.push(d.cpu.total);
-            this.#cpuHistory.shift();
-            this.#ramHistory.push(d.ram.pct);
-            this.#ramHistory.shift();
-            this.#gpuHistory.push(d.gpu.gpu_pct ?? 0);
-            this.#gpuHistory.shift();
-            this.#vramHistory.push(d.gpu.vram_pct ?? 0);
-            this.#vramHistory.shift();
-            this.#tempHistory.push(d.gpu.temp_c ?? 0);
-            this.#tempHistory.shift();
+            const prevHistory = this.#stats.history;
+
+            this.#stats = {
+                cpu: d.cpu,
+                ram: d.ram,
+                gpu: d.gpu,
+                history: {
+                    cpu: [...prevHistory.cpu.slice(1), d.cpu.total],
+                    ram: [...prevHistory.ram.slice(1), d.ram.pct],
+                    gpu: [...prevHistory.gpu.slice(1), d.gpu.gpu_pct ?? 0],
+                    vram: [...prevHistory.vram.slice(1), d.gpu.vram_pct ?? 0],
+                    temp: [...prevHistory.temp.slice(1), d.gpu.temp_c ?? 0],
+                },
+            };
         };
         this.#eventSource.onerror = () => {
             this.#connected = false;

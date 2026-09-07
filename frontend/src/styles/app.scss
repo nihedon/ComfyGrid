@@ -4,8 +4,6 @@
 
 @layer base, utilities, components;
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
-
 @layer base {
     html {
         font-size: 0.84em;
@@ -27,8 +25,13 @@
         --error-border-width: 1.5px;
     }
     textarea {
-        line-height: 1.1 !important;
+        font-family: 'Inter', sans-serif !important;
+    }
+    .cm-content {
+        font-size: 1rem !important;
+        line-height: 1.15 !important;
         font-family: 'Fira Code', monospace, Consolas, 'Courier New' !important;
+        font-variant-ligatures: none !important;
     }
     .grid-stack-item textarea {
         resize: none !important;
@@ -37,6 +40,20 @@
     .modal-backdrop {
         --bs-backdrop-bg: var(--backdrop-bg) !important;
         --bs-backdrop-opacity: var(--backdrop-opacity) !important;
+    }
+
+    /* Default display and width for ComfyGrid custom elements */
+    cg-button-widget,
+    cg-modal-combo-widget,
+    cg-toggle-widget {
+        width: 100%;
+    }
+
+    .cg-drop-target-above {
+        border-top: 2px solid var(--bs-primary, #0d6efd) !important;
+    }
+    .cg-drop-target-below {
+        border-bottom: 2px solid var(--bs-primary, #0d6efd) !important;
     }
 }
 
@@ -49,6 +66,25 @@
         @extend .align-items-center;
         @extend .justify-content-center;
         @extend .p-1;
+    }
+    .model-info-icon-btn {
+        @extend .position-absolute;
+        @extend .end-0;
+        @extend .px-1;
+        @extend .text-muted;
+        @extend .text-decoration-none;
+        background-color: var(--bs-body-bg);
+        z-index: 5;
+        border: 0;
+        opacity: 0.8;
+        transition:
+            opacity 0.15s ease-in-out,
+            color 0.15s ease-in-out;
+        &:hover {
+            background-color: var(--bs-body-bg);
+            opacity: 1;
+            color: var(--bs-primary) !important;
+        }
     }
 
     .nav.nav-tabs {
@@ -119,6 +155,10 @@
     }
 
     .node-widget {
+        @extend .card;
+        @extend .grid-stack-item-content;
+        @extend .overflow-hidden;
+        @extend .shadow-sm;
         * {
             scrollbar-width: thin;
         }
@@ -136,6 +176,22 @@
             @extend .flex-nowrap;
             @extend .justify-content-between;
             @extend .align-items-center;
+            > .card-header-left {
+                @extend .d-flex;
+                @extend .align-items-center;
+                @extend .gap-2;
+            }
+
+            > .card-header-right {
+                @extend .d-flex;
+                @extend .align-items-center;
+                @extend .gap-1;
+            }
+
+            > .node-title {
+                @extend .text-truncate;
+                @extend .fs-6;
+            }
         }
     }
 

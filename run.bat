@@ -1,5 +1,6 @@
 @echo off
 chcp 65001 > nul
+cd /d "%~dp0"
 setlocal EnableDelayedExpansion
 
 echo ========================================
@@ -114,7 +115,7 @@ if exist venv (
     echo Virtual environment already exists.
     echo Checking if packages are up to date...
     call venv\Scripts\activate
-    call pip install . --quiet
+    call python -m pip install . --quiet
 ) else (
     echo Creating virtual environment...
     call python -m venv venv
@@ -133,7 +134,7 @@ if exist venv (
     
     echo Installing Python packages...
     call python -m pip install --upgrade pip
-    call pip install .
+    call python -m pip install .
 )
 
 if !errorlevel! neq 0 (

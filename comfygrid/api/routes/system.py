@@ -1,14 +1,12 @@
 import asyncio
-import os
 import shutil
 import subprocess
-import zipfile
 from pathlib import Path
 
 import httpx
 import orjson
 import psutil
-from fastapi import APIRouter, BackgroundTasks, FastAPI, Request
+from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse
 
@@ -185,4 +183,3 @@ async def check_update():
             }
     except Exception as e:
         return JSONResponse({"error": str(e)}, status_code=500)
-

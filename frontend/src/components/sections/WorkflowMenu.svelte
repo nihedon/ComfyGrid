@@ -14,6 +14,11 @@
   }
 
   function handleSelectTab(item: WorkflowTabItem) {
+    if (item.selected) return;
+
+    const app = appState.comfyUiState.app;
+    if (!app) return;
+
     item.tab.click();
     if (uiState.activePageId !== 'grid' && uiState.activePageId !== 'comfyui') {
       uiState.needRefresh = true;

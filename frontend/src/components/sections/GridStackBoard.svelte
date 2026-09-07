@@ -1,11 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { GridStack } from 'gridstack';
-  import {
-    applyFloatingPositions,
-    gs,
-    syncAndSaveLayout,
-  } from '@/services/gridstack-service';
+  import { applyFloatingPositions, gs, syncAndSaveLayout } from '@/services/gridstack-service';
   import { appState } from '@/states/app-state.svelte';
   import { ComfyGridGroup, ComfyGridNode } from '@/states/model-state.svelte';
   import type { BoardId } from '@/types/board';

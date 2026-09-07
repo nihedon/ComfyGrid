@@ -1,10 +1,5 @@
 <script lang="ts">
-  import {
-    Info,
-    Loader2,
-    RotateCw,
-    TriangleAlert,
-  } from '@lucide/svelte';
+  import { Info, Loader2, RotateCw, TriangleAlert } from '@lucide/svelte';
   import { Modal } from 'bootstrap';
   import { appState } from '@/states/app-state.svelte';
 

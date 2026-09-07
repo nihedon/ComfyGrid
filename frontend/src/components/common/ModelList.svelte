@@ -13,8 +13,9 @@
     ChevronsRight,
     Folder,
     FolderOpen,
-    FolderTree,
+    Heart,
     RotateCw,
+    Search,
     Star,
     Trash2,
   } from '@lucide/svelte';
@@ -27,6 +28,7 @@
   import { appState } from '@/states/app-state.svelte';
   import type { Model, ModelTypes } from '@/states/storage-state.svelte';
   import logger from '@/utils/logger';
+  import { SearchIndexer } from '@/utils/search-indexer';
   import ModelInfoWrapper from './ModelInfoWrapper.svelte';
   import Thumbnail from './Thumbnail.svelte';
 
@@ -38,13 +40,13 @@
     dir,
     subdirs,
     valueSet,
-    action,
+    action = null,
     focusSelectedModel = false,
   }: {
     dir: ModelTypes;
     subdirs: ReadonlyArray<string>;
     valueSet?: ReadonlySet<string>;
-    action: ((model: Model) => void) | null;
+    action?: ((model: Model) => void) | null;
     focusSelectedModel?: boolean;
   } = $props();
 
@@ -81,7 +83,6 @@
   let selectedFolder = $state<string>(untrack(() => optionState.get(folderStorageKey) ?? ''));
   let showNsfw = $state(optionState.get('ComfyGrid.ui.show_nsfw'));
   let favoriteOnly = $state(false);
-  let modelTreeView = $state(optionState.get('ComfyGrid.ui.model_tree_view'));
 
   const sortAsc = $derived<boolean>(optionState.get(`ComfyGrid.ui.${dir}_sort_asc`) ?? true);
   const sortMethod = $derived<SortType>(optionState.get(`ComfyGrid.ui.${dir}_sort`) ?? 'path');
@@ -154,12 +155,22 @@
     return sortAsc ? sortedList : sortedList.reverse();
   });
 
+  let modelIndexer: SearchIndexer<Model> | null = null;
+
+  $effect(() => {
+    if (!modelIndexer) {
+      modelIndexer = new SearchIndexer(modelList, (m) => m.path ?? '');
+    } else {
+      modelIndexer.update(modelList, (m) => m.path ?? '');
+    }
+  });
+
   const folderFilteredModelList = $derived.by(() => {
     if (!selectedFolder) {
       return sortedModelList;
     }
     return sortedModelList.filter((model: Model) => {
-      const normalizedPath = model.path.replace(/\\/g, '/');
+      const normalizedPath = (model.path ?? '').replace(/\\/g, '/');
       return normalizedPath.startsWith(selectedFolder + '/');
     });
   });
@@ -173,17 +184,12 @@
       list = list.filter((model: Model) => model.favorite === true);
     }
 
-    const filters = filterText
-      .toLowerCase()
-      .split(' ')
-      .filter((f) => f.trim() !== '');
-    if (filters.length === 0) {
+    if (!filterText.trim() || !modelIndexer) {
       return list;
     }
-    return list.filter((model: Model) => {
-      const path = (model.path ?? '').toLowerCase();
-      return filters.every((f) => path.includes(f));
-    });
+
+    const searchSet = new Set(modelIndexer.search(filterText));
+    return list.filter((model: Model) => searchSet.has(model));
   });
 
   const PAGE_SIZE = 100;
@@ -202,7 +208,6 @@
   }
 
   $effect(() => {
-    // Reset page and scroll to top when filter/folder/sort changes
     void filterText;
     void selectedFolder;
     void sortMethod;
@@ -215,10 +220,6 @@
 
   $effect(() => {
     optionState.set('ComfyGrid.ui.show_nsfw', showNsfw);
-  });
-
-  $effect(() => {
-    optionState.set('ComfyGrid.ui.model_tree_view', modelTreeView);
   });
 
   function expandParentFolders(folder: string) {
@@ -344,6 +345,18 @@
       logger.error(e);
     }
   }
+
+  async function toggleFavorite(e: MouseEvent, model: Model) {
+    e.preventDefault();
+    e.stopPropagation();
+    const nextState = !model.favorite;
+    model.favorite = nextState;
+    try {
+      await comfyGridApiClient.postModelInfo(model.full_path, { favorite: nextState });
+    } catch (err) {
+      logger.error('Failed to toggle model favorite:', err);
+    }
+  }
 </script>
 
 <nav class="navbar navbar-light bg-light">
@@ -358,47 +371,35 @@
             bind:checked={favoriteOnly}
           />
           <label
-            class="btn btn-sm btn-outline-primary"
+            class="btn btn-sm btn-outline-primary py-0"
             for="favoriteOnlySwitch"
             style="width: 70px;">Favorite</label
           >
         </li>
         <li class="nav-item">
           <input class="btn-check" type="checkbox" id="showNsfwSwitch" bind:checked={showNsfw} />
-          <label class="btn btn-sm btn-outline-primary" for="showNsfwSwitch" style="width: 70px;">
+          <label
+            class="btn btn-sm btn-outline-primary py-0"
+            for="showNsfwSwitch"
+            style="width: 70px;"
+          >
             {showNsfw ? 'ALL' : 'NSFW'}
           </label>
         </li>
       {/if}
-      <li class="nav-item">
-        <input class="btn-check" type="checkbox" id="useTreeView" bind:checked={modelTreeView} />
-        <label class="btn btn-sm btn-outline-primary btn-icon" for="useTreeView">
-          <FolderTree size={16} />
-        </label>
-      </li>
-      {#if !modelTreeView}
-        <li class="nav-item" style="min-width: 200px;">
-          <select
-            class="form-select"
-            name="folder"
-            value={selectedFolder}
-            onchange={(e) => selectFolder((e.target as HTMLSelectElement).value)}
-          >
-            <option value="">All Folders</option>
-            {#each folderList as folder (folder)}
-              <option value={folder}>{folder}</option>
-            {/each}
-          </select>
-        </li>
-      {/if}
-      <li class="nav-item" style="width: 200px;">
-        <input
-          type="search"
-          class="form-control"
-          name="filter"
-          bind:value={filterText}
-          placeholder="Filter {dir}..."
-        />
+      <li class="nav-item" style="width: 220px;">
+        <div class="input-group input-group-sm">
+          <span class="input-group-text">
+            <Search size={14} class="text-body-secondary" />
+          </span>
+          <input
+            type="search"
+            class="form-control"
+            name="filter"
+            bind:value={filterText}
+            placeholder="Filter {dir}..."
+          />
+        </div>
       </li>
       <li class="nav-item">
         <div class="btn-group" role="group">
@@ -453,64 +454,62 @@
 </nav>
 
 <div class="d-flex" style="flex: 1; min-height: 0;">
-  {#if modelTreeView}
-    <div class="border-end p-2 overflow-auto" style="width: 250px; flex-shrink: 0;">
-      {#snippet treeNode(node: FolderNode)}
-        <li>
-          <div class="d-flex align-items-center mt-1 text-nowrap">
-            {#if node.children.length > 0}
-              <!-- svelte-ignore a11y_invalid_attribute -->
-              <a
-                href="#"
-                class="text-decoration-none me-1 text-secondary d-inline-flex align-items-center justify-content-center"
-                style="width: 16px; text-align: center;"
-                onclick={(e) => toggleFolder(node.path, e)}
-              >
-                {#if expandedFolders.has(node.path)}
-                  <ChevronDown size={14} />
-                {:else}
-                  <ChevronRight size={14} />
-                {/if}
-              </a>
-            {:else}
-              <span style="width: 16px; margin-right: 0.25rem;"></span>
-            {/if}
-
+  <div class="border-end p-2 overflow-auto" style="width: 250px; flex-shrink: 0;">
+    {#snippet treeNode(node: FolderNode)}
+      <li>
+        <div class="d-flex align-items-center mt-1 text-nowrap">
+          {#if node.children.length > 0}
             <!-- svelte-ignore a11y_invalid_attribute -->
             <a
               href="#"
-              class="text-decoration-none d-inline-flex align-items-center gap-1"
-              class:fw-bold={selectedFolder === node.path}
-              onclick={(e) => {
-                e.preventDefault();
-                selectFolder(node.path);
-              }}
-              title={node.path || 'All Folders'}
+              class="text-decoration-none me-1 text-secondary d-inline-flex align-items-center justify-content-center"
+              style="width: 16px; text-align: center;"
+              onclick={(e) => toggleFolder(node.path, e)}
             >
               {#if expandedFolders.has(node.path)}
-                <FolderOpen size={16} class="text-secondary" />
+                <ChevronDown size={14} />
               {:else}
-                <Folder size={16} class="text-secondary" />
+                <ChevronRight size={14} />
               {/if}
-              <span class="text-body">{node.name}</span>
             </a>
-          </div>
-
-          {#if node.children.length > 0 && expandedFolders.has(node.path)}
-            <ul class="list-unstyled ms-3 mb-0">
-              {#each node.children as child (child.path)}
-                {@render treeNode(child)}
-              {/each}
-            </ul>
+          {:else}
+            <span style="width: 16px; margin-right: 0.25rem;"></span>
           {/if}
-        </li>
-      {/snippet}
 
-      <ul class="list-unstyled mb-0">
-        {@render treeNode(folderTree)}
-      </ul>
-    </div>
-  {/if}
+          <!-- svelte-ignore a11y_invalid_attribute -->
+          <a
+            href="#"
+            class="text-decoration-none d-inline-flex align-items-center gap-1"
+            class:fw-bold={selectedFolder === node.path}
+            onclick={(e) => {
+              e.preventDefault();
+              selectFolder(node.path);
+            }}
+            title={node.path || 'All Folders'}
+          >
+            {#if expandedFolders.has(node.path)}
+              <FolderOpen size={16} class="text-secondary" />
+            {:else}
+              <Folder size={16} class="text-secondary" />
+            {/if}
+            <span class="text-body">{node.name}</span>
+          </a>
+        </div>
+
+        {#if node.children.length > 0 && expandedFolders.has(node.path)}
+          <ul class="list-unstyled ms-3 mb-0">
+            {#each node.children as child (child.path)}
+              {@render treeNode(child)}
+            {/each}
+          </ul>
+        {/if}
+      </li>
+    {/snippet}
+
+    <ul class="list-unstyled mb-0">
+      {@render treeNode(folderTree)}
+    </ul>
+  </div>
 
   <div class="flex-grow-1 overflow-hidden d-flex flex-column">
     <div
@@ -524,7 +523,19 @@
           style:--modelThumbWidth="{modelThumbWidth}px;"
           data-name={model.name}
         >
-          <div class="card-body p-0 w-100 h-100">
+          <div class="card-body p-0 w-100 h-100 position-relative">
+            {#if dir === 'models'}
+              <button
+                class="btn btn-sm btn-icon position-absolute top-0 end-0 m-1 z-2 border-0 bg-transparent text-danger p-1"
+                class:opacity-25={!model.favorite}
+                class:opacity-100={model.favorite}
+                onclick={(e) => toggleFavorite(e, model)}
+                title={model.favorite ? 'Remove from favorites' : 'Add to favorites'}
+              >
+                <Heart size={18} fill={model.favorite ? 'currentColor' : 'none'} />
+              </button>
+            {/if}
+
             <!-- svelte-ignore a11y_invalid_attribute -->
             <a
               class="text-decoration-none w-100 h-100"
@@ -621,6 +632,10 @@
     width: var(--modelThumbWidth);
     height: calc((var(--modelThumbWidth) * 4) / 3);
     transition: all 0.2s ease-in-out;
+
+    &:hover .opacity-25 {
+      opacity: 0.75 !important;
+    }
 
     &.selected {
       border: 3px solid var(--bs-primary);

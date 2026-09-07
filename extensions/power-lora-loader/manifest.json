@@ -1,0 +1,21 @@
+{
+  "id": "power-lora-loader",
+  "name": "Power LoRA Loader",
+  "version": "1.0.0",
+  "description": "LoRA list widget for PowerLoraLoader nodes",
+  "frontend": {
+    "scripts": ["lora.js", "add_button.js"],
+    "styles": ["style.css"],
+    "widgets": [
+      {
+        "match": { "widget_class_name": "PowerLoraLoaderWidget" },
+        "custom_element": "power-lora-item-widget",
+        "template": "template.html#power-lora-item"
+      },
+      {
+        "match": { "widget_class_name": "RgthreeBetterButtonWidget" },
+        "custom_element": "power-lora-add-button-widget"
+      }
+    ]
+  }
+}

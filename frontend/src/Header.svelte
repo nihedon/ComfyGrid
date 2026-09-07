@@ -27,7 +27,7 @@
       <ul class="nav nav-tabs navbar-expand-lg flex-row flex-grow-1">
         <Page id="grid" text="Grid" title={workspaceState.layout?.graphId} />
         <Page id="comfyui" text="ComfyUI" />
-        <Page id="model" text="Model" />
+        <Page id="files" text="Files" />
         <Page id="image-info" text="Image Info" />
         <Page id="settings" text="Settings" />
       </ul>

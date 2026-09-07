@@ -1,8 +1,8 @@
 <script lang="ts">
   import ComfyUiPage from '@/components/pages/ComfyUiPage.svelte';
+  import FilesPage from '@/components/pages/FilesPage.svelte';
   import GridPage from '@/components/pages/GridPage.svelte';
   import ImageInfoPage from '@/components/pages/ImageInfoPage.svelte';
-  import ModelPage from '@/components/pages/ModelPage.svelte';
   import SettingsPage from '@/components/pages/SettingsPage.svelte';
   import { loadPages } from '@/services/pages-service';
   import { appState } from '@/states/app-state.svelte';
@@ -31,8 +31,8 @@
     {/each}
   {/await}
 
-  {#if uiState.activePageId === 'model'}
-    <ModelPage />
+  {#if uiState.activePageId === 'files'}
+    <FilesPage />
   {/if}
 
   {#if uiState.activePageId === 'settings'}

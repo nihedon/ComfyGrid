@@ -68,11 +68,9 @@ export class ComfyUiBridge {
 
         await waitOnDrawBackgroundAll(app.rootGraph);
 
+        ComfyUiApiHook.hookForGraphSetDirtyCanvas(app.rootGraph);
         for (const topNode of app.rootGraph.nodes) {
-            ComfyUiApiHook.hookForAddCustomWidget(topNode);
-            ComfyUiApiHook.hookForNodeWidgetChanged(topNode);
             ComfyUiApiHook.hookForWidgetCallback(topNode);
-            ComfyUiApiHook.hookForNodeSetDirtyCanvas(topNode);
         }
 
         const tabs = this.getWorkflowTabs();

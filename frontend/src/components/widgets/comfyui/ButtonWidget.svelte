@@ -2,19 +2,38 @@
   import { t } from '@/i18n/i18n';
   import type { ComfyGridWidget } from '@/states/model-state.svelte';
 
-  let { widget }: { widget: ComfyGridWidget } = $props();
+  let {
+    widget,
+    labelOverride,
+    variant = 'secondary',
+    onclickCallback,
+  }: {
+    widget?: ComfyGridWidget;
+    labelOverride?: string;
+    variant?: string;
+    onclickCallback?: () => void;
+  } = $props();
 
   function clickAction() {
-    widget.clickButton();
+    if (onclickCallback) {
+      onclickCallback();
+    } else if (widget) {
+      widget.clickButton();
+    }
   }
+
+  const displayText = $derived(
+    labelOverride ??
+      (widget ? ($t(`comfyui.widget.${widget.name}`, {}, widget.label) ?? widget.name) : 'Button'),
+  );
 </script>
 
 <button
-  class="btn btn-sm btn-secondary w-100"
-  title={widget.tooltip ?? ''}
-  data-id={widget.id}
-  data-name={widget.name}
+  class="btn btn-sm btn-{variant} w-100"
+  title={widget?.tooltip ?? ''}
+  data-id={widget?.id}
+  data-name={widget?.name}
   onclick={clickAction}
 >
-  {$t(`comfyui.widget.${widget.name}`, {}, widget.label) ?? widget.name}
+  {displayText}
 </button>

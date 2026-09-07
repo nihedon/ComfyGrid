@@ -1,13 +1,6 @@
 <script lang="ts">
+  import { Download, Eye, Info, Save, Trash2, Upload } from '@lucide/svelte';
   import { SvelteMap } from 'svelte/reactivity';
-  import {
-    Download,
-    Eye,
-    Info,
-    Save,
-    Trash2,
-    Upload,
-  } from '@lucide/svelte';
   import { t } from '@/i18n/i18n';
   import { galleryManager } from '@/managers/gallery-manager';
   import { appState } from '@/states/app-state.svelte';
@@ -45,6 +38,16 @@
     optionState.get('ComfyGrid.ui.gallery_image_max_size') as number,
   );
 
+  const isDeletable = $derived.by(() => {
+    const job = galleryState.currentGalleryJob;
+    if (!job) return false;
+    if (job.completed && !job.hasPreviewNode) return true;
+
+    const isLatestJob = galleryState.currentJobIndex === galleryState.galleryJobs.length - 1;
+    const isPreviewJob = job.hasPreviewNode || !job.completed || job.isPreview;
+    return isPreviewJob && !isLatestJob;
+  });
+
   function getMetadata(): Record<string, string> {
     return galleryState.currentGalleryJob?.metadata ?? {};
   }
@@ -76,16 +79,11 @@
   $effect(() => {
     if (galleryState.galleryJobs.length === 0) {
       galleryState.selectedJobIndex = 0;
+      galleryState.selectedNodeIndex = undefined;
       return;
     }
     if (galleryState.selectedJobIndex >= galleryState.galleryJobs.length) {
       galleryState.selectedJobIndex = galleryState.galleryJobs.length - 1;
-    }
-  });
-
-  $effect(() => {
-    if (galleryState.galleryJobs.length === 0) {
-      galleryState.selectedNodeIndex = undefined;
     }
   });
 
@@ -113,8 +111,6 @@
     }
     container?.focus();
   });
-
-
 
   function handleKeydown(e: KeyboardEvent) {
     if (fullscreen && (e.key === 'Escape' || e.key === 'Esc')) {
@@ -194,22 +190,19 @@
   });
 
   $effect(() => {
-    // eslint-disable-next-line @typescript-eslint/no-unused-expressions
-    galleryState.currentJobIndex;
+    void galleryState.currentJobIndex;
     const timerId = setTimeout(scrollToActiveJobThumbnail, 50);
     return () => clearTimeout(timerId);
   });
 
   $effect(() => {
-    // eslint-disable-next-line @typescript-eslint/no-unused-expressions
-    galleryState.selectedNodeIndex;
+    void galleryState.selectedNodeIndex;
     const timerId = setTimeout(scrollToActiveNodeThumbnail, 50);
     return () => clearTimeout(timerId);
   });
 
   $effect(() => {
-    // eslint-disable-next-line @typescript-eslint/no-unused-expressions
-    fullscreen;
+    void fullscreen;
     const timerId1 = setTimeout(scrollToActiveNodeThumbnail, 50);
     const timerId2 = setTimeout(scrollToActiveJobThumbnail, 50);
     return () => {
@@ -316,7 +309,7 @@
                 >SAVED</span
               >
             {/if}
-            {#if galleryState.currentGalleryJob.completed && !galleryState.currentGalleryJob.hasPreviewNode}
+            {#if isDeletable}
               <button
                 class="delete-button btn btn-danger position-absolute d-flex justify-content-center align-items-center fs-6 z-1 p-1"
                 aria-label="delete"
@@ -337,7 +330,8 @@
                   muted
                 ></video>
               {:else}
-                {@const isCompare = genAssets.originalCompare && genAssets.originalCompare.length > 1}
+                {@const isCompare =
+                  genAssets.originalCompare && genAssets.originalCompare.length > 1}
                 {@const src = isCompare ? genAssets.originalCompare : [genAssets.originalSingle]}
                 {#if isCompare && src && src.length > 1}
                   <div class="generated object-fit-contain">
@@ -456,8 +450,7 @@
         <button
           class="btn btn-primary d-flex align-items-center justify-content-center"
           aria-label="Download"
-          onclick={() => galleryManager.downloadImage(getMetadata())}
-          ><Download size={16} /></button
+          onclick={() => galleryManager.downloadImage(getMetadata())}><Download size={16} /></button
         >
         <button
           class="btn btn-secondary d-flex align-items-center justify-content-center"
@@ -506,7 +499,11 @@
             </button>
           </li>
           <li>
-            <button class="dropdown-item text-danger d-flex align-items-center gap-2" type="button" onclick={clearAllImages}>
+            <button
+              class="dropdown-item text-danger d-flex align-items-center gap-2"
+              type="button"
+              onclick={clearAllImages}
+            >
               <Trash2 size={16} />{$t('gallery.clear_all')}
             </button>
           </li>

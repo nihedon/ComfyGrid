@@ -46,13 +46,8 @@
   function parseValue(rawValue: string | number): string | number {
     if (typeof rawValue === 'number') return rawValue;
     const strVal = String(rawValue);
-    const allValues = [
-      ...(widget.options?.values ?? []),
-      ...(widget.options?.fixed_values ?? []),
-    ];
-    const matchedNumber = allValues.find(
-      (v) => typeof v === 'number' && String(v) === strVal,
-    );
+    const allValues = [...(widget.options?.values ?? []), ...(widget.options?.fixed_values ?? [])];
+    const matchedNumber = allValues.find((v) => typeof v === 'number' && String(v) === strVal);
     if (matchedNumber !== undefined) {
       return matchedNumber as number;
     }

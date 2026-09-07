@@ -2,6 +2,7 @@ import { workflowManager } from '@/managers/workflow-manager';
 import { appState } from '@/states/app-state.svelte';
 import type { ComfyWindow } from '@/states/comfyui-state.svelte';
 import type { ComfyApp, ComfyGraph, ComfyNode } from '@/types/comfy-model';
+import logger from '@/utils/logger';
 
 export class ComfyUiApiHook {
     static readonly #pendingTimers = new Map<string | number, number | ReturnType<typeof setTimeout>>();
@@ -35,13 +36,13 @@ export class ComfyUiApiHook {
         app.loadGraphData = async function (...args: any[]) {
             const orgRet = await orgLoadGraphData.apply(this, args);
             appState.comfyUiState.graphReady = true;
-
             if (appState.uiState.activePageId === 'grid') {
-                workflowManager.loadCurrentWorkflow();
+                workflowManager.loadCurrentWorkflow().catch((error) => {
+                    logger.error('Failed to load current workflow:', error);
+                });
             } else {
                 appState.uiState.needRefresh = true;
             }
-
             return orgRet;
         };
         anyApp.loadGraphData.__comfygrid__is_hooked__ = true;
@@ -70,68 +71,16 @@ export class ComfyUiApiHook {
         if (orgSetDirtyCanvas) {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             anyGraph.setDirtyCanvas = function (...args: any[]) {
-                return orgSetDirtyCanvas.apply(this, args);
+                const ret = orgSetDirtyCanvas.apply(this, args);
+                try {
+                    workflowManager.handleUpdateMode();
+                } catch (error) {
+                    logger.error('Failed to handle set dirty canvas:', error);
+                }
+                return ret;
             };
         }
         anyGraph.setDirtyCanvas.__comfygrid__is_hooked__ = true;
-    }
-
-    static hookForNodeWidgetChanged(node: ComfyNode) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const anyNode = node as any;
-        if (!anyNode.onWidgetChanged || anyNode.onWidgetChanged.__comfygrid__is_hooked__) {
-            return;
-        }
-
-        const orgOnWidgetChanged = anyNode.onWidgetChanged;
-        if (orgOnWidgetChanged) {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            anyNode.onWidgetChanged = function (...args: any[]) {
-                const orgRet = orgOnWidgetChanged.apply(this, args);
-                ComfyUiApiHook.#handleUpdateNodeDebounce(String(node.id));
-                return orgRet;
-            };
-        }
-        anyNode.onWidgetChanged.__comfygrid__is_hooked__ = true;
-    }
-
-    static hookForNodeSetDirtyCanvas(node: ComfyNode) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const anyNode = node as any;
-        if (!anyNode.setDirtyCanvas || anyNode.setDirtyCanvas.__comfygrid__is_hooked__) {
-            return;
-        }
-
-        const orgSetDirtyCanvas = anyNode.setDirtyCanvas;
-        if (orgSetDirtyCanvas) {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            anyNode.setDirtyCanvas = function (...args: any[]) {
-                const orgRet = orgSetDirtyCanvas.apply(this, args);
-                ComfyUiApiHook.#handleUpdateNodeDebounce(String(node.id));
-                return orgRet;
-            };
-        }
-        anyNode.setDirtyCanvas.__comfygrid__is_hooked__ = true;
-    }
-
-    static hookForAddCustomWidget(node: ComfyNode) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const anyNode = node as any;
-        if (!anyNode.addCustomWidget || anyNode.addCustomWidget.__comfygrid__is_hooked__) {
-            return;
-        }
-
-        const orgAddCustomWidget = anyNode.addCustomWidget;
-        if (orgAddCustomWidget) {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            anyNode.addCustomWidget = function (...args: any[]) {
-                const orgRet = orgAddCustomWidget.apply(this, args);
-                ComfyUiApiHook.hookForWidgetCallback(node);
-                ComfyUiApiHook.#handleUpdateNodeDebounce(String(node.id));
-                return orgRet;
-            };
-        }
-        anyNode.addCustomWidget.__comfygrid__is_hooked__ = true;
     }
 
     static hookForWidgetCallback(node: ComfyNode) {

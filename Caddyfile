@@ -2,7 +2,7 @@ http://127.0.0.1:{$COMFYGRID_PROXY_PORT:6210} {
     redir /comfygrid /comfygrid/
 
     handle_path /comfygrid/* {
-        root * {$COMFYGRID_FRONTEND_DIR:./frontend/dist}
+        root * "{$COMFYGRID_FRONTEND_DIR:./frontend/dist}"
         file_server
     }
     handle /comfygrid/api/* {

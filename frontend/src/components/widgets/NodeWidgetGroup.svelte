@@ -35,9 +35,7 @@
 
   const nodes = $derived(findChildren());
 
-  const visibleNodes = $derived(
-    group.nodes.filter((n) => n.isGroupVisible),
-  );
+  const visibleNodes = $derived(group.nodes.filter((n) => n.isGroupVisible));
 
   const masonryNodes = $derived(
     visibleNodes.filter(

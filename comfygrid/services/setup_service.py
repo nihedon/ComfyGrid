@@ -82,9 +82,12 @@ def prepare_launch_dependencies(comfy_service) -> None:
     install_recommended_extensions()
     comfy_service.install_grid_extension()
     load_extensions()
+    from comfygrid.services.tag_service import ensure_tag_models_generated
+
+    ensure_tag_models_generated()
 
 
-def install_ffmpeg(progress_callback: Callable[[int, int], None] = None) -> None:
+def install_ffmpeg(progress_callback: Callable[[int, int], None] | None = None) -> None:
     ffmpeg_config = load_install_config().get("ffmpeg")
     if not ffmpeg_config:
         return
@@ -100,7 +103,7 @@ def install_ffmpeg(progress_callback: Callable[[int, int], None] = None) -> None
         logging.error("Failed to install ffmpeg: %s", e)
 
 
-def install_caddy(progress_callback: Callable[[int, int], None] = None) -> None:
+def install_caddy(progress_callback: Callable[[int, int], None] | None = None) -> None:
     caddy_config = load_install_config().get("caddy")
     if not caddy_config:
         return

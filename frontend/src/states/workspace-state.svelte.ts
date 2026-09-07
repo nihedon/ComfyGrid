@@ -101,7 +101,6 @@ export class Layout {
         }
     }
     deleteFloatingNode(nodeId: string) {
-        logger.trace(`[LAYOUT_LOG] deleteFloatingNode: nodeId=${nodeId}`);
         this.#floatingNodes.delete(nodeId);
     }
     setFloatingWidgets(widgetId: string, boardId: BoardId) {
@@ -403,19 +402,7 @@ class WorkspaceState {
     getEffectiveNodes(boardTarget: BoardId | 'default' = '', groupId?: string): ComfyGridNode[] {
         const commonTabBoard = (appState.optionState.get('ComfyGrid.ui.common_tab_board') as boolean) ?? false;
 
-        // eslint-disable-next-line svelte/prefer-svelte-reactivity
-        const nodeGroupMap = new Map<string, ComfyGridGroup>();
-        const traverseGroup = (g: ComfyGridGroup) => {
-            for (const n of g.nodes) {
-                nodeGroupMap.set(n.id, g);
-            }
-            for (const child of g.children) {
-                traverseGroup(child);
-            }
-        };
-        for (const g of this.#groups) {
-            traverseGroup(g);
-        }
+        const nodeGroupMap = this.nodeGroupMap;
 
         return Array.from(this.#nodes.values()).filter((node) => {
             if (!node.isVisible) return false;
@@ -433,11 +420,32 @@ class WorkspaceState {
             }
 
             if (boardTarget === '' || boardTarget === 'default') {
-                return !parentGroup || !parentGroup.isTabify;
+                return !parentGroup?.isTabify;
             }
 
             return false;
         });
+    }
+
+    get nodeGroupMap(): ReadonlyMap<string, ComfyGridGroup> {
+        // eslint-disable-next-line svelte/prefer-svelte-reactivity
+        const map = new Map<string, ComfyGridGroup>();
+        const traverseGroup = (g: ComfyGridGroup) => {
+            for (const n of g.nodes) {
+                map.set(n.id, g);
+            }
+            for (const child of g.children) {
+                traverseGroup(child);
+            }
+        };
+        for (const g of this.#groups) {
+            traverseGroup(g);
+        }
+        return map;
+    }
+
+    getGroup(groupId: string): ComfyGridGroup | undefined {
+        return this.#groups.find((g) => g.id === groupId);
     }
 
     hasEffectiveNodes(boardTarget: BoardId | 'default' = '', groupId?: string): boolean {
@@ -458,7 +466,7 @@ class WorkspaceState {
             if (groupId) {
                 for (const node of this.#nodes.values()) {
                     if (node.widgets.some((w) => w.id === widgetId)) {
-                        const parentGroup = this.#groups.find((g) => g.nodes.some((n) => n.id === node.id));
+                        const parentGroup = this.nodeGroupMap.get(node.id);
                         if (parentGroup?.id === groupId) {
                             return true;
                         }
@@ -478,7 +486,7 @@ class WorkspaceState {
             return hasDefaultNodes || hasCommonTabBoardNodes;
         }
 
-        const group = this.#groups.find((g) => g.id === tabId);
+        const group = this.getGroup(tabId);
         if (!group) return false;
 
         const hasGroupVisibleNodes = group.hasVisibleNodes;

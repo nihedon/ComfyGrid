@@ -8,7 +8,7 @@
     text,
     title,
   }: {
-    id: 'grid' | 'comfyui' | 'model' | 'image-info' | 'settings';
+    id: 'grid' | 'comfyui' | 'files' | 'image-info' | 'settings';
     text: string;
     title?: string;
   } = $props();

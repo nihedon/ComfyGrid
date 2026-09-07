@@ -12,6 +12,7 @@
   } from '@lucide/svelte';
   import { Modal } from 'bootstrap';
   import DOMPurify from 'dompurify';
+  import beautify from 'js-beautify';
   import { marked } from 'marked';
   import { comfyGridApiClient } from '@/api/api-client';
   import { appState } from '@/states/app-state.svelte';
@@ -93,6 +94,34 @@
     descriptionState.close();
   }
 
+  function cleanHtml(html: string): string {
+    return html
+      .replace(/<p>\s*(<br\s*\/?>|&nbsp;|\s)*<\/p>/gi, '')
+      .replace(/(<br\s*\/?>\s*){3,}/gi, '<br><br>');
+  }
+
+  function formatDescriptionHtml(raw: string): string {
+    if (!raw) return '';
+    const hasHtmlTags =
+      /<\/?(p|div|br|h[1-6]|ul|ol|li|table|tr|td|blockquote|section|article)\b/i.test(raw);
+    const html = hasHtmlTags ? raw : (marked.parse(raw) as string);
+    const cleaned = cleanHtml(html);
+    return beautify.html(cleaned, {
+      indent_size: 2,
+      wrap_line_length: 0,
+    });
+  }
+
+  function renderDescription(text: string): string {
+    if (!text) return '';
+    const hasHtmlTags =
+      /<\/?(p|div|br|h[1-6]|ul|ol|li|table|tr|td|blockquote|section|article|span|a|b|strong|i|em)\b/i.test(
+        text,
+      );
+    const html = hasHtmlTags ? text : (marked.parse(text) as string);
+    return DOMPurify.sanitize(html) as string;
+  }
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   function applyFetchedData(data: any) {
     if (!data.model) {
@@ -121,7 +150,7 @@
     const fetchedWords: string[] = Array.isArray(rawWords) ? rawWords : [];
 
     if (data.description) {
-      tempDescription = data.description;
+      tempDescription = formatDescriptionHtml(data.description);
     }
 
     // eslint-disable-next-line svelte/prefer-svelte-reactivity
@@ -195,6 +224,7 @@
         model.preview = relPath + ext;
       }
       model.description = tempDescription;
+      model.has_description = true;
       model.url = tempUrl;
       model.nsfw = tempNsfw;
       model.rate = tempRate;
@@ -237,7 +267,7 @@
               onclick={() => (tempFavorite = !tempFavorite)}
             >
               {#if tempFavorite}
-                <Heart size={18} class="text-warning" fill="currentColor" />
+                <Heart size={18} class="text-danger" fill="currentColor" />
               {:else}
                 <Heart size={18} />
               {/if}
@@ -304,7 +334,7 @@
                 {:else}
                   <div class="form-control flex-grow-1 mb-0">
                     <!-- eslint-disable-next-line svelte/no-at-html-tags -->
-                    {@html DOMPurify.sanitize(marked.parse(tempDescription) as string)}
+                    {@html renderDescription(tempDescription)}
                   </div>
                 {/if}
               </div>
@@ -465,7 +495,12 @@
 <style lang="scss">
   .description {
     min-width: 0;
-    > div,
+    > div {
+      white-space: normal;
+      overflow-y: auto;
+      height: 0;
+      min-height: 400px;
+    }
     textarea {
       white-space: pre-wrap;
       overflow-y: auto;

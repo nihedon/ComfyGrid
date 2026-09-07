@@ -13,12 +13,12 @@ MEDIA_TYPES = {
 }
 
 
-@router.get("/custom_nodes")
+@router.get("/extensions")
 def list_extensions():
-    return extension_service.list_custom_nodes()
+    return extension_service.list_extensions()
 
 
-@router.get("/custom_nodes/{name}/assets/{asset_path:path}")
+@router.get("/extensions/{name}/assets/{asset_path:path}")
 def serve_extension_asset(name: str, asset_path: str):
     path = extension_service.get_custom_asset_path(name, asset_path)
     if path is None:

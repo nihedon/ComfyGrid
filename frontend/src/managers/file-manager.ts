@@ -29,45 +29,57 @@ class FileManager {
     }
 
     async processFile(file: File): Promise<void> {
-        const toastState = appState.toastState;
         const fileName = file.name.toLowerCase();
 
         if (/\.(json|txt)$/i.test(fileName)) {
-            try {
-                const text = await file.text();
-                const json = JSON.parse(text);
-                const keySize = Object.keys(json).length;
+            await this.processTextFile(file);
+        } else if (/\.(png|jfif|pjpeg|jpeg|pjp|jpg|webp|jxl|mp4|webm|m4v|mkv)$/i.test(fileName)) {
+            await this.processMediaFile(file);
+        }
+    }
 
-                if (keySize === 0) {
-                    toastState.addToast({ type: 'error', message: get(t)('toast.metadata_load_failed') });
-                    return;
-                }
+    async processTextFile(file: File): Promise<void> {
+        const toastState = appState.toastState;
 
-                const layout = json.comfygrid ? (typeof json.comfygrid === 'string' ? JSON.parse(json.comfygrid) : json.comfygrid) : undefined;
+        try {
+            const text = await file.text();
+            const json = JSON.parse(text);
+            const keySize = Object.keys(json).length;
 
-                let workflowLoaded = false;
-                if (keySize > 1) {
-                    workflowLoaded = await this.loadWorkflow(file.name, json, layout);
-                }
-
-                if (layout && workflowLoaded) {
-                    toastState.addToast({ type: 'success', message: get(t)('toast.layout_applied') });
-                } else if (workflowLoaded) {
-                    toastState.addToast({ type: 'info', message: get(t)('toast.no_layout_found') });
-                } else {
-                    toastState.addToast({ type: 'warning', message: get(t)('toast.no_workflow_found') });
-                }
-            } catch (error) {
-                logger.error('Failed to read JSON file:', error);
+            if (keySize === 0) {
                 toastState.addToast({ type: 'error', message: get(t)('toast.metadata_load_failed') });
+                return;
             }
-            return;
-        }
 
-        if (!/\.(png|jfif|pjpeg|jpeg|pjp|jpg|webp|jxl|mp4|webm|m4v|mkv)$/i.test(fileName)) {
-            toastState.addToast({ type: 'warning', message: get(t)('toast.unsupported_file_type') });
-            return;
+            let layout = undefined;
+            if (json.comfygrid) {
+                if (typeof json.comfygrid === 'string') {
+                    layout = JSON.parse(json.comfygrid);
+                } else {
+                    layout = json.comfygrid;
+                }
+            }
+
+            let workflowLoaded = false;
+            if (keySize > 1) {
+                workflowLoaded = await this.loadWorkflow(file.name, json, layout);
+            }
+
+            if (layout && workflowLoaded) {
+                toastState.addToast({ type: 'success', message: get(t)('toast.layout_applied') });
+            } else if (workflowLoaded) {
+                toastState.addToast({ type: 'info', message: get(t)('toast.no_layout_found') });
+            } else {
+                toastState.addToast({ type: 'warning', message: get(t)('toast.no_workflow_found') });
+            }
+        } catch (error) {
+            logger.error('Failed to read JSON file:', error);
+            toastState.addToast({ type: 'error', message: get(t)('toast.metadata_load_failed') });
         }
+    }
+
+    async processMediaFile(file: File): Promise<void> {
+        const toastState = appState.toastState;
 
         try {
             const res = await comfyGridApiClient.postImageInfo(file);
@@ -80,7 +92,15 @@ class FileManager {
             let workflowLoaded = false;
 
             const comfygridData = metadata.comfygrid;
-            const layout = comfygridData ? (typeof comfygridData === 'string' ? JSON.parse(comfygridData) : comfygridData) : undefined;
+
+            let layout = undefined;
+            if (comfygridData) {
+                if (typeof comfygridData === 'string') {
+                    layout = JSON.parse(comfygridData);
+                } else {
+                    layout = comfygridData;
+                }
+            }
 
             if (metadata.workflow) {
                 try {

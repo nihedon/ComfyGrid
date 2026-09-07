@@ -32,8 +32,6 @@ def load_install_config() -> dict:
 
 def load_settings(env: str = "dev") -> AppSettings:
     frontend_dir = os.getenv("COMFYGRID_FRONTEND_DIR")
-    is_frozen = getattr(sys, "frozen", False)
-    default_dist_dir = Path("frontend") if is_frozen else FRONTEND_DIST_DIR
     return AppSettings(
         env=env,
         host=os.getenv("COMFYGRID_HOST", DEFAULT_HOST),
@@ -41,6 +39,6 @@ def load_settings(env: str = "dev") -> AppSettings:
         server_port=int(os.getenv("COMFYGRID_SERVER_PORT", DEFAULT_SERVER_PORT)),
         log_level=os.getenv("COMFYGRID_LOG_LEVEL", "INFO"),
         frontend_src_dir=FRONTEND_SRC_DIR,
-        frontend_dist_dir=Path(frontend_dir) if frontend_dir else default_dist_dir,
+        frontend_dist_dir=Path(frontend_dir) if frontend_dir else FRONTEND_DIST_DIR,
         install_config=load_install_config(),
     )

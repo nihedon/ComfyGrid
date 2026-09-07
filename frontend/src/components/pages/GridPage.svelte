@@ -18,7 +18,6 @@
   const optionState = appState.optionState;
 
   let activeTabId: string = $state('__ungrouped__');
-  let tabContainer = $state<HTMLElement>();
 
   const sortedGroups = $derived.by(() => {
     return workspaceState.groups.toSorted(ComfyGridGroup.sortGroupsByPriority);
@@ -201,17 +200,21 @@
                 </div>
               </div>
             </div>
-            <div class="py-2" bind:this={tabContainer}>
+            <div class="py-2">
               {#if workspaceState.hasTabContent('__ungrouped__')}
-                <InnerTabContainer tabId="__ungrouped__" {activeTabId}>
-                  <WidgetsSection container={tabContainer} />
-                </InnerTabContainer>
+                {#if '__ungrouped__' == activeTabId}
+                  <InnerTabContainer>
+                    <WidgetsSection />
+                  </InnerTabContainer>
+                {/if}
               {/if}
               {#each workspaceState.groups as group (group.id)}
                 {#if group.isTabify && workspaceState.hasTabContent(group.id)}
-                  <InnerTabContainer tabId={group.id} {activeTabId}>
-                    <WidgetsSection container={tabContainer} {group} />
-                  </InnerTabContainer>
+                  {#if group.id == activeTabId}
+                    <InnerTabContainer>
+                      <WidgetsSection {group} />
+                    </InnerTabContainer>
+                  {/if}
                 {/if}
               {/each}
             </div>

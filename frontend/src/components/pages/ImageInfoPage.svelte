@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { Image, Send } from '@lucide/svelte';
   import { onDestroy } from 'svelte';
+  import { Image, Send } from '@lucide/svelte';
   import { comfyGridApiClient } from '@/api/api-client';
   import JsonViewer from '@/components/common/JsonViewer.svelte';
   import { t } from '@/i18n/i18n';

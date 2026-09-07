@@ -2,6 +2,7 @@ import { mount } from 'svelte';
 import * as bootstrap from 'bootstrap';
 import 'gridstack/dist/gridstack-all.js';
 import jQuery from 'jquery';
+import { ensurePromptPilotModelsLoaded } from '@/components/common/prompt-editor/prompt-pilot/services/loader-service';
 import { loadRuntimeExtensions } from '@/components/widgets/comfyui/registry/runtime-loader';
 import { setupCustomNodeApi } from '@/services/custom-node-service.svelte';
 import { ComfyUIHealthCheckService } from '@/services/healthcheck-service';
@@ -19,7 +20,6 @@ globalThis.bootstrap = bootstrap;
 
 await import('bootstrap-autocomplete');
 await import('bootstrap-contextmenu');
-await import('jquery-ui/dist/jquery-ui.js');
 const litHtml = await import('lit-html');
 const litUnsafeHtml = await import('lit-html/directives/unsafe-html.js');
 globalThis.litHtml = {
@@ -57,6 +57,9 @@ comfyUiHealthCheck.connect();
 setupCustomNodeApi();
 
 loadRuntimeExtensions();
+
+// Preload PromptPilot tag dictionaries on page open
+void ensurePromptPilotModelsLoaded();
 
 mount(App, {
     target: document.getElementById('comfygrid'),

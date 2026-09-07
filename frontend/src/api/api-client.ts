@@ -1,9 +1,10 @@
 import type { Model } from '@/states/storage-state.svelte';
 import type { Job } from '@/types/job';
-import type { ExtensionManifestJson } from '@/types/manifest';
+import type { ExtensionManifest } from '@/types/manifest';
 import type { ImageInfo } from '@/types/model-shared';
 import type { SetupConfig } from '@/types/setup';
 import type { Version } from '@/types/verion';
+import type { WorkflowListResponse } from '@/types/workflow';
 import logger from '@/utils/logger';
 
 type ApiResult = {
@@ -200,8 +201,64 @@ class ComfyGridApiClient {
         });
     }
 
-    async getCustomNodes(): Promise<ApiResultJson<Record<string, ExtensionManifestJson>[]>> {
-        return await fetchApiJson('/comfygrid/api/custom_nodes');
+    async getCustomNodes(): Promise<ApiResultJson<ExtensionManifest[]>> {
+        return await fetchApiJson('/comfygrid/api/extensions');
+    }
+
+    async getWorkflows(): Promise<ApiResultJson<WorkflowListResponse>> {
+        return await fetchApiJson<WorkflowListResponse>('/comfygrid/api/workflows');
+    }
+
+    async createWorkflowFolder(folderPath: string): Promise<ApiResultJson<{ status: string }>> {
+        return await fetchApiJson('/comfygrid/api/workflows/folder', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ folder_path: folderPath }),
+        });
+    }
+
+    async renameWorkflow(oldPath: string, newName: string): Promise<ApiResultJson<{ status: string; new_path: string }>> {
+        return await fetchApiJson('/comfygrid/api/workflows/rename', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ old_path: oldPath, new_name: newName }),
+        });
+    }
+
+    async moveWorkflow(sourcePath: string, targetDirPath: string): Promise<ApiResultJson<{ status: string; new_path: string }>> {
+        return await fetchApiJson('/comfygrid/api/workflows/move', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ source_path: sourcePath, target_dir_path: targetDirPath }),
+        });
+    }
+
+    async deleteWorkflow(path: string): Promise<ApiResultJson<{ status: string }>> {
+        return await fetchApiJson('/comfygrid/api/workflows', {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ path }),
+        });
+    }
+
+    async toggleWorkflowFavorite(path: string, isFavorite?: boolean): Promise<ApiResultJson<{ status: string; is_favorite: boolean }>> {
+        return await fetchApiJson('/comfygrid/api/workflows/favorite', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ path, is_favorite: isFavorite }),
+        });
+    }
+
+    async getWorkflowContent(path: string): Promise<ApiResultJson<unknown>> {
+        return await fetchApiJson(`/comfygrid/api/workflows/content?path=${encodeURIComponent(path)}`);
+    }
+
+    async saveWorkflowThumbnail(path: string, imageBase64: string): Promise<ApiResultJson<{ status: string }>> {
+        return await fetchApiJson('/comfygrid/api/workflows/thumbnail', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ path, image_base64: imageBase64 }),
+        });
     }
 
     async postUploadToInput(url: string, filename: string): Promise<ApiResultJson<{ message: string }>> {
@@ -211,8 +268,6 @@ class ComfyGridApiClient {
             body: JSON.stringify({ url, filename }),
         });
     }
-
-
 
     async getVideoThumbnail(url: string, size: number = 120): Promise<ApiResultBlob> {
         return await fetchApiBlob(`/comfygrid/api/video_thumbnail?url=${encodeURIComponent(url)}&size=${size}`);

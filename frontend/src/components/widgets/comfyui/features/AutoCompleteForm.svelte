@@ -1,10 +1,11 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onDestroy } from 'svelte';
   import jQuery from 'jquery';
   import { appState } from '@/states/app-state.svelte';
   import { ComfyGridWidget } from '@/states/model-state.svelte';
   import type { Model, ModelTypes } from '@/states/storage-state.svelte';
   import { COMFY_NODE_MODE } from '@/types/model-shared';
+  import { getCachedItemSet, getCachedSearchIndex } from '@/utils/search-index-cache';
 
   type ComboWidget = ComfyGridWidget<
     string | number,
@@ -23,7 +24,7 @@
     handleInput,
   }: {
     widget: ComboWidget;
-    select: (string | number)[];
+    select: readonly (string | number)[];
     modelDir?: ModelTypes;
     modelSubdirs?: string[];
     isValidOverride?: boolean;
@@ -43,62 +44,42 @@
   const workspaceState = appState.workspaceState;
 
   const showNsfw = $derived(appState.optionState.get('ComfyGrid.ui.show_nsfw'));
-
-  const selectStr = $derived(
-    select
-      .map((v) => String(v))
-      .sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' })),
-  );
   const fixedValuesStr = $derived((widget.options?.fixed_values ?? []).map((v) => String(v)));
+  const itemSet = $derived(getCachedItemSet(select));
 
   const isValid = $derived.by(() => {
     if (isValidOverride !== undefined) return isValidOverride;
     const strValue = String(widget.value);
     return (
-      selectStr.includes(strValue) ||
+      itemSet.has(strValue) ||
       strValue.toLocaleLowerCase() === 'none' ||
       strValue.indexOf('Select ') === 0 ||
       fixedValuesStr.includes(strValue)
     );
   });
 
-  function teleportDropdown() {
-    document.body.appendChild(ddEl);
-    repositionDropdown();
-  }
+  let isAutoCompleteInitialized = false;
 
-  function repositionDropdown() {
-    const rect = inputDomEl?.getBoundingClientRect();
-    if (rect && ddEl) {
-      const dropdownHeight = ddEl.offsetHeight || 400;
-      const spaceBelow = window.innerHeight - rect.bottom;
-      const spaceAbove = rect.top;
+  function initAutoComplete() {
+    if (isAutoCompleteInitialized || !inputDomEl) return;
+    isAutoCompleteInitialized = true;
 
-      if (spaceBelow < dropdownHeight && spaceAbove > spaceBelow) {
-        ddEl.style.top = `${rect.top - dropdownHeight}px`;
-      } else {
-        ddEl.style.top = `${rect.bottom}px`;
-      }
-      ddEl.style.left = `${rect.left}px`;
-    }
-  }
-
-  onMount(() => {
-    const inputEl = jQuery(inputDomEl!);
+    const inputEl = jQuery(inputDomEl);
     inputEl.autoComplete({
       resolver: 'custom',
       bootstrapVersion: '4',
       minLength: 0,
       events: {
         search: function (query: string, callback: (results: string[]) => void) {
+          const cachedIndex = getCachedSearchIndex(select);
           if (showAllOnNextSearch) {
             showAllOnNextSearch = false;
-            callback(selectStr);
-          } else {
-            const lowerQuery = query.toLowerCase();
-            const filtered = selectStr.filter((v) => v.toLowerCase().includes(lowerQuery));
-            callback(filtered);
+            cachedIndex.indexer.resetQuery();
+            callback(cachedIndex.sortedItems.slice(0, 200));
+            return;
           }
+
+          callback(cachedIndex.indexer.search(query).slice(0, 200));
         },
       },
     });
@@ -108,7 +89,9 @@
         ddEl = inputDomEl.parentElement?.querySelector<HTMLElement>(
           '.bootstrap-autocomplete.dropdown-menu',
         ) as HTMLElement;
-        ddEl.onmousemove = handleMouseMove;
+        if (ddEl) {
+          ddEl.onmousemove = handleMouseMove;
+        }
       }
       teleportDropdown();
 
@@ -136,27 +119,45 @@
     };
     window.addEventListener('scroll', handleScrollOrResize, true);
     window.addEventListener('resize', handleScrollOrResize);
+  }
 
-    return () => {
-      inputEl.autoComplete('destroy');
-      ddEl?.remove();
-      window.removeEventListener('scroll', handleScrollOrResize, true);
-      window.removeEventListener('resize', handleScrollOrResize);
-    };
-  });
+  function teleportDropdown() {
+    if (!ddEl) return;
+    document.body.appendChild(ddEl);
+    repositionDropdown();
+  }
+
+  function repositionDropdown() {
+    const rect = inputDomEl?.getBoundingClientRect();
+    if (rect && ddEl) {
+      const dropdownHeight = ddEl.offsetHeight || 400;
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const spaceAbove = rect.top;
+
+      if (spaceBelow < dropdownHeight && spaceAbove > spaceBelow) {
+        ddEl.style.top = `${rect.top - dropdownHeight}px`;
+      } else {
+        ddEl.style.top = `${rect.bottom}px`;
+      }
+      ddEl.style.left = `${rect.left}px`;
+    }
+  }
 
   let originalValue: string | number = '';
 
   function handleFocus() {
+    initAutoComplete();
     originalValue = widget.value;
   }
 
   function handleClick() {
+    initAutoComplete();
     if (isValid) {
       showAllOnNextSearch = true;
     } else {
       const lowerQuery = String(inputDomEl?.value ?? '').toLowerCase();
-      const hasPartialMatch = selectStr.some((v) => v.toLowerCase().includes(lowerQuery));
+      const cachedIndex = getCachedSearchIndex(select);
+      const hasPartialMatch = cachedIndex.indexer.search(lowerQuery).length > 0;
       showAllOnNextSearch = !hasPartialMatch;
     }
     jQuery(inputDomEl).autoComplete('show');
@@ -168,7 +169,9 @@
       e.stopPropagation();
       widget.value = originalValue;
       if (inputDomEl) inputDomEl.value = String(originalValue);
-      jQuery(inputDomEl).autoComplete('hide');
+      if (isAutoCompleteInitialized) {
+        jQuery(inputDomEl).autoComplete('hide');
+      }
       inputDomEl.blur();
     }
   }
@@ -201,11 +204,28 @@
     }
   }
 
+  onDestroy(() => {
+    if (isAutoCompleteInitialized && inputDomEl) {
+      try {
+        jQuery(inputDomEl).autoComplete('destroy');
+      } catch {
+        /* ignore */
+      }
+    }
+  });
+
   $effect(() => {
     if (widget.node.mode === COMFY_NODE_MODE.NORMAL && !isValid) {
       workspaceState.addErrorWidget(widget.node.id, widget.id);
     } else {
       workspaceState.deleteErrorWidget(widget.node.id, widget.id);
+    }
+  });
+
+  $effect(() => {
+    const stringVal = widget.value != null ? String(widget.value) : '';
+    if (inputDomEl && document.activeElement !== inputDomEl && inputDomEl.value !== stringVal) {
+      inputDomEl.value = stringVal;
     }
   });
 </script>

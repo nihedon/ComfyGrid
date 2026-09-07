@@ -2,12 +2,12 @@
   import { onDestroy, untrack } from 'svelte';
   import { LayoutDashboard } from '@lucide/svelte';
   import { comfyGridApiClient } from '@/api/api-client';
+  import PromptEditor from '@/components/common/PromptEditor.svelte';
   import { t } from '@/i18n/i18n';
   import { saveLayoutObject, updateBoardFloatingState } from '@/services/gridstack-service';
   import { translationManager } from '@/services/translation-service.svelte';
   import { appState } from '@/states/app-state.svelte';
   import type { ComfyGridWidget } from '@/states/model-state.svelte';
-  import { keyupEditAttention } from '../../../helpers/edit-attention';
   import TextareaCategory from './features/TextareaCategory.svelte';
 
   let {
@@ -30,7 +30,6 @@
 
   let activeTranslationText = '';
   let activeTranslationPromise: Promise<void> | null = null;
-  let prevIsTranslate = $state<boolean>(false);
   let inputTimer: ReturnType<typeof setTimeout> | null = null;
   let translationRequestId = 0;
 
@@ -161,69 +160,49 @@
   }
 
   $effect(() => {
-    const currentIsTranslate = isTranslate;
-    if (currentIsTranslate !== prevIsTranslate) {
-      prevIsTranslate = currentIsTranslate;
-      if (currentIsTranslate) {
-        if (widget.rawValue === undefined || widget.rawValue === null) {
-          widget.rawValue = widget.value ?? '';
-        }
-        widget.isDirty = true;
-        registerOrUnregisterPending();
-        const timing =
-          appState.optionState.get('ComfyGrid.ollama.translate_timing') ?? 'on_generate';
-        const text = widget.rawValue ?? '';
-        if (timing === 'on_blur' && text.trim()) {
-          triggerTranslation(text);
-        }
-      } else {
-        if (widget.rawValue !== undefined && widget.rawValue === widget.value) {
-          widget.rawValue = undefined;
-        }
-        widget.translationFailed = false;
-        translationManager.unregister(widget.id);
+    if (isTranslate) {
+      if (widget.rawValue === undefined || widget.rawValue === null) {
+        widget.rawValue = widget.value ?? '';
       }
+      registerOrUnregisterPending();
+    } else {
+      if (widget.rawValue !== undefined && widget.rawValue === widget.value) {
+        widget.rawValue = undefined;
+      }
+      widget.translationFailed = false;
+      translationManager.unregister(widget.id);
     }
   });
 
+  let previousOllamaConfig: string | null = null;
   const currentOllamaConfig = $derived(
     `${layout.getTranslateModel(widget.id) ?? appState.optionState.get('ComfyGrid.ollama.model') ?? ''}::${layout.getTranslateSystem(widget.id) ?? appState.optionState.get('ComfyGrid.ollama.system') ?? ''}`,
   );
-  let prevOllamaConfig = $state<string>(untrack(() => currentOllamaConfig));
 
   $effect(() => {
     const config = currentOllamaConfig;
-    if (prevOllamaConfig && config && config !== prevOllamaConfig) {
-      prevOllamaConfig = config;
-      widget.isDirty = true;
-      const text = widget.rawValue ?? '';
-      if (isTranslate && text.trim()) {
-        const timing =
-          appState.optionState.get('ComfyGrid.ollama.translate_timing') ?? 'on_generate';
-        if (timing === 'on_generate') {
-          registerOrUnregisterPending();
-        } else {
-          triggerTranslation(text);
+    untrack(() => {
+      if (previousOllamaConfig !== null && previousOllamaConfig !== config) {
+        widget.isDirty = true;
+        const text = widget.rawValue ?? '';
+        if (isTranslate && text.trim()) {
+          const timing =
+            appState.optionState.get('ComfyGrid.ollama.translate_timing') ?? 'on_generate';
+          if (timing === 'on_generate') {
+            registerOrUnregisterPending();
+          } else {
+            triggerTranslation(text);
+          }
         }
       }
-    } else {
-      prevOllamaConfig = config;
-    }
+      previousOllamaConfig = config;
+    });
   });
 
   onDestroy(() => {
     if (inputTimer) clearTimeout(inputTimer);
     translationManager.unregister(widget.id);
   });
-
-  function keydown(e: KeyboardEvent) {
-    if (e.ctrlKey) {
-      if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
-        keyupEditAttention(e, textareaElement);
-        textareaElement.dispatchEvent(new Event('change', { bubbles: true }));
-      }
-    }
-  }
 
   async function toggleFloating() {
     const current = layout.floatingWidgets.get(widget.id);
@@ -244,12 +223,20 @@
 </script>
 
 {#snippet textarea()}
-  {#if isTranslate}
+  {#if isPromptGroup}
+    <PromptEditor
+      rows={options.isFloating ? 1 : 6}
+      readonly={widget.readonly}
+      placeholder={widget.placeholder}
+      bind:value={widget.value}
+      oninput={handleInput}
+      onblur={handleBlur}
+    />
+  {:else if isTranslate}
     <textarea
       class="flex-grow-1 form-control overflow-y-scroll rounded-top-0"
       class:positive-prompt={isPositivePrompt}
       class:prompt={isPromptGroup}
-      onkeydown={keydown}
       oninput={handleInput}
       onblur={handleBlur}
       rows={options.isFloating ? 1 : 6}
@@ -263,7 +250,6 @@
       class="flex-grow-1 form-control overflow-y-scroll rounded-top-0"
       class:positive-prompt={isPositivePrompt}
       class:prompt={isPromptGroup}
-      onkeydown={keydown}
       oninput={handleInput}
       rows={options.isFloating ? 1 : 6}
       style:min-height={options.isFloating ? '0' : undefined}

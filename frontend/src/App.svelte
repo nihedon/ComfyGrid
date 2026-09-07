@@ -23,7 +23,7 @@
   import { loadOpts } from '@/services/options-service';
   import { appState } from '@/states/app-state.svelte';
   import type { DropdownFormInfo } from '@/states/option-state.svelte';
-  import logger from '@/utils/logger';
+  import logger, { setDebugMode } from '@/utils/logger';
   import Body from './Body.svelte';
   import Header from './Header.svelte';
   import { comfyGridApiClient } from './api/api-client';
@@ -38,6 +38,10 @@
   const comfyUiState = appState.comfyUiState;
   const optionState = appState.optionState;
   const uiState = appState.uiState;
+
+  $effect(() => {
+    setDebugMode(Boolean(appState.isDebugMode));
+  });
 
   function handleSetupLaunched() {
     launched = true;
@@ -124,7 +128,7 @@
 
   // Theme change: triggered when the color theme setting of options changes
   $effect(() => {
-    const theme = optionState.opts.get('ComfyGrid.ui.color_theme');
+    const theme = optionState.opts.get('ComfyGrid.theme.color_theme');
     if (!theme) {
       return;
     }
