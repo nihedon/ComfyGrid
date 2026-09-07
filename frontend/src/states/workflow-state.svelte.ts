@@ -46,10 +46,7 @@ export class WorkflowState {
             if (this.isFavoriteView) {
                 return item.is_favorite;
             }
-            if (!this.selectedFolder) {
-                return true;
-            }
-            return item.parent === this.selectedFolder || item.path.startsWith(this.selectedFolder + '/');
+            return item.parent === this.selectedFolder;
         });
 
         const sortFn = (a: WorkflowItem, b: WorkflowItem) => {
