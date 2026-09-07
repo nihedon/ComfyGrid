@@ -118,9 +118,14 @@ def ensure_tag_models_generated(output_dirs: list[Path] | None = None, force_reb
     if not ensure_tags_cloned():
         return []
 
-    target_dirs = output_dirs or [FRONTEND_PUBLIC_DIR]
-    if FRONTEND_DIST_DIR.is_dir() and FRONTEND_DIST_DIR not in target_dirs:
-        target_dirs.append(FRONTEND_DIST_DIR)
+    if output_dirs:
+        target_dirs = output_dirs
+    elif FRONTEND_PUBLIC_DIR.is_dir():
+        target_dirs = [FRONTEND_PUBLIC_DIR]
+    elif FRONTEND_DIST_DIR.is_dir():
+        target_dirs = [FRONTEND_DIST_DIR]
+    else:
+        target_dirs = [FRONTEND_PUBLIC_DIR]
 
     generated_files: list[Path] = []
 
