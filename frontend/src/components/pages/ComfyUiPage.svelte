@@ -15,6 +15,12 @@
     comfyUiState.iframe = iframeRef;
     comfyUiState.window = iframeRef.contentWindow as ComfyWindow;
     await executionManager.syncStateFromComfyUi();
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const app = comfyUiState.window?.comfyAPI?.app?.app as any;
+    if (app?.graph?._nodes?.length > 0 && !comfyUiState.graphReady) {
+      window.dispatchEvent(new CustomEvent('comfygrid:graph_ready', { detail: { app } }));
+    }
   }
 </script>
 
