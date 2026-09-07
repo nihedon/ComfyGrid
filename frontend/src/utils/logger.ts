@@ -1,8 +1,11 @@
 import log from 'loglevel';
-import { appState } from '@/states/app-state.svelte';
 
 const isDev = import.meta.env.DEV;
-log.setLevel(isDev || appState.isDebugMode ? 'debug' : 'warn');
+log.setLevel(isDev ? 'debug' : 'warn');
+
+export function setDebugMode(enabled: boolean) {
+    log.setLevel(isDev || enabled ? 'debug' : 'warn');
+}
 
 const style = {
     color: '#2453da',

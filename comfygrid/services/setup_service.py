@@ -87,7 +87,7 @@ def prepare_launch_dependencies(comfy_service) -> None:
     ensure_tag_models_generated()
 
 
-def install_ffmpeg(progress_callback: Callable[[int, int], None]) -> None:
+def install_ffmpeg(progress_callback: Callable[[int, int], None] | None = None) -> None:
     ffmpeg_config = load_install_config().get("ffmpeg")
     if not ffmpeg_config:
         return
@@ -103,7 +103,7 @@ def install_ffmpeg(progress_callback: Callable[[int, int], None]) -> None:
         logging.error("Failed to install ffmpeg: %s", e)
 
 
-def install_caddy(progress_callback: Callable[[int, int], None]) -> None:
+def install_caddy(progress_callback: Callable[[int, int], None] | None = None) -> None:
     caddy_config = load_install_config().get("caddy")
     if not caddy_config:
         return
