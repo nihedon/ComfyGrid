@@ -1,4 +1,3 @@
-import { ComfyUiApiHook } from '@/bridge/comfyui-api-hook';
 import { ComfyUiEventListener } from '@/bridge/comfyui-event-listener';
 import type { ComfyApi, ComfyApp } from '@/types/comfy-model';
 import { ComfyUiBridge } from './comfyui-bridge.svelte';
@@ -12,7 +11,6 @@ class ComfyUiState {
     #bridge: ComfyUiBridge = $state(null);
     #iframe: HTMLIFrameElement | null = $state(null);
     #window: ComfyWindow | null = $state(null);
-    #stopHookInterval: (() => void) | null = null;
 
     readonly comfyAPI = $derived(this.#graphReady ? this.#window.comfyAPI : null);
     readonly app = $derived(this.comfyAPI ? this.comfyAPI.app.app : null);
@@ -53,9 +51,7 @@ class ComfyUiState {
         this.#iframe = iframe;
     }
     set window(window: ComfyWindow) {
-        this.#stopHookInterval?.();
         this.#window = window;
-        this.#stopHookInterval = ComfyUiApiHook.startHookLoadGraphDataInterval(window);
     }
 }
 

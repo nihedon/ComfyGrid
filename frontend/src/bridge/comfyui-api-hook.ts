@@ -1,7 +1,6 @@
 import { workflowManager } from '@/managers/workflow-manager';
 import { appState } from '@/states/app-state.svelte';
-import type { ComfyWindow } from '@/states/comfyui-state.svelte';
-import type { ComfyApp, ComfyGraph, ComfyNode } from '@/types/comfy-model';
+import type { ComfyGraph, ComfyNode } from '@/types/comfy-model';
 import logger from '@/utils/logger';
 
 export class ComfyUiApiHook {
@@ -23,41 +22,6 @@ export class ComfyUiApiHook {
         }, 100);
 
         ComfyUiApiHook.#pendingTimers.set(nodeId, timerId);
-    }
-
-    static hookLoadGraphData(app: ComfyApp) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const anyApp = app as any;
-        if (anyApp.loadGraphData.__comfygrid__is_hooked__) {
-            return;
-        }
-        const orgLoadGraphData = app.loadGraphData;
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        app.loadGraphData = async function (...args: any[]) {
-            const orgRet = await orgLoadGraphData.apply(this, args);
-            appState.comfyUiState.graphReady = true;
-            if (appState.uiState.activePageId === 'grid') {
-                workflowManager.loadCurrentWorkflow().catch((error) => {
-                    logger.error('Failed to load current workflow:', error);
-                });
-            } else {
-                appState.uiState.needRefresh = true;
-            }
-            return orgRet;
-        };
-        anyApp.loadGraphData.__comfygrid__is_hooked__ = true;
-    }
-
-    static startHookLoadGraphDataInterval(window: ComfyWindow): () => void {
-        const intervalId = setInterval(() => {
-            const app = window?.comfyAPI?.app?.app;
-            if (app?.loadGraphData) {
-                ComfyUiApiHook.hookLoadGraphData(app);
-                clearInterval(intervalId);
-            }
-        }, 10);
-
-        return () => clearInterval(intervalId);
     }
 
     static hookForGraphSetDirtyCanvas(graph: ComfyGraph) {

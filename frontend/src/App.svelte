@@ -21,6 +21,7 @@
   import { loadExtensions } from '@/services/extension-service';
   import { ensureAllModels } from '@/services/models-service';
   import { loadOpts } from '@/services/options-service';
+  import { workflowManager } from '@/managers/workflow-manager';
   import { appState } from '@/states/app-state.svelte';
   import type { DropdownFormInfo } from '@/states/option-state.svelte';
   import logger, { setDebugMode } from '@/utils/logger';
@@ -204,8 +205,20 @@
     launched = false;
   }
 
+  function handleGraphReady() {
+    comfyUiState.graphReady = true;
+    if (uiState.activePageId === 'grid') {
+      workflowManager.loadCurrentWorkflow().catch((error) => {
+        logger.error('Failed to load current workflow:', error);
+      });
+    } else {
+      uiState.needRefresh = true;
+    }
+  }
+
   onMount(async () => {
     window.addEventListener('comfygrid:open_setup', handleOpenSetup);
+    window.addEventListener('comfygrid:graph_ready', handleGraphReady);
     launched = false;
     await checkSetupStatus();
     showScreen = true;
@@ -217,6 +230,7 @@
 
   onDestroy(() => {
     window.removeEventListener('comfygrid:open_setup', handleOpenSetup);
+    window.removeEventListener('comfygrid:graph_ready', handleGraphReady);
     document.documentElement.removeEventListener('dragenter', handleDragEnter);
     document.documentElement.removeEventListener('dragover', handleDragOver);
     document.documentElement.removeEventListener('dragleave', handleDragLeave);

@@ -1,4 +1,4 @@
-import type { ComfyApp, ComfyCanvas, ComfyGraph } from '@/types/comfy-model';
+import type { ComfyCanvas, ComfyGraph } from '@/types/comfy-model';
 
 export class ComfyUiCanvas {
     static getGraphBounds(graph: ComfyGraph): [number, number, number, number] {
@@ -26,20 +26,6 @@ export class ComfyUiCanvas {
             return [0, 0, 0, 0];
         }
         return [minX, minY, maxX - minX, maxY - minY];
-    }
-
-    static handleGraphDataLoaded(app: ComfyApp, func: () => void) {
-        const orgLoadGraphData = app.loadGraphData;
-
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        app.loadGraphData = async function (...args: any[]) {
-            try {
-                return await orgLoadGraphData.apply(this, args);
-            } finally {
-                app.loadGraphData = orgLoadGraphData;
-                func();
-            }
-        };
     }
 
     static async fitGraphToCanvas(canvas: ComfyCanvas) {
