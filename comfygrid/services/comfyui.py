@@ -77,6 +77,8 @@ class ComfyUIService:
         self.startup_log_queue = Queue()
         self.log_history = []
         self.startup_log_clients = []
+        self._monitor_task: asyncio.Task[None] | None = None
+        self._monitor_lock = asyncio.Lock()
 
         self._load_config_if_ready()
 
@@ -166,16 +168,15 @@ class ComfyUIService:
             return
 
         logger.info("[ComfyUIService] Restarting ComfyUI...")
-        self.exit()
+        await self.exit()
         self.url = None
         self.started = False
         self._broadcast_startup_log("Restarting ComfyUI...")
 
-        asyncio.create_task(self.run(*self.last_args))
+        await self.run(*self.last_args)
 
     async def _launch(self):
-        if self.proc:
-            self.exit()
+        await self.exit()
 
         resolved_python_path = rel_to_abs(self.comfyui_path, self.python_path)
 
@@ -219,7 +220,7 @@ class ComfyUIService:
             port = int(comfy_args[comfy_args.index("--port") + 1])
             ws_url = f"ws://{host}:{port}/ws?clientId=comfygrid-monitor"
 
-            asyncio.create_task(self._monitor_comfyui_ws(ws_url))
+            await self._set_monitor(ws_url)
 
             logging.info("ComfyUI launch initiated.")
         except Exception as e:
@@ -227,6 +228,7 @@ class ComfyUIService:
             raise
 
     async def _connect_to_existing(self):
+        await self.exit()
         host = self.connect_host or "127.0.0.1"
         target_url = f"http://{host}:{self.connect_port}"
         if not target_url:
@@ -240,7 +242,17 @@ class ComfyUIService:
         self._broadcast_startup_log(f"Connecting to existing ComfyUI at {target_url} ...")
         self.url = target_url
 
-        asyncio.create_task(self._monitor_comfyui_ws(ws_url))
+        await self._set_monitor(ws_url)
+
+    async def _set_monitor(self, ws_url: str | None):
+        # Wait for the old socket to close before starting its replacement.
+        async with self._monitor_lock:
+            if self._monitor_task is not None:
+                self._monitor_task.cancel()
+                await asyncio.gather(self._monitor_task, return_exceptions=True)
+                self._monitor_task = None
+            if ws_url is not None:
+                self._monitor_task = asyncio.create_task(self._monitor_comfyui_ws(ws_url))
 
     def _monitor_output(self, proc):
         if not proc:
@@ -335,11 +347,17 @@ class ComfyUIService:
             except Exception:
                 await asyncio.sleep(0.05)
 
-    def exit(self):
-        if not self.proc:
+    async def exit(self):
+        await self._set_monitor(None)
+        self.started = False
+        self.url = None
+        proc = self.proc
+        self.proc = None
+        if proc is None:
             return
-        self.proc.terminate()
+        proc.terminate()
         try:
-            self.proc.wait(timeout=10)
+            await asyncio.to_thread(proc.wait, timeout=10)
         except subprocess.TimeoutExpired:
-            self.proc.kill()
+            proc.kill()
+            await asyncio.to_thread(proc.wait)

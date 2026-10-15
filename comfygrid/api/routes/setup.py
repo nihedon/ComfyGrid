@@ -33,10 +33,7 @@ async def get_setup_status(comfy_service: ComfyUIService = Depends(get_comfy_ser
 async def stop_comfyui(comfy_service: ComfyUIService = Depends(get_comfy_service)):
     if comfy_service.proc or comfy_service.started:
         logger.info("Stopping ComfyUI instance...")
-        comfy_service.exit()
-        comfy_service.proc = None
-        comfy_service.started = False
-        comfy_service.url = None
+    await comfy_service.exit()
     return {"message": "stopped"}
 
 
@@ -45,10 +42,7 @@ async def launch_comfyui(request: Request, body: LaunchRequest, comfy_service: C
 
     if comfy_service.started or comfy_service.proc:
         logger.info("Stopping previous ComfyUI instance before launching new workspace...")
-        comfy_service.exit()
-        comfy_service.proc = None
-        comfy_service.started = False
-        comfy_service.url = None
+    await comfy_service.exit()
 
     current_port = os.environ.get("COMFYUI_PORT")
 
