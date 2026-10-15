@@ -5,7 +5,7 @@ import logger from '@/utils/logger';
 
 /**
  * Handles image and video asset creation for generated outputs.
- * Manages preview blob URL lifecycle via {@link JobState}.
+ * Manages preview blob URL lifecycle alongside GalleryState.
  */
 class MediaProcessor {
     #lastPreviewTime = 0;
@@ -64,12 +64,14 @@ class MediaProcessor {
         jobInfo.metadata = { ...jobInfo.metadata, datetime: new SvelteDate().toISOString() };
         appState.galleryState.upsertJob(jobId, { metadata: { ...jobInfo.metadata } });
 
+        const generatedAssets = await Promise.all(images.map((batch) => this.#makeGeneratedAssets(batch)));
+        const previousImages = jobInfo.images[nodeId] ?? [];
         jobInfo.images[nodeId] = [];
         for (let i = 0; i < images.length; i++) {
             const batchJobId = i === 0 ? jobId : `${jobId}-${i}`;
             lastBatchJobId = batchJobId;
 
-            const assets = await this.#makeGeneratedAssets(images[i]);
+            const assets = generatedAssets[i];
             jobInfo.images[nodeId].push({ nodeId, batchJobIndex: i, previewUrl: undefined });
 
             const nodeName = appState.workspaceState.getRealNode(nodeId)?.title ?? nodeId;
@@ -82,6 +84,11 @@ class MediaProcessor {
                 downloaded: false,
                 previewUrl: undefined,
             });
+        }
+
+        // Replaced previews are no longer tracked below, but still need releasing.
+        for (const image of previousImages) {
+            if (image.previewUrl) URL.revokeObjectURL(image.previewUrl);
         }
 
         for (const nId of Object.keys(jobInfo.images)) {
