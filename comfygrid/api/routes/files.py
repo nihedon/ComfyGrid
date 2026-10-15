@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import re
 import threading
@@ -144,13 +145,21 @@ async def save_model_info(request: Request, path: str, comfy_service: ComfyUISer
     except ValueError:
         return JSONResponse({"error": "Invalid path"}, status_code=400)
 
+    try:
+        data = await request.json()
+        # Keep blocking file, database and network work off the event loop.
+        return await asyncio.to_thread(_save_model_info, comfyui_path, full_path, path, data)
+    except Exception as e:
+        logger.error("Error saving model info: %s", e)
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+
+def _save_model_info(comfyui_path: Path, full_path: Path, path: str, data: dict):
     description_path = full_path.with_suffix(".description.txt")
 
     db_key = str(Path("models") / Path(path).relative_to("models")) if path.startswith("models/") else path
 
     try:
-        data = await request.json()
-
         try:
             if "description" in data:
                 description_path = resolve_within(comfyui_path, description_path)
@@ -184,7 +193,7 @@ async def save_model_info(request: Request, path: str, comfy_service: ComfyUISer
                     data["previewUrl"],
                     headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
                 )
-                with urllib.request.urlopen(req) as response, open(preview_path, 'wb') as out_file:
+                with urllib.request.urlopen(req, timeout=15.0) as response, open(preview_path, 'wb') as out_file:
                     out_file.write(response.read())
                 delete_thumbnail_cache(str(preview_path.resolve()))
             except Exception as e:
