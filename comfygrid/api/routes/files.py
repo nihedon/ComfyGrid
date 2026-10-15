@@ -88,9 +88,9 @@ def get_file(file_path: str, comfy_service: ComfyUIService = Depends(get_comfy_s
 def get_model_info(path: str, comfy_service: ComfyUIService = Depends(get_comfy_service)):
     comfyui_path = Path(comfy_service.comfyui_path)
     try:
-        full_path = resolve_within(comfyui_path, path)
-        description_path = resolve_within(comfyui_path, full_path.with_suffix(".description.txt"))
-        civitai_meta_path = resolve_within(comfyui_path, full_path.with_suffix(".civitai.info"))
+        full_path = file_service.resolve_model_info_path(comfyui_path, path)
+        description_path = resolve_within(full_path.parent, full_path.with_suffix(".description.txt"))
+        civitai_meta_path = resolve_within(full_path.parent, full_path.with_suffix(".civitai.info"))
     except ValueError:
         return JSONResponse({"error": "Invalid path"}, status_code=400)
 
@@ -141,7 +141,7 @@ def get_model_info(path: str, comfy_service: ComfyUIService = Depends(get_comfy_
 async def save_model_info(request: Request, path: str, comfy_service: ComfyUIService = Depends(get_comfy_service)):
     comfyui_path = Path(comfy_service.comfyui_path)
     try:
-        full_path = resolve_within(comfyui_path, path)
+        full_path = file_service.resolve_model_info_path(comfyui_path, path)
     except ValueError:
         return JSONResponse({"error": "Invalid path"}, status_code=400)
 
@@ -162,9 +162,9 @@ def _save_model_info(comfyui_path: Path, full_path: Path, path: str, data: dict)
     try:
         try:
             if "description" in data:
-                description_path = resolve_within(comfyui_path, description_path)
+                description_path = resolve_within(full_path.parent, description_path)
             if data.get("previewUrl"):
-                preview_path = resolve_within(comfyui_path, full_path.with_suffix(".preview.png"))
+                preview_path = resolve_within(full_path.parent, full_path.with_suffix(".preview.png"))
         except ValueError:
             return JSONResponse({"error": "Invalid path"}, status_code=400)
 

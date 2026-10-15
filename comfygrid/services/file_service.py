@@ -13,6 +13,7 @@ from charset_normalizer import from_path
 from PIL import Image
 from tqdm import tqdm
 
+from comfygrid.core.paths import resolve_within
 from comfygrid.domain.image import resize_with_crop
 from comfygrid.infrastructure import model_repository
 from comfygrid.infrastructure.cache import cache_thumbnail, load_thumbnail
@@ -194,6 +195,20 @@ def _read_file(file_path: Path) -> str | None:
 
 def has_unsafe_path_fragment(path: str | None) -> bool:
     return bool(path and ".." in path)
+
+
+def resolve_model_info_path(comfyui_path: Path, path: str) -> Path:
+    try:
+        models_root = Path(os.path.abspath(comfyui_path / "models"))
+        target = Path(os.path.abspath(comfyui_path / path))
+        if target == models_root or not target.is_relative_to(models_root):
+            raise ValueError("Model path must be inside the models directory.")
+        # Model directories can be configured using symlinks and junctions.
+        # File links must still stay inside the selected model directory.
+        model_directory = target.parent.resolve()
+        return resolve_within(model_directory, target.name)
+    except (OSError, RuntimeError) as exc:
+        raise ValueError(f"Invalid model path: {path}") from exc
 
 
 def resolve_file_path(comfyui_path: str, file_path: str) -> Path | None:
