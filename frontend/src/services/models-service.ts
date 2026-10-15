@@ -22,6 +22,42 @@ const loadedOnce: Record<ModelTypes, boolean> = {
     videos: false,
 };
 
+const loadingDetails = new WeakMap<Model, Promise<void>>();
+
+export function fetchModelDetails(model: Model): Promise<void> {
+    if (model.retrieved) return Promise.resolve();
+    const current = loadingDetails.get(model);
+    if (current) return current;
+
+    const promise = requestModelDetails(model)
+        .catch((error) => {
+            logger.error(`Failed to fetch details for ${model.full_path}:`, error);
+        })
+        .finally(() => {
+            loadingDetails.delete(model);
+        });
+    loadingDetails.set(model, promise);
+    return promise;
+}
+
+async function requestModelDetails(model: Model): Promise<void> {
+    logger.info(`[${model.name}] fetching details`);
+    const res = await comfyGridApiClient.getModelInfo(model.full_path);
+    if (!res.ok) throw new Error(`Model details ${res.status}`);
+    const data = res.json;
+    if (!data || typeof data !== 'object' || Array.isArray(data)) {
+        throw new Error('Invalid model details response');
+    }
+
+    if (data.description !== undefined) model.description = data.description;
+    if (data.url !== undefined) model.url = data.url;
+    if (data.nsfw !== undefined) model.nsfw = data.nsfw;
+    if (data.rate !== undefined) model.rate = data.rate;
+    if (data.favorite !== undefined) model.favorite = data.favorite;
+    if (Array.isArray(data.trainedWords)) model.trainedWords = data.trainedWords;
+    model.retrieved = true;
+}
+
 function fetchModels(key: ModelTypes, forceRefresh: boolean = false): Promise<void> {
     const current = loading[key];
     if (current) {

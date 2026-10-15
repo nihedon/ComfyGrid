@@ -1,10 +1,9 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
   import { Copy, Info, Link, Tag } from '@lucide/svelte';
-  import { comfyGridApiClient } from '@/api/api-client';
+  import { fetchModelDetails } from '@/services/models-service';
   import { appState } from '@/states/app-state.svelte';
   import type { Model } from '@/states/storage-state.svelte';
-  import logger from '@/utils/logger';
   import SelectablePopover from './SelectablePopover.svelte';
 
   let {
@@ -43,38 +42,14 @@
   async function showDescription(e: MouseEvent) {
     e.preventDefault();
     e.stopPropagation();
+    const target = model;
     await fetchDetails();
-    appState.descriptionModalState.show(model, subdirs ?? []);
+    if (model !== target) return;
+    appState.descriptionModalState.show(target, subdirs ?? []);
   }
 
-  async function fetchDetails() {
-    if (model.retrieved) return;
-
-    logger.info(`[${model.name}] fetching details`);
-
-    const res = await comfyGridApiClient.getModelInfo(model.full_path);
-    if (res.ok) {
-      const data = res.json;
-      if (data.description) {
-        model.description = data.description;
-      }
-      if (data.url !== undefined) {
-        model.url = data.url;
-      }
-      if (data.nsfw !== undefined) {
-        model.nsfw = data.nsfw;
-      }
-      if (data.rate !== undefined) {
-        model.rate = data.rate;
-      }
-      if (data.favorite !== undefined) {
-        model.favorite = data.favorite;
-      }
-      if (Array.isArray(data.trainedWords)) {
-        model.trainedWords = data.trainedWords;
-      }
-    }
-    model.retrieved = true;
+  function fetchDetails() {
+    return fetchModelDetails(model);
   }
 
   $effect(() => {
