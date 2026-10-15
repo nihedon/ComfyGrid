@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Check, Languages, Loader2, TriangleAlert, X } from '@lucide/svelte';
+  import { Check, Languages, Loader2, Settings, TriangleAlert, X } from '@lucide/svelte';
   import AppMenu from '@/components/common/AppMenu.svelte';
   import { t } from '@/i18n/i18n';
   import {
@@ -35,6 +35,11 @@
       onSelect: () => setTextCategory(widget, value),
     })),
   );
+
+  function openOllamaSettings(event: MouseEvent) {
+    event.stopPropagation();
+    appState.ollamaSettingModalState.show(widget.id);
+  }
 </script>
 
 <div class="d-inline-flex align-items-center">
@@ -43,12 +48,25 @@
       <button
         {...props}
         type="button"
-        class="nav-link dropdown-toggle text-capitalize me-2 border-0 bg-transparent"
+        class="nav-link dropdown-toggle text-capitalize border-0 bg-transparent"
+        class:me-2={!isTranslate}
       >
         {textCategoryLabel}
       </button>
     {/snippet}
   </AppMenu>
+  {#if isTranslate}
+    <button
+      type="button"
+      class="nav-link d-inline-flex align-items-center justify-content-center border-0 bg-transparent p-0 ms-1 me-2"
+      title={$t('node.menu.ollama_settings')}
+      aria-label={$t('node.menu.ollama_settings')}
+      onpointerdown={(event) => event.stopPropagation()}
+      onclick={openOllamaSettings}
+    >
+      <Settings size={14} />
+    </button>
+  {/if}
   {#if widget.isTranslating}
     <span class="badge text-bg-primary ms-2 fs-7 d-inline-flex align-items-center gap-1">
       <Loader2 size={14} class="spin" />
