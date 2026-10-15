@@ -40,17 +40,28 @@
     isRestarting = false;
   }
 
-  function handleRefreshComboInNodes() {
+  let isRefreshing = $state(false);
+
+  async function handleRefreshComboInNodes() {
+    if (isRefreshing) return;
+    isRefreshing = true;
     const app = appState.comfyUiState.app;
     appState.toastState.addToast({ type: 'info', message: $t('toast.update_requested') });
-    app?.refreshComboInNodes().then(async () => {
+    try {
+      if (!app) throw new Error('ComfyUI is not available');
+      await app.refreshComboInNodes();
       await workflowManager.loadCurrentWorkflow();
       await refreshModels('models');
       appState.toastState.addToast({
         type: 'success',
         message: $t('toast.update_request_completed'),
       });
-    });
+    } catch (error) {
+      logger.error('Failed to refresh models:', error);
+      appState.toastState.addToast({ type: 'error', message: $t('toast.update_request_failed') });
+    } finally {
+      isRefreshing = false;
+    }
   }
 
   function handleClickImportLayout() {
@@ -96,6 +107,7 @@
       kind: 'action',
       label: $t('menu.update_request'),
       icon: ListRestart,
+      disabled: isRefreshing,
       onSelect: handleRefreshComboInNodes,
     },
     {

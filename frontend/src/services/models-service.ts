@@ -10,10 +10,10 @@ const modelConfigs: Record<ModelTypes, { dir: ModelDirs; extensions: string[] }>
     videos: { dir: 'input', extensions: ['.webm', '.m4v', '.mp4', '.mkv', '.gif'] },
 };
 
-const loading: Record<ModelTypes, boolean> = {
-    models: false,
-    images: false,
-    videos: false,
+const loading: Record<ModelTypes, { promise: Promise<void>; forceRefresh: boolean } | null> = {
+    models: null,
+    images: null,
+    videos: null,
 };
 
 const loadedOnce: Record<ModelTypes, boolean> = {
@@ -22,27 +22,39 @@ const loadedOnce: Record<ModelTypes, boolean> = {
     videos: false,
 };
 
-async function fetchModels(key: ModelTypes, forceRefresh: boolean = false): Promise<void> {
-    if (loading[key]) {
-        return;
+function fetchModels(key: ModelTypes, forceRefresh: boolean = false): Promise<void> {
+    const current = loading[key];
+    if (current) {
+        if (forceRefresh && !current.forceRefresh) {
+            // A cached startup request cannot satisfy an explicit refresh.
+            return current.promise.catch(() => undefined).then(() => fetchModels(key, true));
+        }
+        return current.promise;
     }
-    loading[key] = true;
 
-    try {
-        const config = modelConfigs[key];
-        const res = await comfyGridApiClient.getList(config.dir, config.extensions, forceRefresh);
-        if (!res.ok) throw new Error(`${key} ${res.status}`);
-        const models = res.json;
-        appState.storageState.clearFor(key);
-        models.forEach((model: Model) => {
-            appState.storageState.setFor(key, model);
+    const promise = requestModels(key, forceRefresh)
+        .catch((error) => {
+            logger.error(`[models-service] ${key}`, error);
+            throw error;
+        })
+        .finally(() => {
+            loading[key] = null;
         });
-        loadedOnce[key] = true;
-    } catch (e) {
-        logger.error(`[models-service] ${key}`, e);
-    } finally {
-        loading[key] = false;
-    }
+    loading[key] = { promise, forceRefresh };
+    return promise;
+}
+
+async function requestModels(key: ModelTypes, forceRefresh: boolean): Promise<void> {
+    const config = modelConfigs[key];
+    const res = await comfyGridApiClient.getList(config.dir, config.extensions, forceRefresh);
+    if (!res.ok) throw new Error(`${key} ${res.status}`);
+    if (!Array.isArray(res.json)) throw new Error(`Invalid ${key} list response`);
+
+    appState.storageState.clearFor(key);
+    res.json.forEach((model: Model) => {
+        appState.storageState.setFor(key, model);
+    });
+    loadedOnce[key] = true;
 }
 
 export async function ensureAllModels(): Promise<void> {
@@ -51,7 +63,11 @@ export async function ensureAllModels(): Promise<void> {
 
 async function ensureModels(key: ModelTypes): Promise<void> {
     if (!loadedOnce[key]) {
-        await fetchModels(key);
+        try {
+            await fetchModels(key);
+        } catch {
+            // Startup/prefetch is best-effort; fetchModels already logged the error.
+        }
     }
 }
 

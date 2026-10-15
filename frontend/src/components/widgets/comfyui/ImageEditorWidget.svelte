@@ -1,6 +1,7 @@
 <script lang="ts">
   import { Paintbrush } from '@lucide/svelte';
   import { comfyUiApiClient } from '@/api/api-client';
+  import { t } from '@/i18n/i18n';
   import { refreshModels } from '@/services/models-service';
   import { appState } from '@/states/app-state.svelte';
   import type { ComfyGridWidget } from '@/states/model-state.svelte';
@@ -23,6 +24,15 @@
     return `/api/view?type=${type}&filename=${encodeURIComponent(filename)}&subfolder=${subfolder}&rand=${cacheBuster}`;
   });
 
+  async function refreshImages() {
+    try {
+      await refreshModels('images');
+    } catch (error) {
+      logger.error('Failed to refresh images:', error);
+      appState.toastState.addToast({ type: 'error', message: $t('toast.update_request_failed') });
+    }
+  }
+
   function openPaintModal() {
     if (!widget.image) return;
 
@@ -32,7 +42,7 @@
 
       widget.updateSelect({ value: filename, addOptions: [filename] });
       widget.onDrawBackground();
-      refreshModels('images');
+      void refreshImages();
     });
   }
 
@@ -75,7 +85,7 @@
       cacheBuster = Math.random();
       widget.updateSelect({ value: filename, addOptions: [filename] });
       widget.onDrawBackground();
-      await refreshModels('images');
+      await refreshImages();
     }
   }
 

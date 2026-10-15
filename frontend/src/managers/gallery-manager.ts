@@ -77,7 +77,7 @@ class GalleryManager {
 
             const res = await comfyGridApiClient.postUploadToInput(url, filename);
             if (res.ok && res.json.message === 'uploaded') {
-                refreshModels('images');
+                await refreshModels('images');
 
                 for (const node of appState.workspaceState.nodes.values()) {
                     for (const widget of node.widgets) {
