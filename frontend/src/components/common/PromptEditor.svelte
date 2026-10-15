@@ -52,6 +52,7 @@
   let container = $state<HTMLDivElement>();
   let view = $state<EditorView>();
   let isInternalChange = false;
+  let isExternalChange = false;
   const completionCompartment = new Compartment();
 
   const minHeight = $derived(rows === 1 ? '38px' : `${rows * 24}px`);
@@ -107,7 +108,7 @@
         }),
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         EditorView.updateListener.of((update: any) => {
-          if (update.docChanged) {
+          if (update.docChanged && !isExternalChange) {
             isInternalChange = true;
             const newDoc = update.state.doc.toString();
             value = newDoc;
@@ -155,9 +156,14 @@
       untrack(() => {
         const currentDoc = view!.state.doc.toString();
         if (currentDoc !== currentValue) {
-          view!.dispatch({
-            changes: { from: 0, to: currentDoc.length, insert: currentValue },
-          });
+          isExternalChange = true;
+          try {
+            view!.dispatch({
+              changes: { from: 0, to: currentDoc.length, insert: currentValue },
+            });
+          } finally {
+            isExternalChange = false;
+          }
         }
       });
     }

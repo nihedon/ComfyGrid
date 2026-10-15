@@ -258,14 +258,23 @@
   });
 
   let previousOllamaConfig: string | null = null;
+  let previousOllamaWidget: ComfyGridWidget | null = null;
   const currentOllamaConfig = $derived(
     `${layout.getTranslateModel(widget.id) ?? appState.optionState.get('ComfyGrid.ollama.model') ?? ''}::${layout.getTranslateSystem(widget.id) ?? appState.optionState.get('ComfyGrid.ollama.system') ?? ''}`,
   );
 
   $effect(() => {
     const config = currentOllamaConfig;
+    const currentWidget = widget;
     untrack(() => {
-      if (previousOllamaConfig !== null && previousOllamaConfig !== config) {
+      if (previousOllamaWidget && previousOllamaWidget !== currentWidget) {
+        cancelTranslation();
+      }
+      if (
+        previousOllamaWidget === currentWidget &&
+        previousOllamaConfig !== null &&
+        previousOllamaConfig !== config
+      ) {
         invalidateActiveTranslation();
         widget.isDirty = true;
         const text = widget.rawValue ?? '';
@@ -280,6 +289,7 @@
         }
       }
       previousOllamaConfig = config;
+      previousOllamaWidget = currentWidget;
     });
   });
 
