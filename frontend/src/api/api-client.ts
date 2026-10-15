@@ -26,17 +26,19 @@ type ApiResultBlob = ApiResult & {
     blob: Blob;
 };
 
-async function fetchApiJson<T = unknown>(url: string, options: RequestInit = {}): Promise<ApiResultJson<T>> {
+async function fetchApiJson<T = unknown>(url: string, options: RequestInit = {}, readErrorBody = false): Promise<ApiResultJson<T>> {
     try {
         const res = await fetch(url, options);
         if (res.ok) {
             const json = await res.json().catch(() => ({}) as T);
             return { ok: true, status: res.status, json };
         }
-        return { ok: false, status: res.status, json: {} as T };
+        const json = readErrorBody ? await res.json().catch(() => ({}) as T) : ({} as T);
+        return { ok: false, status: res.status, json };
     } catch (e) {
         if (options.signal?.aborted) throw e;
         logger.error(url, e);
+        if (readErrorBody) throw e;
         return { ok: false, status: 500, json: {} as T };
     }
 }
@@ -341,11 +343,17 @@ class ComfyGridApiClient {
         return await fetchApiJson('/comfygrid/api/pages');
     }
 
-    async getLlmStatus(): Promise<ApiResultJson<{ available: boolean; models: string[]; model_sizes?: Record<string, number | null> }>> {
-        return await fetchApiJson('/comfygrid/api/llm/status');
+    async getLlmStatus(): Promise<ApiResultJson<{ available: boolean; models: string[]; model_sizes?: Record<string, number | null>; detail?: string }>> {
+        return await fetchApiJson('/comfygrid/api/llm/status', {}, true);
     }
 
-    async translate(model: string, text: string, system?: string, signal?: AbortSignal): Promise<ApiResultJson<{ ok: boolean; translated_text: string }>> {
+    async translate(
+        model: string,
+        text: string,
+        system?: string,
+        signal?: AbortSignal,
+        seedMode?: 'fixed' | 'random',
+    ): Promise<ApiResultJson<{ ok?: boolean; translated_text?: string; detail?: unknown }>> {
         const controller = new AbortController();
         const cancel = () => controller.abort(signal?.reason);
         if (signal?.aborted) cancel();
@@ -359,12 +367,16 @@ class ComfyGridApiClient {
                 controller.signal.addEventListener('abort', rejectOnAbort, { once: true });
             });
             return await Promise.race([
-                fetchApiJson<{ ok: boolean; translated_text: string }>('/comfygrid/api/llm/translate', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ model, text, system }),
-                    signal: controller.signal,
-                }),
+                fetchApiJson<{ ok?: boolean; translated_text?: string; detail?: unknown }>(
+                    '/comfygrid/api/llm/translate',
+                    {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ model, text, system, seed_mode: seedMode }),
+                        signal: controller.signal,
+                    },
+                    true,
+                ),
                 cancelled,
             ]);
         } finally {

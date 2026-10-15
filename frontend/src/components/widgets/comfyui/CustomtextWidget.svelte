@@ -5,6 +5,7 @@
   import PromptEditor from '@/components/common/PromptEditor.svelte';
   import { t } from '@/i18n/i18n';
   import { saveLayoutObject, updateBoardFloatingState } from '@/services/gridstack-service';
+  import { notifyTranslationError } from '@/services/translation-error-service';
   import { translationManager } from '@/services/translation-service.svelte';
   import { appState } from '@/states/app-state.svelte';
   import type { ComfyGridWidget } from '@/states/model-state.svelte';
@@ -29,6 +30,10 @@
   const isPositivePrompt = $derived(layout.positivePromptWidgetId === widget.id);
   const isNegativePrompt = $derived(layout.negativePromptWidgetId === widget.id);
   const isTranslate = $derived(layout.isTranslateWidget(widget.id));
+  const translateSeedMode = $derived(
+    layout.getTranslateSeedMode(widget.id) ??
+      (appState.optionState.get('ComfyGrid.ollama.seed_mode') === 'random' ? 'random' : 'fixed'),
+  );
   const useOllamaCodeMirror = $derived(
     Boolean(appState.optionState.get('ComfyGrid.ollama.use_codemirror')),
   );
@@ -102,6 +107,7 @@
         console.warn('Ollama model not specified.');
         if (currentReqId === translationRequestId) {
           widget.value = text;
+          notifyTranslationError({ code: 'missing_model' });
           failTranslation();
         }
         return;
@@ -110,7 +116,13 @@
       const controller = new AbortController();
       translationControllers.add(controller);
       try {
-        const res = await comfyGridApiClient.translate(model, text, system, controller.signal);
+        const res = await comfyGridApiClient.translate(
+          model,
+          text,
+          system,
+          controller.signal,
+          translateSeedMode,
+        );
         if (currentReqId !== translationRequestId) {
           return;
         }
@@ -125,11 +137,17 @@
         widget.translationFailed = !succeeded;
         if (!succeeded) {
           widget.isDirty = true;
+          notifyTranslationError(
+            res.json?.detail ?? (res.ok ? { code: 'empty' } : undefined),
+            res.status,
+            model,
+          );
         }
-      } catch {
+      } catch (error) {
         if (currentReqId === translationRequestId) {
           widget.translationFailed = true;
           widget.isDirty = true;
+          notifyTranslationError(error, undefined, model);
         }
       } finally {
         if (translationControllers.delete(controller)) {
@@ -260,7 +278,7 @@
   let previousOllamaConfig: string | null = null;
   let previousOllamaWidget: ComfyGridWidget | null = null;
   const currentOllamaConfig = $derived(
-    `${layout.getTranslateModel(widget.id) ?? appState.optionState.get('ComfyGrid.ollama.model') ?? ''}::${layout.getTranslateSystem(widget.id) ?? appState.optionState.get('ComfyGrid.ollama.system') ?? ''}`,
+    `${layout.getTranslateModel(widget.id) ?? appState.optionState.get('ComfyGrid.ollama.model') ?? ''}::${layout.getTranslateSystem(widget.id) ?? appState.optionState.get('ComfyGrid.ollama.system') ?? ''}::${translateSeedMode}`,
   );
 
   $effect(() => {

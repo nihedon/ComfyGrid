@@ -19,6 +19,7 @@ class NodeRemovalManager {
                 delete layout.floatingWidgets[id];
                 if (layout.translateModels) delete layout.translateModels[id];
                 if (layout.translateSystems) delete layout.translateSystems[id];
+                if (layout.translateSeedModes) delete layout.translateSeedModes[id];
             }
             for (const positions of Object.values(layout.floatingPositions)) {
                 for (const id of removedIds) delete positions[id];

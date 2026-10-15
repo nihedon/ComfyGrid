@@ -24,6 +24,7 @@ class NodeDuplicationManager {
                 if (layout.translateWidgetIds?.includes(widget.id)) layout.translateWidgetIds.push(copiedId);
                 if (layout.translateModels?.[widget.id]) layout.translateModels[copiedId] = layout.translateModels[widget.id];
                 if (layout.translateSystems?.[widget.id]) layout.translateSystems[copiedId] = layout.translateSystems[widget.id];
+                if (layout.translateSeedModes?.[widget.id]) layout.translateSeedModes[copiedId] = layout.translateSeedModes[widget.id];
             }
             saveLayout(layout);
             await workflowManager.loadCurrentWorkflow();

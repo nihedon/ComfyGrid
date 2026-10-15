@@ -1,5 +1,7 @@
 import type { BoardId } from './board';
 
+export type TranslationSeedMode = 'fixed' | 'random';
+
 export type FloatingPosition = {
     x: number;
     y: number;
@@ -18,6 +20,7 @@ export type LayoutType = {
     translateWidgetIds?: string[];
     translateModels?: Record<string, string>;
     translateSystems?: Record<string, string>;
+    translateSeedModes?: Record<string, TranslationSeedMode>;
     showRenderableLessNodes?: boolean;
     showControlLessNodes?: boolean;
     showCollapsedNodes?: boolean;

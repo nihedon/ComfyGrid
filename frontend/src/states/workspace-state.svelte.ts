@@ -1,7 +1,7 @@
 import type { GridStack, GridStackWidget } from 'gridstack';
 import { SvelteMap, SvelteSet } from 'svelte/reactivity';
 import type { BoardId } from '@/types/board';
-import type { FloatingPosition, LayoutType } from '@/types/layout';
+import type { FloatingPosition, LayoutType, TranslationSeedMode } from '@/types/layout';
 import logger from '@/utils/logger';
 import { appState } from './app-state.svelte';
 import type { ComfyGridGroup, ComfyGridNode, ComfyGridWidget } from './model-state.svelte';
@@ -15,6 +15,7 @@ export class Layout {
     readonly #translateWidgetIds = new SvelteSet<string>();
     readonly #translateModels = new SvelteMap<string, string>();
     readonly #translateSystems = new SvelteMap<string, string>();
+    readonly #translateSeedModes = new SvelteMap<string, TranslationSeedMode>();
     #positivePromptWidgetId = $state<string | null>(null);
     #negativePromptWidgetId = $state<string | null>(null);
     #showRenderableLessNodes = $state<boolean>(false);
@@ -66,6 +67,16 @@ export class Layout {
             this.#translateSystems.set(widgetId, system);
         } else {
             this.#translateSystems.delete(widgetId);
+        }
+    }
+    getTranslateSeedMode(widgetId: string): TranslationSeedMode | undefined {
+        return this.#translateSeedModes.get(widgetId);
+    }
+    setTranslateSeedMode(widgetId: string, mode: TranslationSeedMode | '') {
+        if (mode) {
+            this.#translateSeedModes.set(widgetId, mode);
+        } else {
+            this.#translateSeedModes.delete(widgetId);
         }
     }
     get positivePromptWidgetId(): string | null {
@@ -190,6 +201,9 @@ export class Layout {
             for (const key of Array.from(this.#translateSystems.keys())) {
                 if (!validWidgetIds.has(key)) this.#translateSystems.delete(key);
             }
+            for (const key of Array.from(this.#translateSeedModes.keys())) {
+                if (!validWidgetIds.has(key)) this.#translateSeedModes.delete(key);
+            }
             for (const id of Array.from(this.#translateWidgetIds)) {
                 if (!validWidgetIds.has(id)) this.#translateWidgetIds.delete(id);
             }
@@ -247,6 +261,7 @@ export class Layout {
             translateWidgetIds: [...this.#translateWidgetIds],
             translateModels: Object.fromEntries(Array.from(this.#translateModels.entries()).filter(([, v]) => Boolean(v))),
             translateSystems: Object.fromEntries(Array.from(this.#translateSystems.entries()).filter(([, v]) => Boolean(v))),
+            translateSeedModes: Object.fromEntries(this.#translateSeedModes),
             showRenderableLessNodes: this.#showRenderableLessNodes,
             showControlLessNodes: this.#showControlLessNodes,
             showCollapsedNodes: this.#showCollapsedNodes,
@@ -290,6 +305,10 @@ export class Layout {
         this.#translateSystems.clear();
         Object.entries(layout.translateSystems ?? {}).forEach(([key, value]) => {
             this.#translateSystems.set(key, value);
+        });
+        this.#translateSeedModes.clear();
+        Object.entries(layout.translateSeedModes ?? {}).forEach(([key, value]) => {
+            if (value === 'fixed' || value === 'random') this.#translateSeedModes.set(key, value);
         });
         if (layout.showRenderableLessNodes !== undefined) {
             this.#showRenderableLessNodes = layout.showRenderableLessNodes;
