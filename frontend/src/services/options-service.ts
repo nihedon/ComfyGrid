@@ -4,7 +4,8 @@ import { appState } from '@/states/app-state.svelte';
 import logger from '@/utils/logger';
 import { callOptionsChangedCallbacks } from './callback-service';
 
-let savePromise: Promise<void> | null = null;
+let savePromise = Promise.resolve();
+let pendingSaves: { resolve: () => void; reject: (error: unknown) => void }[] = [];
 
 export async function loadOpts() {
     try {
@@ -26,17 +27,32 @@ export async function loadOpts() {
     }
 }
 
-function saveOpts(): Promise<void> {
-    savePromise = comfyGridApiClient.postOpts(appState.optionState.opts).then(() => {});
+function saveOpts(): void {
+    const waiting = pendingSaves;
+    pendingSaves = [];
+    const opts = new Map(appState.optionState.opts);
 
-    callOptionsChangedCallbacks();
-    return savePromise;
+    // Serialize batches so an older request cannot overwrite newer settings.
+    savePromise = savePromise.then(async () => {
+        try {
+            const res = await comfyGridApiClient.postOpts(opts);
+            if (!res.ok) throw new Error(`Failed to save opts: ${res.status}`);
+            callOptionsChangedCallbacks();
+            waiting.forEach(({ resolve }) => resolve());
+        } catch (error) {
+            waiting.forEach(({ reject }) => reject(error));
+        }
+    });
 }
 
 const saveOptsDebounced = debounce(saveOpts, 1000);
 
-export async function saveOptsWithCallback(callback?: () => void): Promise<void> {
+export function saveOptsWithCallback(callback?: () => void): Promise<void> {
+    const promise = new Promise<void>((resolve, reject) => {
+        pendingSaves.push({ resolve, reject });
+    }).then(() => callback?.());
+    // Existing UI callers may intentionally save without awaiting the result.
+    void promise.catch((error) => logger.error('Failed to save opts:', error));
     saveOptsDebounced();
-    await savePromise;
-    callback?.();
+    return promise;
 }
