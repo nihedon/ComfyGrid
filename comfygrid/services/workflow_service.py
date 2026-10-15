@@ -292,6 +292,8 @@ def move_item(comfyui_path: Path | str, source_path: str, target_dir_path: str) 
 def delete_item(comfyui_path: Path | str, item_path: str) -> None:
     base_dir = get_workflows_dir(comfyui_path)
     target = _safe_resolve(base_dir, item_path)
+    if target == base_dir.resolve():
+        raise ValueError("Cannot delete the workflow root directory")
     if not target.exists():
         return
 
