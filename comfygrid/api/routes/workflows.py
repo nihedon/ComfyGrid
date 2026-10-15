@@ -112,7 +112,10 @@ async def get_workflow_content(path: str = Query(...), comfy_service: ComfyUISer
 
 @router.get("/workflows/thumbnail")
 async def get_workflow_thumbnail(path: str = Query(...), comfy_service: ComfyUIService = Depends(get_comfy_service)):
-    thumb_path = workflow_service.get_workflow_thumbnail_path(comfy_service.comfyui_path, path)
+    try:
+        thumb_path = workflow_service.get_workflow_thumbnail_path(comfy_service.comfyui_path, path)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="Invalid path") from exc
     if not thumb_path or not thumb_path.is_file():
         raise HTTPException(status_code=404, detail="Thumbnail not found")
     media_type = "image/webp"

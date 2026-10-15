@@ -43,30 +43,34 @@
 </script>
 
 <div class="d-inline-flex align-items-center">
-  <AppMenu {items} side="right">
-    {#snippet trigger({ props })}
+  <span
+    class="category-selector d-inline-flex align-items-center me-2"
+    class:has-settings={isTranslate}
+  >
+    <AppMenu {items} side="right">
+      {#snippet trigger({ props })}
+        <button
+          {...props}
+          type="button"
+          class="nav-link dropdown-toggle text-capitalize border-0 bg-transparent p-0"
+        >
+          {textCategoryLabel}
+        </button>
+      {/snippet}
+    </AppMenu>
+    {#if isTranslate}
       <button
-        {...props}
         type="button"
-        class="nav-link dropdown-toggle text-capitalize border-0 bg-transparent"
-        class:me-2={!isTranslate}
+        class="ollama-settings nav-link d-inline-flex align-items-center justify-content-center border-0 bg-transparent p-0"
+        title={$t('node.menu.ollama_settings')}
+        aria-label={$t('node.menu.ollama_settings')}
+        onpointerdown={(event) => event.stopPropagation()}
+        onclick={openOllamaSettings}
       >
-        {textCategoryLabel}
+        <Settings size={14} />
       </button>
-    {/snippet}
-  </AppMenu>
-  {#if isTranslate}
-    <button
-      type="button"
-      class="nav-link d-inline-flex align-items-center justify-content-center border-0 bg-transparent p-0 ms-1 me-2"
-      title={$t('node.menu.ollama_settings')}
-      aria-label={$t('node.menu.ollama_settings')}
-      onpointerdown={(event) => event.stopPropagation()}
-      onclick={openOllamaSettings}
-    >
-      <Settings size={14} />
-    </button>
-  {/if}
+    {/if}
+  </span>
   {#if widget.isTranslating}
     <span class="badge text-bg-primary ms-2 fs-7 d-inline-flex align-items-center gap-1">
       <Loader2 size={14} class="spin" />
@@ -107,3 +111,20 @@
     </span>
   {/if}
 </div>
+
+<style>
+  .category-selector {
+    position: relative;
+  }
+
+  .has-settings :global(.dropdown-toggle::after) {
+    margin-left: calc(14px + 0.5em);
+  }
+
+  .ollama-settings {
+    position: absolute;
+    right: 0.85em;
+    top: 50%;
+    transform: translateY(-50%);
+  }
+</style>
