@@ -59,6 +59,8 @@
   });
 
   let isAutoCompleteInitialized = false;
+  let cleanupAutoComplete: (() => void) | undefined;
+  let scrollTimer: ReturnType<typeof setTimeout> | undefined;
 
   function initAutoComplete() {
     if (isAutoCompleteInitialized || !inputDomEl) return;
@@ -99,7 +101,9 @@
         const items = ddEl.querySelectorAll<HTMLElement>('.dropdown-item');
         for (const item of items) {
           if (item.textContent === inputDomEl.value) {
-            setTimeout(() => {
+            if (scrollTimer !== undefined) clearTimeout(scrollTimer);
+            scrollTimer = setTimeout(() => {
+              scrollTimer = undefined;
               item.scrollIntoView({ behavior: 'instant', block: 'start' });
             }, 0);
             break;
@@ -119,6 +123,26 @@
     };
     window.addEventListener('scroll', handleScrollOrResize, true);
     window.addEventListener('resize', handleScrollOrResize);
+
+    // bootstrap-autocomplete has no destroy API; dispose the resources we own.
+    cleanupAutoComplete = () => {
+      window.removeEventListener('scroll', handleScrollOrResize, true);
+      window.removeEventListener('resize', handleScrollOrResize);
+      if (scrollTimer !== undefined) {
+        clearTimeout(scrollTimer);
+        scrollTimer = undefined;
+      }
+      if (ddEl) {
+        if (popoverState.targetElement && ddEl.contains(popoverState.targetElement)) {
+          popoverState.hidePopover();
+        }
+        ddEl.onmousemove = null;
+        jQuery(ddEl).remove();
+        ddEl = undefined;
+      }
+      inputEl.off().removeData('autoComplete');
+      isAutoCompleteInitialized = false;
+    };
   }
 
   function teleportDropdown() {
@@ -205,13 +229,8 @@
   }
 
   onDestroy(() => {
-    if (isAutoCompleteInitialized && inputDomEl) {
-      try {
-        jQuery(inputDomEl).autoComplete('destroy');
-      } catch {
-        /* ignore */
-      }
-    }
+    cleanupAutoComplete?.();
+    cleanupAutoComplete = undefined;
   });
 
   $effect(() => {
