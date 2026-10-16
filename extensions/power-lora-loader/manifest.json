@@ -8,12 +8,28 @@
     "styles": ["style.css"],
     "widgets": [
       {
-        "match": { "widget_class_name": "PowerLoraLoaderWidget" },
+        "match": [
+          { "widget_class_name": "PowerLoraLoaderWidget" },
+          {
+            "node_comfy_class": "Power Lora Loader (rgthree)",
+            "widget_class_name": "LegacyWidget",
+            "widget_type": "custom",
+            "widget_name_prefix": "lora_"
+          }
+        ],
         "custom_element": "power-lora-item-widget",
         "template": "template.html#power-lora-item"
       },
       {
-        "match": { "widget_class_name": "RgthreeBetterButtonWidget" },
+        "match": [
+          { "widget_class_name": "RgthreeBetterButtonWidget" },
+          {
+            "node_comfy_class": "Power Lora Loader (rgthree)",
+            "widget_class_name": "LegacyWidget",
+            "widget_type": "custom",
+            "widget_name": "\u2795 Add Lora"
+          }
+        ],
         "custom_element": "power-lora-add-button-widget"
       }
     ]

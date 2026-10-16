@@ -49,6 +49,7 @@ You can match widgets by:
 
 - `widget_class_name`: Class name of the ComfyUI widget (e.g. `"PowerLoraLoaderWidget"`)
 - `widget_name`: Name property of the widget (e.g. `"seed"`)
+- `widget_name_prefix`: Prefix of the widget name (e.g. `"lora_"`). Combine with a node condition to avoid matching unrelated nodes.
 - `widget_type`: Type of the widget (e.g. `"combo"`, `"custom"`)
 - `node_type`: ComfyUI node type name
 - `comfy_class`: Python class name of the node

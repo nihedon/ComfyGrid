@@ -3,6 +3,7 @@ export type ManifestMatchCondition = {
     node_constructor_name?: string;
     widget_class_name?: string;
     widget_name?: string;
+    widget_name_prefix?: string;
     widget_type?: string;
 };
 

@@ -2,6 +2,7 @@
  * Extension loader for dynamically registered widget extensions
  */
 import type { Component } from 'svelte';
+import { SvelteMap } from 'svelte/reactivity';
 import { ComfyGridNode, ComfyGridWidget } from '@/states/model-state.svelte';
 import type { ExtensionManifest, ManifestIgnoreCondition, ManifestMatchCondition } from '@/types/manifest';
 
@@ -16,7 +17,7 @@ export interface CustomElementTemplateInfo {
     templateId?: string;
 }
 
-const registeredManifests: ExtensionManifest[] = [];
+const registeredManifests = new SvelteMap<string, ExtensionManifest>();
 const ignoreConditions: ManifestIgnoreCondition[] = [];
 const customElementMetaMap = new Map<string, CustomElementTemplateInfo>();
 
@@ -24,8 +25,6 @@ const customElementMetaMap = new Map<string, CustomElementTemplateInfo>();
  * Register an extension manifest
  */
 export function registerExtension(manifest: ExtensionManifest): void {
-    registeredManifests.push(manifest);
-
     const widgets = manifest.frontend?.widgets ?? manifest.widgets ?? [];
     for (const widgetDef of widgets) {
         if (widgetDef.custom_element) {
@@ -53,6 +52,8 @@ export function registerExtension(manifest: ExtensionManifest): void {
     for (const cond of manifest.ignore ?? []) {
         ignoreConditions.push(cond);
     }
+
+    registeredManifests.set(manifest.id, manifest);
 }
 
 /**
@@ -84,7 +85,7 @@ export function shouldIgnore(node: ComfyGridNode): boolean {
  * Find a matching extension with metadata
  */
 export function matchExtensionWithMeta(node: ComfyGridNode, widget: ComfyGridWidget): ExtensionMatchResult | null {
-    for (const manifest of registeredManifests) {
+    for (const manifest of registeredManifests.values()) {
         const widgets = manifest.frontend?.widgets ?? manifest.widgets ?? [];
         for (const widgetDef of widgets) {
             if (matchesConditions(widgetDef.match, node, widget)) {
@@ -107,6 +108,7 @@ function matchesCondition(cond: ManifestMatchCondition, node: ComfyGridNode, wid
     if (cond.node_comfy_class && node.comfyClass !== cond.node_comfy_class) return false;
     if (cond.node_constructor_name && node.constructorName !== cond.node_constructor_name) return false;
     if (cond.widget_name && widget.name !== cond.widget_name) return false;
+    if (cond.widget_name_prefix && !widget.name.startsWith(cond.widget_name_prefix)) return false;
     if (cond.widget_type && widget.type !== cond.widget_type) return false;
     return true;
 }
