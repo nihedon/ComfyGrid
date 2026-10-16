@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, Request
 from fastapi.responses import JSONResponse
 
 from comfygrid.domain import callbacks
-from comfygrid.schemas.setup import LaunchRequest
+from comfygrid.schemas.setup import LaunchRequest, WorkspaceInfo
 from comfygrid.services import setup_service
 from comfygrid.services.comfyui import ComfyUIService
 from comfygrid.services.dependencies import get_comfy_service
@@ -17,8 +17,40 @@ logger = logging.getLogger(__name__)
 
 
 @router.get("/config")
-async def get_setup_config():
-    return setup_service.get_setup_config()
+def get_setup_config(comfy_service: ComfyUIService = Depends(get_comfy_service)):
+    return {**setup_service.get_setup_config(), "active_profile_id": setup_service.active_profile_id(comfy_service)}
+
+
+@router.post("/profiles")
+def create_profile(body: WorkspaceInfo):
+    try:
+        return setup_service.save_profile(body)
+    except ValueError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
+
+
+@router.put("/profiles/{profile_id}")
+def update_profile(profile_id: str, body: WorkspaceInfo, comfy_service: ComfyUIService = Depends(get_comfy_service)):
+    if setup_service.active_profile_id(comfy_service) == profile_id:
+        # Keep the running identity even if its next-launch settings are edited.
+        comfy_service.setup_profile_id = profile_id
+    try:
+        return setup_service.save_profile(body, profile_id)
+    except KeyError:
+        return JSONResponse({"error": "Profile not found."}, status_code=404)
+    except ValueError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
+
+
+@router.delete("/profiles/{profile_id}")
+def delete_profile(profile_id: str, comfy_service: ComfyUIService = Depends(get_comfy_service)):
+    if setup_service.active_profile_id(comfy_service) == profile_id:
+        return JSONResponse({"error": "Stop this profile before deleting it."}, status_code=409)
+    try:
+        setup_service.delete_profile(profile_id)
+        return {"message": "deleted"}
+    except KeyError:
+        return JSONResponse({"error": "Profile not found."}, status_code=404)
 
 
 @router.get("/status")
@@ -31,6 +63,11 @@ async def get_setup_status(comfy_service: ComfyUIService = Depends(get_comfy_ser
 
 @router.post("/stop")
 async def stop_comfyui(comfy_service: ComfyUIService = Depends(get_comfy_service)):
+    task = getattr(comfy_service, "setup_task", None)
+    if task is not None and not task.done():
+        task.cancel()
+        await asyncio.gather(task, return_exceptions=True)
+    comfy_service.setup_starting = False
     if comfy_service.proc or comfy_service.started:
         logger.info("Stopping ComfyUI instance...")
     await comfy_service.exit()
@@ -39,12 +76,49 @@ async def stop_comfyui(comfy_service: ComfyUIService = Depends(get_comfy_service
 
 @router.post("/launch")
 async def launch_comfyui(request: Request, body: LaunchRequest, comfy_service: ComfyUIService = Depends(get_comfy_service)):
+    if getattr(comfy_service, "setup_starting", False):
+        return JSONResponse({"error": "A profile is already starting."}, status_code=409)
+    profile = None
+    if getattr(body, "profile_id", None):
+        try:
+            profile = setup_service.get_profile(body.profile_id)
+        except KeyError:
+            return JSONResponse({"error": "Profile not found."}, status_code=404)
+        body = LaunchRequest(mode=profile.mode, workspace=profile, connect_host=profile.connect_host,
+                             connect_port=profile.connect_port, profile_id=profile.id)
 
-    if comfy_service.started or comfy_service.proc:
-        logger.info("Stopping previous ComfyUI instance before launching new workspace...")
-    await comfy_service.exit()
+    if body.mode == "launch":
+        if not body.workspace:
+            return JSONResponse({"error": "workspace is required for launch mode"}, status_code=400)
+        for label, value in [("ComfyUI main script", body.workspace.script_path), ("Python executable", body.workspace.python_path)]:
+            if not value or not Path(value).is_file():
+                return JSONResponse({"error": f"{label} not found: {value}"}, status_code=400)
+    elif not body.connect_port or not 1 <= body.connect_port <= 65535:
+        return JSONResponse({"error": "A valid connect_port is required"}, status_code=400)
 
     current_port = os.environ.get("COMFYUI_PORT")
+    comfy_service.setup_starting = True
+    try:
+        await comfy_service.exit()
+        if profile:
+            setup_service.activate_profile(profile)
+        elif body.mode == "launch":
+            setup_service.save_launch_workspace(body.workspace)
+        else:
+            setup_service.save_connect_port(body.connect_port, body.connect_host or "127.0.0.1")
+        comfy_service.setup_profile_id = profile.id if profile else None
+    except Exception:
+        comfy_service.setup_starting = False
+        raise
+
+    async def run_background(action):
+        try:
+            await action()
+        except Exception:
+            logger.exception("Profile startup failed")
+            await comfy_service.exit()
+        finally:
+            comfy_service.setup_starting = False
 
     async def restart_caddy_if_needed(new_port: int | None):
         if new_port and str(new_port) != current_port:
@@ -52,18 +126,6 @@ async def launch_comfyui(request: Request, body: LaunchRequest, comfy_service: C
             await asyncio.to_thread(setup_service.start_caddy_proxy)
 
     if body.mode == "launch":
-        if not body.workspace:
-            return JSONResponse({"error": "workspace is required for launch mode"}, status_code=400)
-
-        main_path = Path(body.workspace.script_path)
-        if not main_path.exists() or not main_path.is_file():
-            return JSONResponse({"error": f"ComfyUI main script not found: {main_path}"}, status_code=400)
-
-        python_path = Path(body.workspace.python_path)
-        if not python_path.exists() or not python_path.is_file():
-            return JSONResponse({"error": f"Python executable not found: {python_path}"}, status_code=400)
-
-        setup_service.save_launch_workspace(body.workspace)
         comfy_service.apply_launch_config(body.workspace)
 
         async def background_launch():
@@ -101,14 +163,10 @@ async def launch_comfyui(request: Request, body: LaunchRequest, comfy_service: C
             )
             await comfy_service.run()
 
-        asyncio.create_task(background_launch())
+        comfy_service.setup_task = asyncio.create_task(run_background(background_launch))
 
     elif body.mode == "connect":
-        if not body.connect_port:
-            return JSONResponse({"error": "connect_port is required for connect mode"}, status_code=400)
-
         connect_host = body.connect_host or "127.0.0.1"
-        setup_service.save_connect_port(body.connect_port, connect_host)
         comfy_service.apply_connect_config(body.connect_port, connect_host)
 
         async def background_connect():
@@ -119,7 +177,7 @@ async def launch_comfyui(request: Request, body: LaunchRequest, comfy_service: C
             )
             await comfy_service.run()
 
-        asyncio.create_task(background_connect())
+        comfy_service.setup_task = asyncio.create_task(run_background(background_connect))
 
     else:
         return JSONResponse({"error": "Invalid mode"}, status_code=400)

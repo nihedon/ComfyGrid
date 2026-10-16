@@ -1,451 +1,711 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import {
-    CirclePlus,
+    Check,
+    Copy,
     FolderOpen,
-    Grid3x3,
     Link,
+    Loader2,
+    MoreHorizontal,
+    Pencil,
     Play,
-    Sparkles,
-    SquareChartGantt,
+    Plus,
+    Save,
+    Square,
+    Trash2,
   } from '@lucide/svelte';
   import { comfyGridApiClient } from '@/api/api-client';
-  import type { SetupConfig, WorkspaceInfo } from '@/types/setup';
-  import logger from '@/utils/logger';
+  import { t } from '@/i18n/i18n';
+  import { SetupProfiles } from '@/states/setup-profiles.svelte';
+  import type { MenuEntry } from '@/types/menu';
+  import AppMenu from './AppMenu.svelte';
 
-  const DEFAULT_COMFYUI_PORT = 8188;
-
-  type LaunchMode = 'launch' | 'connect';
-
-  let { onLaunched: handleLaunched }: { onLaunched: () => void } = $props();
-
-  let mode = $state<LaunchMode>('launch');
-  let config = $state<SetupConfig>({
-    workspaces: [],
-    last_workspace: '',
-    connect_port: DEFAULT_COMFYUI_PORT,
-  });
-  let selectedWorkspaceName = $state('');
-  let editingWorkspace = $state<WorkspaceInfo>({
-    name: '',
-    script_path: '',
-    python_path: '',
-    comfyui_port: DEFAULT_COMFYUI_PORT,
-    comfyui_args: '',
-  });
-  let connectHost = $state<string>('127.0.0.1');
-  let connectPort = $state<number | null>(DEFAULT_COMFYUI_PORT);
-  let isSubmitting = $state(false);
-  let errorMessage = $state('');
-  let isNewWorkspace = $state(false);
-
-  let isConnectingToBackend = $state(true);
-
-  let updateInfo = $state<{
-    has_update: boolean;
-    latest_version: string;
-    download_url: string | null;
-    release_notes: string;
-  } | null>(null);
+  let { onLaunched }: { onLaunched: () => void } = $props();
+  const editor = new SetupProfiles();
+  let loading = $state(true);
+  let nameInput = $state<HTMLInputElement>()!;
+  let confirmation = $state<HTMLDialogElement>()!;
+  let renameTimer: ReturnType<typeof setTimeout>;
+  let updateAvailable = $state('');
+  const connectMode = $derived(editor.draft.mode === 'connect');
+  const busy = $derived(editor.pending !== null);
+  const actionLabel = $derived(
+    editor.isRunning && !editor.dirty
+      ? 'setup.open'
+      : editor.dirty || editor.isNew
+        ? connectMode
+          ? 'setup.save_connect'
+          : 'setup.save_launch'
+        : connectMode
+          ? 'setup.connect'
+          : 'setup.launch',
+  );
+  const menuItems = $derived<MenuEntry[]>([
+    {
+      id: 'rename',
+      kind: 'action',
+      icon: Pencil,
+      label: $t('setup.rename'),
+      onSelect: () => {
+        renameTimer = setTimeout(() => {
+          nameInput.focus();
+          nameInput.select();
+        }, 0);
+      },
+    },
+    {
+      id: 'duplicate',
+      kind: 'action',
+      icon: Copy,
+      label: $t('setup.duplicate'),
+      onSelect: () => editor.request({ kind: 'duplicate' }),
+    },
+    { id: 'separator', kind: 'separator' },
+    {
+      id: 'delete',
+      kind: 'action',
+      icon: Trash2,
+      label: $t('setup.delete'),
+      danger: true,
+      disabled: editor.isRunning,
+      hint: editor.isRunning ? $t('setup.stop_before_delete') : undefined,
+      onSelect: () => editor.requestDelete(),
+    },
+  ]);
 
   onMount(() => {
-    let unmounted = false;
-
-    async function pollConfig() {
-      while (!unmounted) {
-        const res = await comfyGridApiClient.getSetupConfig();
-        if (res.ok) {
-          config = res.json;
-          connectHost = config.connect_host ?? '127.0.0.1';
-          connectPort = config.connect_port;
-
-          if (config.workspaces.length > 0) {
-            const lastWs = config.workspaces.find((w) => w.name === config.last_workspace);
-            selectedWorkspaceName = lastWs?.name ?? config.workspaces[0].name;
-            syncEditingWorkspace(selectedWorkspaceName);
-          } else {
-            isNewWorkspace = true;
-          }
-          isConnectingToBackend = false;
-          errorMessage = '';
-
-          try {
-            const updateRes = await comfyGridApiClient.getUpdateCheck();
-            if (updateRes.ok) {
-              updateInfo = updateRes.json;
+    const controller = new AbortController();
+    let timer: ReturnType<typeof setTimeout>;
+    async function load() {
+      while (!controller.signal.aborted) {
+        try {
+          const response = await comfyGridApiClient.getSetupConfig(controller.signal);
+          if (controller.signal.aborted) return;
+          if (response.ok) {
+            editor.initialize(response.json);
+            loading = false;
+            try {
+              const update = await comfyGridApiClient.getUpdateCheck();
+              if (!controller.signal.aborted && update.ok && update.json.has_update)
+                updateAvailable = update.json.latest_version;
+            } catch {
+              /* Update checks must not reload an edited profile. */
             }
-          } catch (e) {
-            logger.error('Failed to check for updates:', e);
+            return;
           }
-          break;
-        } else {
-          logger.trace('Waiting for backend...');
+        } catch {
+          if (controller.signal.aborted) return;
         }
-
-        // Wait 1 second before retrying
-        await new Promise((r) => setTimeout(r, 1000));
+        await new Promise<void>((resolve) => {
+          timer = setTimeout(resolve, 1000);
+        });
       }
     }
-
-    pollConfig();
-
+    void load();
+    const beforeUnload = (event: BeforeUnloadEvent) => {
+      if (editor.dirty) {
+        event.preventDefault();
+        event.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', beforeUnload);
     return () => {
-      unmounted = true;
+      controller.abort();
+      clearTimeout(timer);
+      clearTimeout(renameTimer);
+      window.removeEventListener('beforeunload', beforeUnload);
     };
   });
 
-  function syncEditingWorkspace(name: string) {
-    const ws = config.workspaces.find((w) => w.name === name);
-    if (ws) {
-      editingWorkspace = { ...ws };
-    }
-  }
+  $effect(() => {
+    if (!confirmation) return;
+    if (editor.intent || editor.confirmingDelete) {
+      if (!confirmation.open) confirmation.showModal();
+    } else if (confirmation.open) confirmation.close();
+  });
 
-  function handleWorkspaceSelect(name: string) {
-    selectedWorkspaceName = name;
-    isNewWorkspace = false;
-    syncEditingWorkspace(name);
-  }
-
-  function handleAddWorkspace() {
-    isNewWorkspace = true;
-    selectedWorkspaceName = '';
-    editingWorkspace = {
-      name: '',
-      script_path: '',
-      python_path: '',
-      comfyui_port: DEFAULT_COMFYUI_PORT,
-      comfyui_args: '',
-    };
-  }
-
-  async function submit(e: SubmitEvent) {
-    e.preventDefault();
-
-    const form = e.currentTarget as HTMLFormElement;
-    if (!form.checkValidity()) {
-      e.stopPropagation();
-      form.classList.add('was-validated');
-      return;
-    }
-    form.classList.add('was-validated');
-
-    errorMessage = '';
-    isSubmitting = true;
-
-    try {
-      const body =
-        mode === 'launch'
-          ? { mode: 'launch', workspace: { ...editingWorkspace } }
-          : { mode: 'connect', connect_host: connectHost, connect_port: connectPort };
-
-      const res = await comfyGridApiClient.postSetupLaunch(JSON.stringify(body));
-
-      if (!res.ok) {
-        if (res.status === 409) {
-          handleLaunched();
-          return;
-        }
-        errorMessage = res.json.error ?? 'Unknown error';
-        return;
-      }
-
-      handleLaunched();
-    } catch (e) {
-      errorMessage = 'Failed to connect to backend.';
-      logger.error('Failed to connect to backend.', e);
-    } finally {
-      isSubmitting = false;
-    }
-  }
-
-  async function pickMainScriptFile() {
-    const filetypes = [['ComfyUI main.py', 'main.py']];
-    const data = await comfyGridApiClient.postDialogFile(
-      'Select ComfyUI main.py',
-      filetypes,
-      editingWorkspace.script_path,
+  async function pickFile(kind: 'script_path' | 'python_path') {
+    const response = await comfyGridApiClient.postDialogFile(
+      kind === 'script_path' ? 'Select ComfyUI main.py' : 'Select Python executable',
+      kind === 'script_path'
+        ? [['ComfyUI main.py', 'main.py']]
+        : [
+            ['Python', '*.exe'],
+            ['All files', '*'],
+          ],
+      editor.draft[kind],
     );
-    if (data.ok) {
-      editingWorkspace.script_path = data.json.path;
-    }
+    if (response.ok && response.json.path) editor.draft[kind] = response.json.path;
   }
 
-  async function pickPythonFile() {
-    const filetypes = [
-      ['Python', 'python.exe'],
-      ['Python3', 'python3.exe'],
-    ];
-    const data = await comfyGridApiClient.postDialogFile(
-      'Select ComfyUI python.exe',
-      filetypes,
-      editingWorkspace.python_path,
-    );
-    if (data.ok) {
-      editingWorkspace.python_path = data.json.path;
-    }
+  async function launch(event: SubmitEvent) {
+    event.preventDefault();
+    if (connectMode) return;
+    if (await editor.launch()) onLaunched();
   }
 </script>
 
-<form
-  class="setup-overlay d-flex align-items-center justify-content-center needs-validation"
-  novalidate
-  onsubmit={submit}
->
-  <div class="setup-card card shadow-lg">
-    <div class="card-header d-flex align-items-center gap-2 py-3">
-      <Grid3x3 class="text-primary fs-5" />
-      <span class="fw-bold fs-5">ComfyGrid Setup</span>
-    </div>
-
-    <div class="card-body p-4">
-      {#if isConnectingToBackend}
-        <div class="text-center py-5">
-          <div class="spinner-border text-primary mb-3" role="status"></div>
-          <h5 class="fw-bold">Connecting to ComfyGrid Server...</h5>
-          <p class="text-muted small">Please wait while the backend starts up.</p>
-        </div>
-      {:else}
-        {#if updateInfo?.has_update && updateInfo.download_url}
-          <div class="alert alert-info mb-4 shadow-sm border-0 bg-info-subtle">
-            <h6 class="mb-1">
-              <Sparkles size={18} class="me-1 text-primary" />New Update Available:
-              <strong>{updateInfo.latest_version}</strong>
-            </h6>
-            <p class="mb-0 small opacity-75">A newer version of ComfyGrid is ready to download.</p>
-          </div>
-        {/if}
-
-        <!-- Mode selector -->
-        <div class="mb-4">
-          <div class="btn-group w-100" role="group">
-            <input
-              type="radio"
-              class="btn-check"
-              name="mode"
-              id="mode-launch"
-              value="launch"
-              bind:group={mode}
-            />
-            <label
-              class="btn btn-outline-primary d-flex align-items-center justify-content-center gap-1"
-              for="mode-launch"
+<div class="setup-overlay">
+  <section class="setup-shell" aria-label={$t('setup.title')}>
+    <header class="setup-header">
+      <div class="d-flex align-items-center gap-2">
+        <img src={`${import.meta.env.BASE_URL}icon.ico`} width="23" height="23" alt="" />
+        <h1>ComfyGrid</h1>
+        <span class="text-body-secondary">{$t('setup.title')}</span>
+      </div>
+      {#if updateAvailable}<span class="small text-info"
+          >{$t('setup.update', { version: updateAvailable })}</span
+        >{/if}
+    </header>
+    {#if loading}
+      <div class="loading-state">
+        <Loader2 size={24} class="spin" /><span>{$t('setup.loading')}</span>
+      </div>
+    {:else}
+      <div class="setup-body">
+        <aside class="profile-sidebar" aria-label={$t('setup.profiles')}>
+          <div class="sidebar-heading">
+            <h2>{$t('setup.profiles')}</h2>
+            <button
+              class="btn btn-sm btn-outline-secondary icon-button"
+              type="button"
+              title={$t('setup.new')}
+              aria-label={$t('setup.new')}
+              disabled={busy}
+              onclick={() => editor.request({ kind: 'new' })}><Plus size={17} /></button
             >
-              <Play size={16} />Launch ComfyUI
-            </label>
-            <input
-              type="radio"
-              class="btn-check"
-              name="mode"
-              id="mode-connect"
-              value="connect"
-              bind:group={mode}
-            />
-            <label
-              class="btn btn-outline-primary d-flex align-items-center justify-content-center gap-1"
-              for="mode-connect"
-            >
-              <Link size={16} />Attach to existing
-            </label>
           </div>
-        </div>
-
-        {#if mode === 'launch'}
-          <!-- Workspace list -->
-          <div class="mb-3">
-            <!-- svelte-ignore a11y_label_has_associated_control -->
-            <label class="form-label fw-semibold">Workspace</label>
-            <div class="workspace-list vstack gap-1">
-              {#each config.workspaces as ws, index (index)}
+          <div class="profile-list">
+            {#each editor.config.workspaces as profile (profile.id)}
+              <div class="profile-row" class:active={editor.selectedId === profile.id}>
                 <button
                   type="button"
-                  class="workspace-item btn btn-sm text-start w-100 d-flex align-items-center gap-2"
-                  class:active={selectedWorkspaceName === ws.name && !isNewWorkspace}
-                  onclick={() => handleWorkspaceSelect(ws.name)}
+                  class="profile-select"
+                  disabled={busy}
+                  aria-current={editor.selectedId === profile.id ? 'true' : undefined}
+                  onclick={() => editor.request({ kind: 'select', id: profile.id! })}
                 >
-                  <SquareChartGantt size={16} />{ws.name}
+                  {#if profile.mode === 'connect'}<Link size={16} />{:else}<Play size={16} />{/if}
+                  <span class="profile-name">{profile.name}</span>
+                  {#if editor.config.active_profile_id === profile.id}<span
+                      class="running-dot"
+                      title={$t('setup.running')}
+                    ></span>{/if}
                 </button>
-              {/each}
-              <button
-                type="button"
-                class="workspace-item btn btn-sm btn-outline-secondary text-start w-100 d-flex align-items-center gap-2"
-                class:active={isNewWorkspace}
-                onclick={handleAddWorkspace}
-              >
-                <CirclePlus size={16} />New workspace
-              </button>
-            </div>
+                {#if editor.selectedId === profile.id}
+                  <AppMenu items={menuItems} disabled={busy} align="start">
+                    {#snippet trigger({ props })}<button
+                        {...props}
+                        type="button"
+                        class="btn btn-sm icon-button profile-menu"
+                        title={$t('setup.actions')}
+                        aria-label={$t('setup.actions')}><MoreHorizontal size={18} /></button
+                      >{/snippet}
+                  </AppMenu>
+                {/if}
+              </div>
+            {/each}
+            {#if editor.isNew}<div class="new-profile-label active" aria-current="true">
+                <Plus size={16} /><span>{$t('setup.new')}</span>
+              </div>{/if}
           </div>
-
-          <!-- Workspace editor -->
-          <div class="mb-3">
-            <div class="settings-form row g-3 rounded mt-0 mb-3 pb-3">
-              <div class="col-md-12">
-                <label for="ws-name" class="form-label">Name</label>
+        </aside>
+        <form id="setup-profile-form" class="profile-editor" onsubmit={launch}>
+          <div class="editor-heading">
+            <h2>{editor.isNew ? $t('setup.new') : editor.draft.name}</h2>
+            {#if editor.dirty}<span class="badge text-bg-warning">{$t('setup.unsaved')}</span>
+            {:else if editor.saved}<span
+                class="small text-success d-inline-flex align-items-center gap-1"
+                ><Check size={14} />{$t('setup.saved')}</span
+              >{/if}
+          </div>
+          <fieldset disabled={busy}>
+            <div class="mb-3">
+              <label class="form-label" for="profile-name">{$t('setup.name')}</label><input
+                id="profile-name"
+                class="form-control"
+                bind:this={nameInput}
+                bind:value={editor.draft.name}
+                autocomplete="off"
+                required
+              />
+            </div>
+            <div class="mb-4">
+              <span class="form-label d-block" id="profile-mode-label">{$t('setup.mode')}</span>
+              <div class="mode-options" role="group" aria-labelledby="profile-mode-label">
                 <input
-                  id="ws-name"
-                  type="text"
-                  class="form-control"
-                  bind:value={editingWorkspace.name}
-                  placeholder="e.g. default"
-                />
-              </div>
-              <div class="col-md-12">
-                <label for="ws-script-path" class="form-label">ComfyUI main script path</label>
-                <div class="input-group">
-                  <input
-                    id="ws-script-path"
-                    type="text"
-                    class="form-control font-monospace"
-                    bind:value={editingWorkspace.script_path}
-                    placeholder="e.g. D:\ComfyUI_windows\ComfyUI\main.py"
-                    required
-                  />
-                  <button
-                    class="btn btn-primary d-flex align-items-center justify-content-center"
-                    type="button"
-                    onclick={pickMainScriptFile}><FolderOpen size={16} /></button
-                  >
-                </div>
-                <div class="invalid-feedback">Please specify the ComfyUI main script path.</div>
-              </div>
-              <div class="col-md-12">
-                <label for="ws-python-path" class="form-label">Python exe path</label>
-                <div class="input-group">
-                  <input
-                    id="ws-python-path"
-                    type="text"
-                    class="form-control font-monospace"
-                    bind:value={editingWorkspace.python_path}
-                    placeholder="e.g. D:\ComfyUI_windows\python_embeded\python.exe"
-                    required
-                  />
-                  <button
-                    class="btn btn-primary d-flex align-items-center justify-content-center"
-                    type="button"
-                    onclick={pickPythonFile}><FolderOpen size={16} /></button
-                  >
-                </div>
-                <div class="invalid-feedback">Please specify the Python executable path.</div>
-              </div>
-              <div class="col-md-9">
-                <label for="ws-host" class="form-label">ComfyUI Host</label>
+                  class="btn-check"
+                  id="profile-mode-launch"
+                  name="profile-mode"
+                  type="radio"
+                  value="launch"
+                  bind:group={editor.draft.mode}
+                /><label class="btn btn-outline-secondary" for="profile-mode-launch"
+                  ><Play size={15} /> {$t('setup.local')}</label
+                >
                 <input
-                  id="ws-host"
-                  type="text"
-                  class="form-control font-monospace readonly"
-                  value="127.0.0.1"
+                  class="btn-check"
+                  id="profile-mode-connect"
+                  name="profile-mode"
+                  type="radio"
+                  value="connect"
                   disabled
-                />
-              </div>
-              <div class="col-md-3">
-                <label for="ws-port" class="form-label">Port</label>
-                <input
-                  id="ws-port"
-                  type="number"
-                  class="form-control font-monospace"
-                  bind:value={editingWorkspace.comfyui_port}
-                  placeholder={String(DEFAULT_COMFYUI_PORT)}
-                  required
-                />
-                <div class="invalid-feedback">Port is required.</div>
-              </div>
-              <div class="col-md-12">
-                <label for="ws-args" class="form-label">Extra launch arguments</label>
-                <textarea
-                  id="ws-args"
-                  class="form-control font-monospace"
-                  rows="3"
-                  bind:value={editingWorkspace.comfyui_args}
-                  placeholder="e.g. --disable-dynamic-vram --enable-manager"></textarea>
-                <div class="form-text">Command-line arguments passed to ComfyUI on launch.</div>
+                  bind:group={editor.draft.mode}
+                /><label class="mode-unavailable" for="profile-mode-connect" title={$t('setup.wip')}
+                  ><Link size={15} />
+                  {$t('setup.existing')}<small>WIP</small></label
+                >
               </div>
             </div>
-          </div>
-        {:else}
-          <!-- Connect URL -->
-          <div class="mb-3">
-            <div class="settings-form row g-3 rounded mt-0 mb-3 pb-3">
-              <div class="col-md-8">
-                <label for="connect-host" class="form-label">ComfyUI Host / IP</label>
-                <input
-                  id="connect-host"
-                  type="text"
-                  class="form-control font-monospace"
-                  bind:value={connectHost}
-                  placeholder="e.g. 172.16.0.100 or 127.0.0.1"
-                  required
-                />
+            {#if connectMode}
+              <div class="connection-fields">
+                <div>
+                  <label class="form-label" for="profile-host">{$t('setup.host')}</label><input
+                    id="profile-host"
+                    class="form-control font-monospace"
+                    bind:value={editor.draft.connect_host}
+                    required
+                  />
+                </div>
+                <div>
+                  <label class="form-label" for="profile-connect-port">{$t('setup.port')}</label
+                  ><input
+                    id="profile-connect-port"
+                    class="form-control font-monospace"
+                    type="number"
+                    min="1"
+                    max="65535"
+                    bind:value={editor.draft.connect_port}
+                    required
+                  />
+                </div>
               </div>
-              <div class="col-md-4">
-                <label for="connect-port" class="form-label">Port</label>
-                <input
-                  id="connect-port"
-                  type="number"
-                  class="form-control font-monospace"
-                  bind:value={connectPort}
-                  placeholder={String(DEFAULT_COMFYUI_PORT)}
-                  required
-                />
+            {:else}
+              <div class="mb-3">
+                <label class="form-label" for="profile-script">{$t('setup.script')}</label>
+                <div class="input-group">
+                  <input
+                    id="profile-script"
+                    class="form-control font-monospace"
+                    bind:value={editor.draft.script_path}
+                    required
+                  /><button
+                    class="btn btn-outline-secondary icon-button"
+                    type="button"
+                    title={$t('setup.browse_script')}
+                    aria-label={$t('setup.browse_script')}
+                    onclick={() => pickFile('script_path')}><FolderOpen size={17} /></button
+                  >
+                </div>
               </div>
-            </div>
-          </div>
-        {/if}
-
-        {#if errorMessage}
-          <div class="alert alert-danger py-2 mb-3">{errorMessage}</div>
-        {/if}
-
-        <button type="submit" class="btn btn-primary w-100" disabled={isSubmitting}>
-          {#if isSubmitting}
-            <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+              <div class="mb-3">
+                <label class="form-label" for="profile-python">{$t('setup.python')}</label>
+                <div class="input-group">
+                  <input
+                    id="profile-python"
+                    class="form-control font-monospace"
+                    bind:value={editor.draft.python_path}
+                    required
+                  /><button
+                    class="btn btn-outline-secondary icon-button"
+                    type="button"
+                    title={$t('setup.browse_python')}
+                    aria-label={$t('setup.browse_python')}
+                    onclick={() => pickFile('python_path')}><FolderOpen size={17} /></button
+                  >
+                </div>
+              </div>
+              <div class="connection-fields mb-4">
+                <div>
+                  <label class="form-label" for="profile-local-host">{$t('setup.host')}</label
+                  ><input
+                    id="profile-local-host"
+                    class="form-control font-monospace"
+                    value="127.0.0.1"
+                    disabled
+                  />
+                </div>
+                <div>
+                  <label class="form-label" for="profile-port">{$t('setup.port')}</label><input
+                    id="profile-port"
+                    class="form-control font-monospace"
+                    type="number"
+                    min="1"
+                    max="65535"
+                    bind:value={editor.draft.comfyui_port}
+                    required
+                  />
+                </div>
+              </div>
+              <details open={Boolean(editor.draft.comfyui_args)}>
+                <summary>{$t('setup.advanced')}</summary>
+                <div class="pt-3">
+                  <label class="form-label" for="profile-args">{$t('setup.args')}</label><textarea
+                    id="profile-args"
+                    class="form-control font-monospace"
+                    rows="3"
+                    bind:value={editor.draft.comfyui_args}></textarea>
+                </div>
+              </details>
+            {/if}
+          </fieldset>
+          {#if editor.error}<div class="alert alert-danger mt-3 mb-0" role="alert">
+              {$t(editor.error) ?? editor.error}
+            </div>{/if}
+        </form>
+      </div>
+      <footer class="setup-footer">
+        <div class="footer-status">
+          {#if editor.config.active_profile_id}<span class="small text-success"
+              >{$t('setup.running')}</span
+            ><button
+              type="button"
+              class="btn btn-sm btn-outline-secondary icon-button"
+              disabled={busy}
+              title={$t('setup.stop')}
+              aria-label={$t('setup.stop')}
+              onclick={() => editor.stop()}><Square size={14} /></button
+            >{/if}
+        </div>
+        <div class="footer-actions">
+          {#if editor.isNew}<button
+              type="button"
+              class="btn btn-outline-secondary"
+              disabled={busy || editor.config.workspaces.length === 0}
+              onclick={() => editor.cancelNew()}>{$t('setup.cancel_create')}</button
+            >
           {/if}
-          {mode === 'launch' ? 'Launch' : 'Connect'}
-        </button>
-      {/if}
-    </div>
+          <button
+            type="button"
+            class="btn btn-outline-secondary d-flex align-items-center gap-2"
+            disabled={busy || (!editor.isNew && !editor.dirty)}
+            onclick={() => editor.save()}
+            >{#if editor.pending === 'save'}<Loader2 size={16} class="spin" />{:else}<Save
+                size={16}
+              />{/if}{$t('setup.save')}</button
+          >
+          <button
+            type="submit"
+            form="setup-profile-form"
+            class="btn btn-primary d-flex align-items-center gap-2"
+            disabled={busy || connectMode}
+            >{#if editor.pending === 'launch'}<Loader2
+                size={16}
+                class="spin"
+              />{:else if connectMode}<Link size={16} />{:else}<Play size={16} />{/if}{$t(
+              actionLabel,
+            )}</button
+          >
+        </div>
+      </footer>
+    {/if}
+  </section>
+</div>
+
+<dialog
+  bind:this={confirmation}
+  oncancel={(event) => {
+    if (busy) event.preventDefault();
+    else {
+      editor.intent = null;
+      editor.confirmingDelete = false;
+    }
+  }}
+  aria-labelledby="setup-confirm-title"
+>
+  <h2 id="setup-confirm-title">
+    {$t(editor.confirmingDelete ? 'setup.delete_title' : 'setup.unsaved_title')}
+  </h2>
+  <p>
+    {editor.confirmingDelete
+      ? $t('setup.delete_message', {
+          name: editor.config.workspaces.find((p) => p.id === editor.selectedId)?.name ?? '',
+        })
+      : $t('setup.unsaved_message')}
+  </p>
+  {#if editor.confirmingDelete}<p class="small text-body-secondary">
+      {$t('setup.delete_scope')}
+    </p>{/if}
+  {#if editor.error}<div class="alert alert-danger" role="alert">
+      {$t(editor.error) ?? editor.error}
+    </div>{/if}
+  <div class="confirmation-actions">
+    <button
+      type="button"
+      class="btn btn-outline-secondary"
+      disabled={busy}
+      onclick={() => {
+        editor.intent = null;
+        editor.confirmingDelete = false;
+      }}>{$t('setup.cancel')}</button
+    >
+    {#if editor.confirmingDelete}<button
+        type="button"
+        class="btn btn-danger"
+        disabled={busy}
+        onclick={() => editor.delete()}><Trash2 size={16} /> {$t('setup.delete')}</button
+      >
+    {:else}<button
+        type="button"
+        class="btn btn-outline-secondary"
+        disabled={busy}
+        onclick={() => editor.discardAndContinue()}>{$t('setup.discard')}</button
+      ><button
+        type="button"
+        class="btn btn-primary"
+        disabled={busy}
+        onclick={() => editor.saveAndContinue()}>{$t('setup.save')}</button
+      >{/if}
   </div>
-</form>
+</dialog>
 
 <style lang="scss">
   .setup-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(var(--bs-body-bg-rgb, 0, 0, 0), 0.6);
-    backdrop-filter: blur(6px);
-    z-index: 9999;
+    z-index: 9000;
+    display: grid;
+    place-items: center;
+    padding: 24px;
+    background: var(--bs-tertiary-bg);
   }
-
-  .setup-card {
+  .setup-shell {
     width: 100%;
-    max-width: 600px;
+    max-width: 960px;
+    height: min(760px, calc(100dvh - 48px));
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    background: var(--bs-body-bg);
     border: 1px solid var(--bs-border-color);
+    border-radius: 8px;
+    overflow: hidden;
   }
-
-  .workspace-list {
-    max-height: 140px;
+  .setup-header,
+  .setup-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 18px 24px;
+  }
+  .setup-header {
+    border-bottom: 1px solid var(--bs-border-color);
+    flex-wrap: wrap;
+  }
+  h1 {
+    font-size: 20px;
+    margin: 0;
+  }
+  h2 {
+    font-size: 16px;
+    margin: 0;
+    overflow-wrap: anywhere;
+  }
+  .setup-body {
+    display: grid;
+    grid-template-columns: 240px minmax(0, 1fr);
+    min-height: 0;
+  }
+  .profile-sidebar {
+    padding: 18px 12px;
+    border-right: 1px solid var(--bs-border-color);
     overflow-y: auto;
-  }
-
-  .workspace-item {
-    border: 1px solid var(--bs-border-color);
     background: var(--bs-tertiary-bg);
+  }
+  .sidebar-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin: 0 4px 14px;
+  }
+  .profile-row {
+    display: flex;
+    align-items: center;
+    min-height: 44px;
+    border-radius: 4px;
+    margin-bottom: 4px;
+  }
+  .profile-row.active,
+  .new-profile-label.active {
+    background: var(--bs-primary-bg-subtle);
+    box-shadow: inset 3px 0 var(--bs-primary);
+  }
+  .profile-select {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    flex: 1;
+    min-width: 0;
+    background: none;
+    border: 0;
+    text-align: left;
     color: var(--bs-body-color);
-    transition: background 0.15s;
-
-    &.active {
-      background: var(--bs-primary);
-      border-color: var(--bs-primary);
-      color: #fff;
-    }
-
-    &:not(.active):hover {
-      background: var(--bs-secondary-bg);
-    }
+    padding: 10px 12px;
   }
-
-  .settings-form {
-    background: var(--bs-tertiary-bg);
+  .profile-row:not(.active):hover {
+    background: var(--bs-secondary-bg);
+  }
+  .profile-select :global(svg) {
+    flex-shrink: 0;
+  }
+  .profile-name {
+    min-width: 0;
+    overflow-wrap: anywhere;
+    font-size: 14px;
+  }
+  .running-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--bs-success);
+    flex-shrink: 0;
+  }
+  .new-profile-label {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    min-height: 44px;
+    border-radius: 4px;
+    padding: 10px 12px;
+    font-size: 14px;
+    color: var(--bs-body-color);
+  }
+  .icon-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 34px;
+    min-height: 34px;
+    padding: 6px;
+  }
+  .profile-menu {
+    margin-right: 4px;
+    flex-shrink: 0;
+  }
+  .profile-editor {
+    padding: 22px 28px;
+    overflow-y: auto;
+    min-width: 0;
+  }
+  .editor-heading {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 22px;
+    min-height: 24px;
+  }
+  fieldset {
+    min-width: 0;
+  }
+  .form-label {
+    font-size: 14px;
+    font-weight: 500;
+  }
+  .mode-options {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+  }
+  .mode-options label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 38px;
+    padding: 6px 12px;
+    font-size: 14px;
+  }
+  .mode-unavailable {
+    color: var(--bs-secondary-color);
+    opacity: 0.65;
+    cursor: not-allowed;
+  }
+  .mode-unavailable small {
+    font-size: 11px;
+  }
+  .connection-fields {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 110px;
+    gap: 16px;
+  }
+  summary {
+    font-size: 14px;
+    color: var(--bs-secondary-color);
+    cursor: pointer;
+  }
+  .setup-footer {
+    border-top: 1px solid var(--bs-border-color);
+  }
+  .footer-actions,
+  .footer-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .loading-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    grid-row: 2 / -1;
+  }
+  dialog {
+    width: min(480px, calc(100% - 32px));
+    padding: 24px;
     border: 1px solid var(--bs-border-color);
+    border-radius: 8px;
+    background: var(--bs-body-bg);
+    color: var(--bs-body-color);
+  }
+  dialog::backdrop {
+    background: rgb(0 0 0 / 45%);
+  }
+  dialog h2 {
+    margin-bottom: 16px;
+  }
+  .confirmation-actions {
+    display: flex;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 24px;
+  }
+  @media (max-width: 680px) {
+    .setup-overlay {
+      padding: 8px;
+    }
+    .setup-shell {
+      height: calc(100dvh - 16px);
+    }
+    .setup-header,
+    .setup-footer {
+      padding: 12px 16px;
+    }
+    .setup-body {
+      grid-template-columns: minmax(0, 1fr);
+      grid-template-rows: auto minmax(0, 1fr);
+    }
+    .profile-sidebar {
+      border-right: 0;
+      border-bottom: 1px solid var(--bs-border-color);
+      padding: 10px 12px;
+      max-height: 175px;
+    }
+    .sidebar-heading {
+      margin-bottom: 6px;
+    }
+    .profile-editor {
+      padding: 16px;
+    }
+    .setup-footer {
+      flex-wrap: wrap;
+    }
+    .footer-actions {
+      margin-left: auto;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
   }
 </style>

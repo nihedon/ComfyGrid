@@ -2,7 +2,7 @@ import type { Model } from '@/states/storage-state.svelte';
 import type { Job } from '@/types/job';
 import type { ExtensionManifest } from '@/types/manifest';
 import type { ImageInfo } from '@/types/model-shared';
-import type { SetupConfig } from '@/types/setup';
+import type { SetupConfig, WorkspaceInfo } from '@/types/setup';
 import type { Version } from '@/types/verion';
 import type { WorkflowListResponse } from '@/types/workflow';
 import logger from '@/utils/logger';
@@ -140,16 +140,36 @@ class ComfyGridApiClient {
         });
     }
 
-    async getSetupConfig(): Promise<ApiResultJson<SetupConfig>> {
-        return await fetchApiJson('/comfygrid/api/setup/config');
+    async getSetupConfig(signal?: AbortSignal): Promise<ApiResultJson<SetupConfig>> {
+        return await fetchApiJson('/comfygrid/api/setup/config', { signal });
+    }
+
+    async saveSetupProfile(profile: WorkspaceInfo, id?: string): Promise<ApiResultJson<WorkspaceInfo & { error?: string; detail?: unknown }>> {
+        return await fetchApiJson(
+            `/comfygrid/api/setup/profiles${id ? `/${encodeURIComponent(id)}` : ''}`,
+            {
+                method: id ? 'PUT' : 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(profile),
+            },
+            true,
+        );
+    }
+
+    async deleteSetupProfile(id: string): Promise<ApiResultJson<{ error?: string }>> {
+        return await fetchApiJson(`/comfygrid/api/setup/profiles/${encodeURIComponent(id)}`, { method: 'DELETE' }, true);
     }
 
     async postSetupLaunch(body: string): Promise<ApiResultJson<{ error: string }>> {
-        return await fetchApiJson('/comfygrid/api/setup/launch', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body,
-        });
+        return await fetchApiJson(
+            '/comfygrid/api/setup/launch',
+            {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body,
+            },
+            true,
+        );
     }
 
     async getUpdateCheck(): Promise<
