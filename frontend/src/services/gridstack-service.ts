@@ -187,7 +187,8 @@ export function applyFloatingPositions(boardId?: string, initSettings?: Record<s
         const items = (Array.from(container.children) as HTMLElement[]).filter((el) => el.hasAttribute('gs-id'));
         const children = items.filter((el) => expectedIds.has(el.getAttribute('gs-id')));
         const savedSettings = initSettings?.[logicalKey] ?? appState.workspaceState.layout?.floatingPositions?.get(logicalKey);
-        const boardSettings = savedSettings ? structuredClone(savedSettings) : undefined;
+        // Snapshot geometry without cloning Svelte proxies or retaining reactive references.
+        const boardSettings = savedSettings ? Object.fromEntries(Object.entries(savedSettings).map(([id, { x, y, w, h }]) => [id, { x, y, w, h }])) : undefined;
 
         restoringGrids.add(grid);
         try {
