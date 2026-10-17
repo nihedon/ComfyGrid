@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onDestroy, untrack } from 'svelte';
   import {
     ChevronLeft,
     ChevronRight,
@@ -19,9 +20,14 @@
   import NoPreview from '../common/NoPreview.svelte';
 
   let modalElement = $state<HTMLDivElement>();
-  let bsModal: Modal | null = null;
+  let bsModal = $state<Modal | null>(null);
   let isFetching = $state(false);
   let isSaving = $state(false);
+  let destroyed = false;
+
+  onDestroy(() => {
+    destroyed = true;
+  });
 
   const descriptionState = appState.descriptionModalState;
   const model = $derived(descriptionState.model);
@@ -61,34 +67,44 @@
       }
     };
 
-    const handleHidden = () => descriptionState.close();
+    const handleHide = () => descriptionState.close();
 
     modalElement.addEventListener('shown.bs.modal', handleShown);
-    modalElement.addEventListener('hidden.bs.modal', handleHidden);
+    modalElement.addEventListener('hide.bs.modal', handleHide);
     return () => {
       modalElement!.removeEventListener('shown.bs.modal', handleShown);
-      modalElement!.removeEventListener('hidden.bs.modal', handleHidden);
+      modalElement!.removeEventListener('hide.bs.modal', handleHide);
     };
   });
 
   $effect(() => {
     if (!bsModal) return;
-    if (model) {
-      tempPreviewUrl = undefined;
-      tempDescription = model.description ?? '';
-      tempUrl = model.url;
-      tempNsfw = model.nsfw ?? false;
-      tempRate = model.rate;
-      tempFavorite = model.favorite ?? false;
-      tempTrainedWords = [...(model.trainedWords ?? [])];
-      isEditingDescription = false;
-      fetchedImages = [];
-      selectedImageIndex = 0;
-      bsModal.show();
-    } else {
-      bsModal.hide();
-    }
+    // Only a new editing session should reset the form, not model cache updates.
+    void descriptionState.sessionId;
+    untrack(() => {
+      isFetching = false;
+      isSaving = false;
+      if (model) {
+        tempPreviewUrl = undefined;
+        tempDescription = model.description ?? '';
+        tempUrl = model.url;
+        tempNsfw = model.nsfw ?? false;
+        tempRate = model.rate;
+        tempFavorite = model.favorite ?? false;
+        tempTrainedWords = [...(model.trainedWords ?? [])];
+        isEditingDescription = false;
+        fetchedImages = [];
+        selectedImageIndex = 0;
+        bsModal!.show();
+      } else {
+        bsModal!.hide();
+      }
+    });
   });
+
+  function isCurrentSession(sessionId: number) {
+    return !destroyed && descriptionState.sessionId === sessionId;
+  }
 
   function handleClose() {
     descriptionState.close();
@@ -168,6 +184,8 @@
   }
 
   async function handleFetch() {
+    if (!model || isFetching || isSaving) return;
+    const sessionId = descriptionState.sessionId;
     let urlToFetch = tempUrl;
     if (!urlToFetch) {
       const prompted = prompt('Enter Model URL:');
@@ -179,13 +197,14 @@
     isFetching = true;
     try {
       const res = await comfyGridApiClient.postFetchInfo(urlToFetch);
+      if (!isCurrentSession(sessionId)) return;
       if (!res.ok) throw new Error('Failed to fetch from backend');
       applyFetchedData(res.json);
     } catch (e) {
       console.error(e);
-      alert('Failed to fetch model info.');
+      if (isCurrentSession(sessionId)) alert('Failed to fetch model info.');
     } finally {
-      isFetching = false;
+      if (isCurrentSession(sessionId)) isFetching = false;
     }
   }
 
@@ -197,10 +216,12 @@
   }
 
   async function handleSave() {
-    if (!model) return;
+    if (!model || isSaving || isFetching) return;
+    const sessionId = descriptionState.sessionId;
+    const targetModel = model;
     isSaving = true;
     try {
-      const payload: Record<string, unknown> = {
+      const payload = {
         description: tempDescription,
         url: tempUrl,
         nsfw: tempNsfw,
@@ -210,33 +231,33 @@
         previewUrl: tempPreviewUrl,
       };
 
-      const apiRes = await comfyGridApiClient.postModelInfo(model.full_path, payload);
+      const apiRes = await comfyGridApiClient.postModelInfo(targetModel.full_path, payload);
       if (!apiRes.ok) {
         throw new Error('Failed to save model info');
       }
-      if (tempPreviewUrl) {
-        const ext = isVideoFile(tempPreviewUrl) ? '.preview.mp4' : '.preview.png';
-        let relPath = model.full_path.replace(/^models[/\\]/i, '');
+      if (payload.previewUrl) {
+        const ext = isVideoFile(payload.previewUrl) ? '.preview.mp4' : '.preview.png';
+        let relPath = targetModel.full_path.replace(/^models[/\\]/i, '');
         const lastDotIndex = relPath.lastIndexOf('.');
         if (lastDotIndex !== -1) {
           relPath = relPath.substring(0, lastDotIndex);
         }
-        model.preview = relPath + ext;
+        targetModel.preview = relPath + ext;
       }
-      model.description = tempDescription;
-      model.has_description = true;
-      model.url = tempUrl;
-      model.nsfw = tempNsfw;
-      model.rate = tempRate;
-      model.favorite = tempFavorite;
-      model.trainedWords = [...tempTrainedWords];
-      model.modified = Date.now();
-      handleClose();
+      targetModel.description = payload.description;
+      targetModel.has_description = true;
+      targetModel.url = payload.url;
+      targetModel.nsfw = payload.nsfw;
+      targetModel.rate = payload.rate;
+      targetModel.favorite = payload.favorite;
+      targetModel.trainedWords = [...payload.trainedWords];
+      targetModel.modified = Date.now();
+      if (isCurrentSession(sessionId)) handleClose();
     } catch (e) {
       console.error(e);
-      alert(e);
+      if (isCurrentSession(sessionId)) alert(e);
     } finally {
-      isSaving = false;
+      if (isCurrentSession(sessionId)) isSaving = false;
     }
   }
 

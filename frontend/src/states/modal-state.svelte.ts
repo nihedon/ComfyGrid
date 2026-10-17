@@ -42,6 +42,7 @@ class ModalState {
     clearModelDir() {
         this.#modelDir = null;
         this.#valueSet = null;
+        this.clearCallback();
     }
 
     clearCallback() {
@@ -134,6 +135,11 @@ class InpaintModalState {
 class DescriptionModalState {
     #model = $state<Model | null>(null);
     #subdirs = $state<ReadonlyArray<string>>([]);
+    #sessionId = $state(0);
+
+    get sessionId() {
+        return this.#sessionId;
+    }
 
     get model() {
         return this.#model;
@@ -143,11 +149,13 @@ class DescriptionModalState {
     }
 
     show(model: Model, subdirs: ReadonlyArray<string>) {
+        this.#sessionId++;
         this.#model = model;
         this.#subdirs = subdirs;
     }
 
     close() {
+        this.#sessionId++;
         this.#model = null;
     }
 }

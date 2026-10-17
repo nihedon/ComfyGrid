@@ -312,11 +312,10 @@
   function apply(model: Model) {
     if (action) {
       action(model);
-    }
-    if (modalState.handleSelect) {
-      modalState.handleSelect(model);
-      modalState.clearCallback();
+    } else if (modalState.modelDir && modalState.handleSelect) {
+      const handleSelect = modalState.handleSelect;
       modalState.clearModelDir();
+      handleSelect(model);
     }
   }
 
