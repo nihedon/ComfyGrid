@@ -1,4 +1,6 @@
+import { get } from 'svelte/store';
 import { comfyGridApiClient } from '@/api/api-client';
+import { t } from '@/i18n/i18n';
 import { executionManager } from '@/managers/execution-manager';
 import { workflowManager } from '@/managers/workflow-manager';
 import { appState } from '@/states/app-state.svelte';
@@ -10,6 +12,8 @@ const TRANSITION_TIMEOUT_MS = 300_000;
 let generation = 0;
 let timer: ReturnType<typeof setTimeout> | undefined;
 let previousApp: ComfyApp | null = null;
+let previousGraphReady = false;
+let previousFrameVersion = 0;
 let restoringApp: ComfyApp | null = null;
 let synchronizedApp: ComfyApp | null = null;
 
@@ -22,12 +26,27 @@ function fail(token: number, error: string) {
     clearTimeout(timer);
     state.transitionError = error;
     logger.error('ComfyUI transition failed:', error);
+    // Only restore the old view if its connection and document are still valid.
+    if (previousGraphReady && state.started && previousApp && previousApp === currentApp() && previousFrameVersion === state.frameReloadVersion) {
+        previousApp = null;
+        previousGraphReady = false;
+        state.graphReady = true;
+        state.transition = null;
+        const translate = get(t);
+        const reason = translate(error) || error;
+        appState.toastState.addToast({
+            type: 'error',
+            message: translate('toast.comfyui_transition_failed', { reason }, `ComfyUI operation failed: ${reason}`),
+        });
+    }
 }
 
 function begin(kind: NonNullable<typeof state.transition>): number {
     const token = ++generation;
     clearTimeout(timer);
     previousApp = currentApp();
+    previousGraphReady = state.graphReady;
+    previousFrameVersion = state.frameReloadVersion;
     state.transition = kind;
     state.transitionError = '';
     state.graphReady = false;
@@ -39,6 +58,7 @@ export function cancelComfyUiTransition() {
     ++generation;
     clearTimeout(timer);
     previousApp = null;
+    previousGraphReady = false;
     restoringApp = null;
     synchronizedApp = null;
     state.transition = null;
@@ -74,6 +94,7 @@ export function updateComfyUiConnection(started: boolean) {
         if (!wasStarted) return;
         appState.executionState.clearQueueJobIds();
         if (!state.transition) begin('reconnect');
+        previousGraphReady = false;
         state.graphReady = false;
     } else if (!wasStarted && currentApp()) {
         if (!state.transition) begin('reconnect');
