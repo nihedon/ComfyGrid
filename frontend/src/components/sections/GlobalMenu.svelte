@@ -9,10 +9,10 @@
     Settings,
     Workflow,
   } from '@lucide/svelte';
-  import { comfyGridApiClient } from '@/api/api-client';
   import AppMenu from '@/components/common/AppMenu.svelte';
   import { t } from '@/i18n/i18n';
   import { workflowManager } from '@/managers/workflow-manager';
+  import { reloadComfyUi, restartComfyUi } from '@/services/comfyui-lifecycle-service';
   import { openLayout } from '@/services/gridstack-service';
   import { refreshModels } from '@/services/models-service';
   import { appState } from '@/states/app-state.svelte';
@@ -23,21 +23,6 @@
 
   function handleClickReloadGraph() {
     workflowManager.loadCurrentWorkflow();
-  }
-
-  function handleReload() {
-    if (appState.comfyUiState.iframe) {
-      appState.comfyUiState.iframe.src = appState.comfyUiState.iframe.src;
-    }
-  }
-
-  let isRestarting = $state(false);
-  async function handleRestart() {
-    isRestarting = true;
-    if (!(await comfyGridApiClient.postRestart())) {
-      logger.error('Failed to restart ComfyUI');
-    }
-    isRestarting = false;
   }
 
   let isRefreshing = $state(false);
@@ -115,15 +100,16 @@
       kind: 'action',
       label: $t('menu.comfyui.reload'),
       icon: RotateCw,
-      onSelect: handleReload,
+      disabled: appState.comfyUiState.transition !== null,
+      onSelect: reloadComfyUi,
     },
     {
       id: 'restart',
       kind: 'action',
       label: $t('menu.comfyui.restart'),
       icon: Power,
-      disabled: isRestarting,
-      onSelect: handleRestart,
+      disabled: appState.comfyUiState.transition !== null,
+      onSelect: restartComfyUi,
     },
     { id: 'files', kind: 'separator' },
     {

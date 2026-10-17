@@ -12,18 +12,22 @@
   import OllamaSettingModal from '@/components/modals/OllamaSettingModal.svelte';
   import PaintModal from '@/components/modals/PaintModal.svelte';
   import { loadTranslations, setLanguage } from '@/i18n/i18n';
-  import { workflowManager } from '@/managers/workflow-manager';
   import { BOOTSWATCH_THEME_OPT_KEY, applyBootswatchTheme } from '@/services/bootswatch-service';
   import {
     callOptionsChangedCallbacks,
     callUiLoadedCallbacks,
     setupCallbacks,
   } from '@/services/callback-service';
+  import {
+    cancelComfyUiTransition,
+    handleComfyUiGraphReady,
+  } from '@/services/comfyui-lifecycle-service';
   import { loadExtensions } from '@/services/extension-service';
   import { ensureAllModels } from '@/services/models-service';
   import { loadOpts } from '@/services/options-service';
   import { appState } from '@/states/app-state.svelte';
   import type { DropdownFormInfo } from '@/states/option-state.svelte';
+  import type { ComfyApp } from '@/types/comfy-model';
   import logger, { setDebugMode } from '@/utils/logger';
   import Body from './Body.svelte';
   import Header from './Header.svelte';
@@ -99,14 +103,9 @@
   });
 
   $effect(() => {
-    if (appState.comfyUiState.graphReady && !initializing) {
+    if (comfyUiState.graphReady && !initializing && !comfyUiState.transition) {
       callOptionsChangedCallbacks();
       callUiLoadedCallbacks();
-
-      // !!! Waiting for ComfyUI's data structure to be organized as the execution is too early. !!!
-      // setTimeout(() => {
-      //   workflowManager.loadCurrentWorkflow();
-      // }, 1000);
     }
   });
 
@@ -193,11 +192,14 @@
   }
 
   async function handleOpenSetup() {
+    cancelComfyUiTransition();
     try {
       await comfyGridApiClient.postSetupStop();
     } catch (e) {
       logger.error('Failed to stop ComfyUI setup:', e);
     }
+    // A stop notification may have started recovery while the request was pending.
+    cancelComfyUiTransition();
     comfyUiState.started = false;
     comfyUiState.graphReady = false;
     initialized = false;
@@ -205,15 +207,8 @@
     launched = false;
   }
 
-  function handleGraphReady() {
-    comfyUiState.graphReady = true;
-    if (uiState.activePageId === 'grid') {
-      workflowManager.loadCurrentWorkflow().catch((error) => {
-        logger.error('Failed to load current workflow:', error);
-      });
-    } else {
-      uiState.needRefresh = true;
-    }
+  function handleGraphReady(event: Event) {
+    void handleComfyUiGraphReady((event as CustomEvent<{ app: ComfyApp }>).detail?.app);
   }
 
   onMount(async () => {
@@ -229,6 +224,7 @@
   });
 
   onDestroy(() => {
+    cancelComfyUiTransition();
     window.removeEventListener('comfygrid:open_setup', handleOpenSetup);
     window.removeEventListener('comfygrid:graph_ready', handleGraphReady);
     document.documentElement.removeEventListener('dragenter', handleDragEnter);
@@ -244,7 +240,7 @@
       {#if !launched}
         <SetupScreen onLaunched={handleSetupLaunched} />
       {:else}
-        {#if comfyUiState.graphReady && !initializing}
+        {#if comfyUiState.graphReady && !initializing && !comfyUiState.transition}
           <Header />
         {:else}
           <LoadingScreen {initializing} />

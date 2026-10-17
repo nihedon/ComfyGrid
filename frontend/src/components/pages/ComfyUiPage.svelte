@@ -1,20 +1,45 @@
 <script lang="ts">
-  import { executionManager } from '@/managers/execution-manager';
+  import { onDestroy } from 'svelte';
   import { appState } from '@/states/app-state.svelte';
   import type { ComfyWindow } from '@/states/comfyui-state.svelte';
 
-  let iframeRef: HTMLIFrameElement;
+  let iframeRef = $state<HTMLIFrameElement>()!;
 
   const uiState = appState.uiState;
   const comfyUiState = appState.comfyUiState;
+  let frameStarted = $state(false);
+  let lastReloadVersion = comfyUiState.frameReloadVersion;
 
-  async function injectBridge() {
+  $effect(() => {
+    if (comfyUiState.started) frameStarted = true;
+  });
+
+  $effect(() => {
+    if (!iframeRef) return;
+    comfyUiState.iframe = iframeRef;
+    comfyUiState.window = iframeRef.contentWindow as ComfyWindow;
+  });
+
+  $effect(() => {
+    const version = comfyUiState.frameReloadVersion;
+    if (version === lastReloadVersion) return;
+    lastReloadVersion = version;
+    if (iframeRef && frameStarted) iframeRef.src = '/';
+  });
+
+  onDestroy(() => {
+    if (comfyUiState.iframe === iframeRef) {
+      comfyUiState.iframe = null;
+      comfyUiState.window = null;
+    }
+  });
+
+  function injectBridge() {
     const iframeDoc = iframeRef.contentDocument || iframeRef.contentWindow?.document;
     if (!iframeDoc) return;
 
     comfyUiState.iframe = iframeRef;
     comfyUiState.window = iframeRef.contentWindow as ComfyWindow;
-    await executionManager.syncStateFromComfyUi();
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const app = comfyUiState.window?.comfyAPI?.app?.app as any;
@@ -37,7 +62,7 @@
         injectBridge();
       }
     }}
-    src={comfyUiState.started ? '/' : 'about:blank'}
+    src={frameStarted ? '/' : 'about:blank'}
     bind:this={iframeRef}
   ></iframe>
 </div>

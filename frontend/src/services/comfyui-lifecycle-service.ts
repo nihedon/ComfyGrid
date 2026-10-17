@@ -1,0 +1,111 @@
+import { comfyGridApiClient } from '@/api/api-client';
+import { executionManager } from '@/managers/execution-manager';
+import { workflowManager } from '@/managers/workflow-manager';
+import { appState } from '@/states/app-state.svelte';
+import type { ComfyApp } from '@/types/comfy-model';
+import logger from '@/utils/logger';
+
+const state = appState.comfyUiState;
+const TRANSITION_TIMEOUT_MS = 300_000;
+let generation = 0;
+let timer: ReturnType<typeof setTimeout> | undefined;
+let previousApp: ComfyApp | null = null;
+let restoringApp: ComfyApp | null = null;
+let synchronizedApp: ComfyApp | null = null;
+
+function currentApp(): ComfyApp | null {
+    return state.window?.comfyAPI?.app?.app ?? null;
+}
+
+function fail(token: number, error: string) {
+    if (token !== generation || !state.transition) return;
+    clearTimeout(timer);
+    state.transitionError = error;
+    logger.error('ComfyUI transition failed:', error);
+}
+
+function begin(kind: NonNullable<typeof state.transition>): number {
+    const token = ++generation;
+    clearTimeout(timer);
+    previousApp = currentApp();
+    state.transition = kind;
+    state.transitionError = '';
+    state.graphReady = false;
+    timer = setTimeout(() => fail(token, 'log.comfyui.lifecycle.timeout'), TRANSITION_TIMEOUT_MS);
+    return token;
+}
+
+export function cancelComfyUiTransition() {
+    ++generation;
+    clearTimeout(timer);
+    previousApp = null;
+    restoringApp = null;
+    synchronizedApp = null;
+    state.transition = null;
+    state.transitionError = '';
+}
+
+export function reloadComfyUi() {
+    if (state.transition && !state.transitionError) return;
+    begin(state.started ? 'reload' : 'reconnect');
+    if (state.started) state.frameReloadVersion++;
+}
+
+export async function restartComfyUi() {
+    if (state.transition && !state.transitionError) return;
+    const token = begin('restart');
+    try {
+        const response = await comfyGridApiClient.postRestart();
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    } catch (error) {
+        fail(token, error instanceof Error ? error.message : String(error));
+    }
+}
+
+export function retryComfyUiTransition() {
+    if (state.transition === 'restart') void restartComfyUi();
+    else reloadComfyUi();
+}
+
+export function updateComfyUiConnection(started: boolean) {
+    const wasStarted = state.started;
+    state.started = started;
+    if (!started) {
+        if (!wasStarted) return;
+        appState.executionState.clearQueueJobIds();
+        if (!state.transition) begin('reconnect');
+        state.graphReady = false;
+    } else if (!wasStarted && currentApp()) {
+        if (!state.transition) begin('reconnect');
+        state.frameReloadVersion++;
+    }
+}
+
+export async function handleComfyUiGraphReady(app: ComfyApp) {
+    // Ignore events from the document being replaced and duplicate hook/onload notifications.
+    if (!state.started || !app || app !== currentApp() || app === previousApp || app === restoringApp) return;
+    const token = state.transition ? generation : begin('loading');
+    const frameVersion = state.frameReloadVersion;
+    const isCurrent = () => state.started && token === generation && frameVersion === state.frameReloadVersion && app === currentApp();
+    restoringApp = app;
+    state.graphReady = true;
+    try {
+        if (synchronizedApp !== app) {
+            await executionManager.syncStateFromComfyUi();
+            if (!isCurrent()) return;
+            synchronizedApp = app;
+        }
+        if (!isCurrent()) return;
+        if (appState.uiState.activePageId === 'grid') await workflowManager.loadCurrentWorkflow();
+        else appState.uiState.needRefresh = true;
+        if (!isCurrent()) return;
+        clearTimeout(timer);
+        previousApp = null;
+        state.transitionError = '';
+        state.transition = null;
+    } catch (error) {
+        if (isCurrent()) fail(token, error instanceof Error ? error.message : String(error));
+    } finally {
+        if (restoringApp === app) restoringApp = null;
+    }
+}

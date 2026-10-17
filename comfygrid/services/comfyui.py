@@ -349,8 +349,11 @@ class ComfyUIService:
 
     async def exit(self):
         await self._set_monitor(None)
+        was_started = self.started
         self.started = False
         self.url = None
+        if was_started:
+            await self._broadcast_status(False)
         proc = self.proc
         self.proc = None
         if proc is None:

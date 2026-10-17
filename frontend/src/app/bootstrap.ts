@@ -52,6 +52,9 @@ if (import.meta.hot) {
 
 const comfyUiHealthCheck = new ComfyUIHealthCheckService();
 comfyUiHealthCheck.connect();
+if (import.meta.hot) {
+    import.meta.hot.dispose(() => comfyUiHealthCheck.close());
+}
 
 setupCustomNodeApi();
 
