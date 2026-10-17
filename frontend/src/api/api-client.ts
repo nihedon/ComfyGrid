@@ -95,6 +95,24 @@ class ComfyGridApiClient {
         });
     }
 
+    async fetchWorkflowUrl(url: string): Promise<ApiResult & { file?: File }> {
+        try {
+            const response = await fetch('/comfygrid/api/workflow/import-url', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ url }),
+                signal: AbortSignal.timeout(40_000),
+            });
+            if (!response.ok) return { ok: false, status: response.status };
+            const filename = decodeURIComponent(response.headers.get('X-ComfyGrid-Filename') ?? 'workflow.json');
+            const blob = await response.blob();
+            return { ok: true, status: response.status, file: new File([blob], filename, { type: blob.type }) };
+        } catch (error) {
+            logger.error('Failed to fetch remote workflow:', error);
+            return { ok: false, status: 0 };
+        }
+    }
+
     private encodePath(path: string): string {
         return path.split('/').map(encodeURIComponent).join('/');
     }

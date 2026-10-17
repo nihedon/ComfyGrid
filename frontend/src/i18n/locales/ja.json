@@ -235,6 +235,8 @@
     "gallery.send_to_image_info": "Image Infoに送信",
     "imageinfo.send_to_comfyui": "ComfyUIに転送",
     "toast.metadata_load_failed": "メタデータの取得に失敗しました",
+    "workflow.paste.confirm": "貼り付けた内容をワークフローとして読み込みますか？",
+    "toast.workflow_url_load_failed": "URLからワークフローを取得できませんでした",
     "toast.unsupported_file_type": "サポートされていないファイル形式です",
     "toast.no_workflow_found": "ファイルにワークフロー情報が含まれていません",
     "toast.workflow_applied": "ComfyUIにワークフローを反映しました",

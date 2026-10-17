@@ -13,6 +13,7 @@ from comfygrid.api.routes.setup import router as setup_router
 from comfygrid.api.routes.system import router as system_router
 from comfygrid.api.routes.websocket import router as ws_router
 from comfygrid.api.routes.workflows import router as workflows_router
+from comfygrid.api.routes.workflow_import import router as workflow_import_router
 
 
 def create_api_router() -> APIRouter:
@@ -28,6 +29,7 @@ def create_api_router() -> APIRouter:
     router.include_router(jobs_router, prefix="/api", tags=["jobs"])
     router.include_router(llm_router, prefix="/api", tags=["llm"])
     router.include_router(workflows_router, prefix="/api", tags=["workflows"])
+    router.include_router(workflow_import_router, prefix="/api", tags=["workflows"])
     router.include_router(setup_router, prefix="/api/setup", tags=["setup"])
     router.include_router(ws_router, prefix="/ws", tags=["ws"])
     return router

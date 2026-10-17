@@ -25,6 +25,7 @@
   import { loadExtensions } from '@/services/extension-service';
   import { ensureAllModels } from '@/services/models-service';
   import { loadOpts } from '@/services/options-service';
+  import { handleWorkflowPaste } from '@/services/workflow-paste-service';
   import { appState } from '@/states/app-state.svelte';
   import type { DropdownFormInfo } from '@/states/option-state.svelte';
   import type { ComfyApp } from '@/types/comfy-model';
@@ -212,6 +213,7 @@
   }
 
   onMount(async () => {
+    window.addEventListener('paste', handleWorkflowPaste);
     window.addEventListener('comfygrid:open_setup', handleOpenSetup);
     window.addEventListener('comfygrid:graph_ready', handleGraphReady);
     launched = false;
@@ -224,6 +226,7 @@
   });
 
   onDestroy(() => {
+    window.removeEventListener('paste', handleWorkflowPaste);
     cancelComfyUiTransition();
     window.removeEventListener('comfygrid:open_setup', handleOpenSetup);
     window.removeEventListener('comfygrid:graph_ready', handleGraphReady);
