@@ -86,7 +86,7 @@ class ComfyGridApiClient {
         return await fetchApiJson('/comfygrid/api/version_info');
     }
 
-    async postImageInfo(file: File): Promise<ApiResultJson<{ metadata?: string; prompt?: string; workflow?: string; comfygrid?: string }>> {
+    async postImageInfo(file: File): Promise<ApiResultJson<{ metadata?: string; prompt?: string; workflow?: string; comfygrid?: string } | null>> {
         const formData = new FormData();
         formData.append('file', file);
         return await fetchApiJson('/comfygrid/api/image_info', {

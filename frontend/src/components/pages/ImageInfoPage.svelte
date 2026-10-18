@@ -10,6 +10,8 @@
 
   const uiState = appState.uiState;
   const toastState = appState.toastState;
+  let loadRequestId = 0;
+  let destroyed = false;
 
   $effect(() => {
     if (uiState.fileToOpenInImageInfo) {
@@ -20,8 +22,10 @@
   });
 
   onDestroy(() => {
+    destroyed = true;
     if (imageSrc) {
       URL.revokeObjectURL(imageSrc);
+      imageSrc = null;
     }
   });
 
@@ -47,19 +51,26 @@
   }
 
   async function openFile(file: File, extraMetadata?: Record<string, string> | null) {
-    currentFileName = file.name.toLowerCase();
+    if (!file || destroyed) return;
+    const requestId = ++loadRequestId;
     currentWorkflowJson = null;
 
-    const formData = new FormData();
-    formData.append('file', file);
-
-    const res = await comfyGridApiClient.postImageInfo(file);
+    let res: Awaited<ReturnType<typeof comfyGridApiClient.postImageInfo>>;
+    try {
+      res = await comfyGridApiClient.postImageInfo(file);
+    } catch (error) {
+      if (destroyed || requestId !== loadRequestId) return;
+      logger.error('Failed to read image metadata', error);
+      res = { ok: false, status: 0, json: null };
+    }
+    if (destroyed || requestId !== loadRequestId) return;
+    const data = res.json;
     let json: { [key: string]: unknown } = {};
 
-    if (res.ok) {
-      if (res.json.metadata) {
+    if (res.ok && data) {
+      if (data.metadata) {
         // Not a ComfyUI format
-        let [positivePrompt, tmp] = res.json.metadata.split('\nNegative prompt:');
+        let [positivePrompt, tmp] = data.metadata.split('\nNegative prompt:');
         let [negativePrompt, options] = tmp?.split('\nSteps:') || ['', ''];
         if (options) {
           options = 'Steps:' + options;
@@ -72,24 +83,24 @@
           metadataJson = { positive: positivePrompt?.trim(), negative: negativePrompt?.trim() };
         }
       } else {
-        if (res.json.prompt) {
+        if (data.prompt) {
           try {
-            json.prompt = JSON.parse(res.json.prompt);
+            json.prompt = JSON.parse(data.prompt);
           } catch (e) {
             logger.error('Failed to parse prompt JSON', e);
           }
         }
-        if (res.json.workflow) {
+        if (data.workflow) {
           try {
-            currentWorkflowJson = JSON.parse(res.json.workflow);
+            currentWorkflowJson = JSON.parse(data.workflow);
             json.workflow = currentWorkflowJson;
           } catch (e) {
             logger.error('Failed to parse workflow JSON', e);
           }
         }
-        if (res.json.comfygrid) {
+        if (data.comfygrid) {
           try {
-            json.comfygrid = JSON.parse(res.json.comfygrid);
+            json.comfygrid = JSON.parse(data.comfygrid);
           } catch (e) {
             logger.error('Failed to parse comfygrid JSON', e);
           }
@@ -124,14 +135,16 @@
       metadataJson = json;
     }
 
-    if (!res.ok && !extraMetadata) {
+    if ((!res.ok || !data) && !extraMetadata) {
       metadataJson = { error: 'No recognizable prompt metadata found.' };
     }
 
+    const nextImageSrc = URL.createObjectURL(file);
     if (imageSrc) {
       URL.revokeObjectURL(imageSrc);
     }
-    imageSrc = URL.createObjectURL(file);
+    currentFileName = file.name.toLowerCase();
+    imageSrc = nextImageSrc;
   }
 
   function parseCustomString(input: string) {
