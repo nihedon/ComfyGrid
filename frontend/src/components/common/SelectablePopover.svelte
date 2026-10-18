@@ -1,6 +1,10 @@
 <script lang="ts">
   import * as bootstrap from 'bootstrap';
 
+  type TransitionPopover = bootstrap.Popover & {
+    _queueCallback: (callback: () => void, element: HTMLElement, animated: boolean) => void;
+  };
+
   let {
     triggerElement,
     contentsElement,
@@ -27,7 +31,19 @@
       customClass: customClass,
       placement: placement,
       html: true,
-    });
+    }) as TransitionPopover;
+
+    // Bootstrap 5 leaves transition callbacks pending after dispose().
+    const queueCallback = popover._queueCallback.bind(popover);
+    popover._queueCallback = (callback, element, animated) => {
+      queueCallback(
+        () => {
+          if (!destroyed) callback();
+        },
+        element,
+        animated,
+      );
+    };
 
     const handleDocumentClick = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
