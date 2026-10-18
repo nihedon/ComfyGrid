@@ -18,6 +18,7 @@
   import { t } from '@/i18n/i18n';
   import { SetupProfiles } from '@/states/setup-profiles.svelte';
   import type { MenuEntry } from '@/types/menu';
+  import AppLogo from './AppLogo.svelte';
   import AppMenu from './AppMenu.svelte';
 
   let { onLaunched }: { onLaunched: () => void } = $props();
@@ -149,7 +150,7 @@
   <section class="setup-shell" aria-label={$t('setup.title')}>
     <header class="setup-header">
       <div class="d-flex align-items-center gap-2">
-        <img src={`${import.meta.env.BASE_URL}icon.ico`} width="23" height="23" alt="" />
+        <AppLogo size={23} />
         <h1>ComfyGrid</h1>
         <span class="text-body-secondary">{$t('setup.title')}</span>
       </div>
