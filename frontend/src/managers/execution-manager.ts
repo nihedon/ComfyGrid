@@ -162,6 +162,22 @@ class ExecutionManager {
         appState.executionState.progress.status = 'interrupted';
     }
 
+    handleQueueDeleted(jobIds: string[]) {
+        const executionState = appState.executionState;
+        for (const jobId of jobIds) {
+            // Execution events may arrive before the queue API response.
+            if (jobId === executionState.processingJobId || appState.galleryState.isJobCompleted(jobId)) continue;
+            executionState.deleteQueueJobId(jobId);
+            executionState.progress.deleteNodeSet(jobId);
+            executionState.progress.deleteExecutedNodeSet(jobId);
+            gallerySession.trackFinished(jobId);
+            this.#removeJob(jobId);
+        }
+        if (executionState.queueJobIds.size === 0 && !executionState.processingJobId) {
+            this.handleTaskFinished();
+        }
+    }
+
     handleExecuting(payload: { jobId: string; nodeIds: string[]; nodeNames: Record<string, string> }) {
         const { jobId, nodeIds, nodeNames } = payload;
 

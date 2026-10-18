@@ -1,5 +1,6 @@
 import { SvelteMap, SvelteSet } from 'svelte/reactivity';
 import { comfyUiApiClient } from '@/api/api-client';
+import { executionManager } from '@/managers/execution-manager';
 import { appState } from './app-state.svelte';
 
 type Status = 'processing' | 'error' | 'interrupted' | null;
@@ -205,27 +206,16 @@ class ExecutionState {
         comfyUiApiClient.interrupt();
     }
 
-    deleteQueue(jobId: string) {
-        this.#progress.deleteNodeSet(jobId);
-        this.#progress.deleteExecutedNodeSet(jobId);
-        comfyUiApiClient.deleteQueues([jobId]);
+    async deleteQueue(jobId: string) {
+        if (jobId === this.#processingJobId || !this.#queueJobIds.has(jobId)) return;
+        const res = await comfyUiApiClient.deleteQueues([jobId]);
+        if (res.ok) executionManager.handleQueueDeleted([jobId]);
     }
 
-    clearQueue() {
-        if (this.#queueJobIds.size > 0) {
-            const [jobId, owner] = this.#queueJobIds.entries().next().value;
-            this.#queueJobIds.clear();
-            this.#queueJobIds.set(jobId, owner);
-            const jobIds = this.#progress.nodeSet.keys();
-            for (const jobId of jobIds) {
-                if (jobId === this.#processingJobId) {
-                    continue;
-                }
-                this.#progress.deleteNodeSet(jobId);
-                this.#progress.deleteExecutedNodeSet(jobId);
-            }
-        }
-        comfyUiApiClient.clearQueues();
+    async clearQueue() {
+        const jobIds = [...this.#queueJobIds.keys()].filter((jobId) => jobId !== this.#processingJobId);
+        const res = await comfyUiApiClient.clearQueues();
+        if (res.ok) executionManager.handleQueueDeleted(jobIds);
     }
 }
 
