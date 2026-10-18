@@ -84,6 +84,8 @@ class InpaintModalState {
     }
 
     async savePaint(maskDataUrl: string, imageDataUrl: string) {
+        const baseImage = { ...this.#baseImage };
+        const handleUpload = this.#handleUpload;
         try {
             // Get image blob from data URL (this is the potentially resized image)
             const [maskBlob, imageBlob] = await Promise.all([
@@ -100,7 +102,7 @@ class InpaintModalState {
             ]);
 
             // Prepare filename
-            let filename = this.#baseImage.filename;
+            let filename = baseImage.filename;
             const lastDotIndex = filename.lastIndexOf('.');
             if (lastDotIndex !== -1) {
                 filename = filename.substring(0, lastDotIndex);
@@ -115,11 +117,11 @@ class InpaintModalState {
                 file: { blob: imageBlob, filename: 'original.png' },
                 mask: { blob: maskBlob, filename: 'mask.png' },
                 filename,
-                subfolder: this.#baseImage.subfolder,
+                subfolder: baseImage.subfolder,
             });
 
             if (res.ok && res.json?.message === 'uploaded') {
-                this.handleUpload?.(filename);
+                handleUpload?.(filename);
             }
         } catch (e) {
             logger.error('Failed to apply mask', e);

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { untrack } from 'svelte';
   import {
     BrushCleaning,
     Eraser,
@@ -38,6 +39,8 @@
   let brushSize = $state(40);
   let history = $state<ImageData[]>([]);
   let historyIndex = $state(-1);
+  const MAX_HISTORY_ENTRIES = 50;
+  const MAX_HISTORY_BYTES = 64 * 1024 * 1024;
   let isEraser = $state(false);
 
   let canvasWidth = $state(0);
@@ -60,27 +63,61 @@
   let initialMaskSrc = $state('');
 
   let loading = $state(false);
+  let pendingMaskImage: HTMLImageElement | null = null;
+
+  function cancelMaskLoad() {
+    if (!pendingMaskImage) return;
+    pendingMaskImage.onload = null;
+    pendingMaskImage.onerror = null;
+    pendingMaskImage.src = '';
+    pendingMaskImage = null;
+  }
+
+  function resetPaintData() {
+    cancelMaskLoad();
+    history = [];
+    historyIndex = -1;
+    baseImageSrc = '';
+    initialMaskSrc = '';
+    loading = false;
+    isDrawing = false;
+    isPanning = false;
+    spacePressed = false;
+    canvasWidth = canvasHeight = originalWidth = originalHeight = 0;
+    showResizeModal = false;
+  }
 
   $effect(() => {
-    if (src && !src.startsWith('data:')) {
-      loadPaintData(src);
+    const imageUrl = src;
+    const controller = new AbortController();
+    untrack(resetPaintData);
+    if (imageUrl?.startsWith('data:')) {
+      baseImageSrc = imageUrl;
+    } else if (imageUrl) {
+      void loadPaintData(imageUrl, controller.signal);
     }
+    return () => {
+      controller.abort();
+      untrack(resetPaintData);
+    };
   });
 
-  async function loadPaintData(imageUrl: string) {
+  async function loadPaintData(imageUrl: string, signal: AbortSignal) {
     loading = true;
     try {
-      const response = await fetch(imageUrl);
+      const response = await fetch(imageUrl, { signal });
       const data = await response.json();
+      if (signal.aborted) return;
 
       initialMaskSrc = data.mask;
       baseImageSrc = data.image;
     } catch (e) {
+      if (signal.aborted) return;
       logger.error('Failed to load paint data:', e);
       baseImageSrc = imageUrl;
       initialMaskSrc = '';
     } finally {
-      loading = false;
+      if (!signal.aborted) loading = false;
     }
   }
 
@@ -89,7 +126,9 @@
   }
 
   function handleImageLoad() {
-    if (!imgEl || !canvasEl) return;
+    if (!imgEl || !canvasEl || !baseImageSrc || loading) return;
+
+    cancelMaskLoad();
 
     const ctx = getContext();
     if (!ctx) return;
@@ -128,7 +167,11 @@
 
     if (initialMaskSrc) {
       const maskImg = new Image();
+      pendingMaskImage = maskImg;
       maskImg.onload = () => {
+        if (pendingMaskImage !== maskImg) return;
+        pendingMaskImage = null;
+        maskImg.onload = maskImg.onerror = null;
         const ctx2 = getContext();
         if (!ctx2 || !canvasEl) return;
 
@@ -183,10 +226,17 @@
     const ctx = getContext();
     if (!ctx || !canvasEl) return;
 
-    history = history.slice(0, historyIndex + 1);
-
     const imageData = ctx.getImageData(0, 0, canvasEl.width, canvasEl.height);
-    history = [...history, imageData];
+    const nextHistory = [...history.slice(0, historyIndex + 1), imageData];
+    let historyBytes = nextHistory.reduce((total, item) => total + item.data.byteLength, 0);
+    // Keep the current snapshot even if it alone exceeds the budget.
+    while (
+      nextHistory.length > 1 &&
+      (nextHistory.length > MAX_HISTORY_ENTRIES || historyBytes > MAX_HISTORY_BYTES)
+    ) {
+      historyBytes -= nextHistory.shift()!.data.byteLength;
+    }
+    history = nextHistory;
     historyIndex = history.length - 1;
   }
 
@@ -753,7 +803,7 @@
       >
         <img
           bind:this={imgEl}
-          src={baseImageSrc}
+          src={baseImageSrc || undefined}
           {alt}
           draggable="false"
           onload={handleImageLoad}
