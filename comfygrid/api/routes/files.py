@@ -19,7 +19,7 @@ from pydantic import BaseModel
 from comfygrid.core.paths import resolve_within
 from comfygrid.infrastructure import model_repository
 from comfygrid.infrastructure.cache import delete_thumbnail_cache
-from comfygrid.services import file_service
+from comfygrid.services import comfyui_input_service, file_service
 from comfygrid.services.comfyui import ComfyUIService
 from comfygrid.services.dependencies import get_comfy_service
 
@@ -228,16 +228,20 @@ def apply_mask(
     file: UploadFile = File(...),
     mask: UploadFile = File(...),
     filename: str = Form(...),
-    subfolder: str = Form(...),
+    subfolder: str = Form(""),
     comfy_service: ComfyUIService = Depends(get_comfy_service),
 ):
     if filename is None or filename == "":
         return JSONResponse({"error": "Invalid file name"}, status_code=400)
 
     try:
-        save_dir = Path(comfy_service.comfyui_path, "input", subfolder)
-        save_dir.mkdir(exist_ok=True)
-        file_service.apply_mask(file.file.read(), mask.file.read(), save_dir / filename)
+        save_path = comfyui_input_service.resolve_input_path(comfy_service.comfyui_path, filename, subfolder)
+    except ValueError:
+        return JSONResponse({"error": "Invalid path"}, status_code=400)
+
+    try:
+        save_path.parent.mkdir(parents=True, exist_ok=True)
+        file_service.apply_mask(file.file.read(), mask.file.read(), save_path)
         return {"message": "uploaded"}
     except Exception as e:
         logger.error("Error in apply_mask: %s", e)
