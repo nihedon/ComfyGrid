@@ -22,6 +22,7 @@
     maxWidth = 800,
     maxHeight = 600,
     onMaskExport: handleMaskExport = () => {},
+    saving = false,
   }: {
     src: string;
     alt?: string;
@@ -30,6 +31,7 @@
     maxWidth?: number;
     maxHeight?: number;
     onMaskExport?: (maskDataUrl: string, imageDataUrl: string) => void;
+    saving?: boolean;
   } = $props();
 
   let containerEl = $state<HTMLDivElement>();
@@ -443,6 +445,7 @@
   }
 
   function exportMask() {
+    if (saving) return;
     const ctx = getContext();
     if (!canvasEl || !ctx || !imgEl) return;
 
@@ -793,9 +796,8 @@
     <li class="nav-item">
       <button
         class="btn btn-primary btn-sm d-flex align-items-center gap-1"
-        data-bs-dismiss="modal"
         onclick={exportMask}
-        disabled={loading || !originalWidth || !originalHeight}
+        disabled={saving || loading || !originalWidth || !originalHeight}
         title="Export"
       >
         <Save size={16} />

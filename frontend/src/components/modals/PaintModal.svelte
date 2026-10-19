@@ -1,9 +1,11 @@
 <script lang="ts">
+  import { Modal } from 'bootstrap';
   import { appState } from '@/states/app-state.svelte';
   import PaintWidget from '../widgets/PaintWidget.svelte';
 
   const modalState = appState.inpaintModalState;
   let modalElement = $state<HTMLDivElement>();
+  let saving = $state(false);
 
   $effect(() => {
     const element = modalElement;
@@ -11,16 +13,21 @@
     let closeTimer: ReturnType<typeof setTimeout> | undefined;
     const handleHidden = () => {
       const handleUpload = modalState.handleUpload;
-      // Bootstrap dismisses in capture phase, before Svelte handles Export.
+      // Preserve a newer session opened before the deferred cleanup runs.
       clearTimeout(closeTimer);
       closeTimer = setTimeout(() => {
         closeTimer = undefined;
         if (modalState.handleUpload === handleUpload) close();
       }, 0);
     };
+    const handleHide = (event: Event) => {
+      if (saving) event.preventDefault();
+    };
+    element.addEventListener('hide.bs.modal', handleHide);
     element.addEventListener('hidden.bs.modal', handleHidden);
     return () => {
       clearTimeout(closeTimer);
+      element.removeEventListener('hide.bs.modal', handleHide);
       element.removeEventListener('hidden.bs.modal', handleHidden);
     };
   });
@@ -29,12 +36,29 @@
     modalState.closePaintModal();
   }
 
-  function handleMaskExport(maskDataUrl: string, imageDataUrl: string) {
-    void modalState.savePaint(maskDataUrl, imageDataUrl);
+  async function handleMaskExport(maskDataUrl: string, imageDataUrl: string) {
+    if (saving) return;
+    saving = true;
+    const handleUpload = modalState.handleUpload;
+    const baseImage = modalState.baseImage;
+    try {
+      const saved = await modalState.savePaint(maskDataUrl, imageDataUrl);
+      saving = false;
+      if (
+        saved &&
+        modalState.handleUpload === handleUpload &&
+        modalState.baseImage === baseImage &&
+        modalElement?.isConnected
+      ) {
+        Modal.getInstance(modalElement)?.hide();
+      }
+    } finally {
+      saving = false;
+    }
   }
 
   function handleBackdropClick(e: MouseEvent) {
-    if (e.target === e.currentTarget) {
+    if (!saving && e.target === e.currentTarget) {
       close();
     }
   }
@@ -58,6 +82,7 @@
             alt="Paint Modal Image"
             maxWidth={800}
             maxHeight={600}
+            {saving}
             onMaskExport={handleMaskExport}
           />
         {/if}

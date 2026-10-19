@@ -127,6 +127,7 @@ class InpaintModalState {
                 throw new Error(res.json?.error || (res.ok ? 'Unexpected image save response' : `HTTP ${res.status}`));
             }
             handleUpload?.(filename);
+            return true;
         } catch (e) {
             logger.error('Failed to apply mask', e);
             const reason = e instanceof Error ? e.message : String(e);
@@ -134,6 +135,7 @@ class InpaintModalState {
                 type: 'error',
                 message: get(t)('toast.paint_save_failed', { reason }, `Failed to save the edited image: ${reason}`),
             });
+            return false;
         }
     }
 
