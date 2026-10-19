@@ -2,6 +2,7 @@
 @use 'gridstack/dist/gridstack.min.css';
 @use 'lucide-static/font/lucide.css';
 @use './menus';
+@use './buttons';
 
 @layer base, utilities, components;
 

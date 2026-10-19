@@ -1,0 +1,49 @@
+// Keep these overrides unlayered to match the imported Bootstrap CSS.
+:root,
+[data-bs-theme='light'] {
+    --cg-secondary-color: #343a40;
+    --cg-secondary-bg: #eef0f2;
+    --cg-secondary-border: #a4adb8;
+    --cg-secondary-hover-bg: #e0e4e9;
+    --cg-secondary-hover-border: #8995a3;
+    --cg-secondary-active-bg: #c8d0da;
+    --cg-secondary-active-border: #738191;
+    --cg-secondary-focus-rgb: 92, 105, 120;
+}
+
+[data-bs-theme='dark'] {
+    --cg-secondary-color: #edf0f3;
+    --cg-secondary-bg: #383d44;
+    --cg-secondary-border: #727c89;
+    --cg-secondary-hover-bg: #474e58;
+    --cg-secondary-hover-border: #8995a5;
+    --cg-secondary-active-bg: #596473;
+    --cg-secondary-active-border: #a2adbb;
+    --cg-secondary-focus-rgb: 173, 186, 203;
+}
+
+.btn-secondary,
+.btn-outline-secondary {
+    --bs-btn-color: var(--cg-secondary-color);
+    --bs-btn-border-color: var(--cg-secondary-border);
+    --bs-btn-hover-color: var(--cg-secondary-color);
+    --bs-btn-hover-bg: var(--cg-secondary-hover-bg);
+    --bs-btn-hover-border-color: var(--cg-secondary-hover-border);
+    --bs-btn-focus-shadow-rgb: var(--cg-secondary-focus-rgb);
+    --bs-btn-active-color: var(--cg-secondary-color);
+    --bs-btn-active-bg: var(--cg-secondary-active-bg);
+    --bs-btn-active-border-color: var(--cg-secondary-active-border);
+    --bs-btn-disabled-color: var(--cg-secondary-color);
+    --bs-btn-disabled-border-color: var(--cg-secondary-border);
+    --bs-btn-disabled-opacity: 0.55;
+}
+
+.btn-secondary {
+    --bs-btn-bg: var(--cg-secondary-bg);
+    --bs-btn-disabled-bg: var(--cg-secondary-bg);
+}
+
+.btn-outline-secondary {
+    --bs-btn-bg: transparent;
+    --bs-btn-disabled-bg: transparent;
+}
