@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { untrack } from 'svelte';
+  import { flushSync, untrack } from 'svelte';
   import {
     BrushCleaning,
     Eraser,
@@ -11,7 +11,10 @@
     ZoomIn,
     ZoomOut,
   } from '@lucide/svelte';
+  import { get } from 'svelte/store';
   import { comfyGridApiClient } from '@/api/api-client';
+  import { t } from '@/i18n/i18n';
+  import { toastState } from '@/states/toast-state.svelte';
   import logger from '@/utils/logger';
 
   let {
@@ -40,7 +43,8 @@
 
   let isDrawing = $state(false);
   let brushSize = $state(40);
-  let history = $state<ImageData[]>([]);
+  type PaintSnapshot = { mask: ImageData; imageSrc: string; width: number; height: number };
+  let history = $state<PaintSnapshot[]>([]);
   let historyIndex = $state(-1);
   const MAX_HISTORY_ENTRIES = 50;
   const MAX_HISTORY_BYTES = 64 * 1024 * 1024;
@@ -66,6 +70,22 @@
   let initialMaskSrc = $state('');
 
   let loading = $state(false);
+  let imageLoading = $state(false);
+  let maskLoading = $state(false);
+  let loadFailed = $state(false);
+  const displayScale = $derived(
+    Math.min(1, maxWidth / (canvasWidth || 1), maxHeight / (canvasHeight || 1)),
+  );
+  const editingDisabled = $derived(
+    saving ||
+      loading ||
+      imageLoading ||
+      maskLoading ||
+      loadFailed ||
+      !originalWidth ||
+      !originalHeight,
+  );
+  let preparedImageSrc = '';
   let pendingMaskImage: HTMLImageElement | null = null;
 
   function cancelMaskLoad() {
@@ -82,6 +102,10 @@
     historyIndex = -1;
     baseImageSrc = '';
     initialMaskSrc = '';
+    preparedImageSrc = '';
+    imageLoading = false;
+    maskLoading = false;
+    loadFailed = false;
     loading = false;
     isDrawing = false;
     isPanning = false;
@@ -94,9 +118,7 @@
     const imageUrl = src;
     const controller = new AbortController();
     untrack(resetPaintData);
-    if (imageUrl?.startsWith('data:')) {
-      baseImageSrc = imageUrl;
-    } else if (imageUrl) {
+    if (imageUrl) {
       void loadPaintData(imageUrl, controller.signal);
     }
     return () => {
@@ -104,6 +126,35 @@
       untrack(resetPaintData);
     };
   });
+
+  function reportError(
+    key: 'toast.paint_load_failed' | 'toast.paint_save_failed' | 'toast.paint_edit_failed',
+    error: unknown,
+  ) {
+    const reason = error instanceof Error ? error.message : String(error);
+    logger.error(reason, error);
+    toastState.addToast({ type: 'error', message: get(t)(key, { reason }) });
+  }
+
+  function failLoad(error: unknown) {
+    if (loadFailed) return;
+    cancelMaskLoad();
+    maskLoading = imageLoading = false;
+    loadFailed = true;
+    reportError('toast.paint_load_failed', error);
+  }
+
+  function isEditable() {
+    return (
+      !saving &&
+      !loading &&
+      !imageLoading &&
+      !maskLoading &&
+      !loadFailed &&
+      originalWidth > 0 &&
+      originalHeight > 0
+    );
+  }
 
   async function loadPaintData(imageUrl: string, signal: AbortSignal) {
     loading = true;
@@ -135,103 +186,113 @@
       baseImageSrc = data.image;
     } catch (e) {
       if (signal.aborted) return;
-      logger.error('Failed to load paint data:', e);
-      baseImageSrc = imageUrl;
-      initialMaskSrc = '';
+      failLoad(e);
     } finally {
       if (!signal.aborted) loading = false;
     }
   }
 
   function getContext(): CanvasRenderingContext2D | null {
-    return canvasEl?.getContext('2d') ?? null;
+    return canvasEl?.getContext('2d', { willReadFrequently: true }) ?? null;
   }
 
   function handleImageLoad() {
     if (!imgEl || !canvasEl || !baseImageSrc || loading) return;
+    imageLoading = false;
+    // Resize and history restoration already supplied the matching mask and dimensions.
+    if (preparedImageSrc === baseImageSrc) return;
 
     cancelMaskLoad();
 
-    const ctx = getContext();
-    if (!ctx) return;
+    try {
+      const ctx = getContext();
+      if (!ctx) throw new Error('Unable to create the paint canvas');
 
-    const naturalWidth = imgEl.naturalWidth;
-    const naturalHeight = imgEl.naturalHeight;
+      const naturalWidth = imgEl.naturalWidth;
+      const naturalHeight = imgEl.naturalHeight;
 
-    // Store actual image dimensions
-    originalWidth = naturalWidth;
-    originalHeight = naturalHeight;
+      // Store actual image dimensions
+      originalWidth = naturalWidth;
+      originalHeight = naturalHeight;
 
-    // Calculate display size (scaled to fit within maxWidth/maxHeight)
-    let displayWidth = naturalWidth;
-    let displayHeight = naturalHeight;
+      // Store the mask at image resolution; only its CSS presentation is scaled.
+      flushSync(() => {
+        canvasWidth = naturalWidth;
+        canvasHeight = naturalHeight;
+      });
+      canvasEl.width = naturalWidth;
+      canvasEl.height = naturalHeight;
+      ctx.clearRect(0, 0, naturalWidth, naturalHeight);
 
-    if (displayWidth > maxWidth) {
-      displayHeight = (displayHeight * maxWidth) / displayWidth;
-      displayWidth = maxWidth;
-    }
-    if (displayHeight > maxHeight) {
-      displayWidth = (displayWidth * maxHeight) / displayHeight;
-      displayHeight = maxHeight;
-    }
-
-    // Ensure integer values for canvas dimensions
-    displayWidth = Math.round(displayWidth);
-    displayHeight = Math.round(displayHeight);
-
-    canvasWidth = displayWidth;
-    canvasHeight = displayHeight;
-
-    canvasEl.width = displayWidth;
-    canvasEl.height = displayHeight;
-
-    ctx.clearRect(0, 0, displayWidth, displayHeight);
-
-    if (initialMaskSrc) {
-      const maskImg = new Image();
-      pendingMaskImage = maskImg;
-      maskImg.onload = () => {
-        if (pendingMaskImage !== maskImg) return;
-        pendingMaskImage = null;
-        maskImg.onload = maskImg.onerror = null;
-        const ctx2 = getContext();
-        if (!ctx2 || !canvasEl) return;
-
-        // Draw mask image to temporary canvas to get ImageData
-        const tempCanvas = document.createElement('canvas');
-        tempCanvas.width = canvasEl.width;
-        tempCanvas.height = canvasEl.height;
-        const tempCtx = tempCanvas.getContext('2d');
-        if (!tempCtx) return;
-
-        tempCtx.drawImage(maskImg, 0, 0, canvasEl.width, canvasEl.height);
-        const maskData = tempCtx.getImageData(0, 0, canvasEl.width, canvasEl.height);
-
-        // Draw white parts of mask (transparent areas) in black
-        const canvasData = ctx2.createImageData(canvasEl.width, canvasEl.height);
-        for (let i = 0; i < maskData.data.length; i += 4) {
-          const maskValue = maskData.data[i]; // Only check R since it's grayscale
-          if (maskValue > 0) {
-            // White parts of mask -> draw in black
-            canvasData.data[i] = 0; // R
-            canvasData.data[i + 1] = 0; // G
-            canvasData.data[i + 2] = 0; // B
-            canvasData.data[i + 3] = maskValue; // A (based on mask intensity)
+      if (initialMaskSrc) {
+        const maskImg = new Image();
+        maskLoading = true;
+        pendingMaskImage = maskImg;
+        maskImg.onload = () => {
+          if (pendingMaskImage !== maskImg) return;
+          pendingMaskImage = null;
+          maskImg.onload = maskImg.onerror = null;
+          const ctx2 = getContext();
+          if (!ctx2 || !canvasEl) {
+            failLoad(new Error('Unable to create the paint canvas'));
+            return;
           }
-        }
-        ctx2.putImageData(canvasData, 0, 0);
 
+          try {
+            if (
+              maskImg.naturalWidth !== canvasEl.width ||
+              maskImg.naturalHeight !== canvasEl.height
+            ) {
+              throw new Error('Mask dimensions do not match the image');
+            }
+            // Draw mask image to temporary canvas to get ImageData
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = canvasEl.width;
+            tempCanvas.height = canvasEl.height;
+            const tempCtx = tempCanvas.getContext('2d');
+            if (!tempCtx) throw new Error('Unable to create mask canvas');
+
+            tempCtx.drawImage(maskImg, 0, 0, canvasEl.width, canvasEl.height);
+            const maskData = tempCtx.getImageData(0, 0, canvasEl.width, canvasEl.height);
+
+            // Draw white parts of mask (transparent areas) in black
+            const canvasData = ctx2.createImageData(canvasEl.width, canvasEl.height);
+            for (let i = 0; i < maskData.data.length; i += 4) {
+              const maskValue = maskData.data[i]; // Only check R since it's grayscale
+              if (maskValue > 0) {
+                // White parts of mask -> draw in black
+                canvasData.data[i] = 0; // R
+                canvasData.data[i + 1] = 0; // G
+                canvasData.data[i + 2] = 0; // B
+                canvasData.data[i + 3] = maskValue; // A (based on mask intensity)
+              }
+            }
+            ctx2.putImageData(canvasData, 0, 0);
+
+            history = [];
+            historyIndex = -1;
+            saveToHistory();
+            centerCanvas();
+            preparedImageSrc = baseImageSrc;
+            initialMaskSrc = '';
+            maskLoading = false;
+          } catch (error) {
+            failLoad(error);
+          }
+        };
+        maskImg.onerror = () => {
+          if (pendingMaskImage === maskImg) failLoad(new Error('Unable to decode the paint mask'));
+        };
+        maskImg.src = initialMaskSrc;
+      } else {
         history = [];
         historyIndex = -1;
         saveToHistory();
         centerCanvas();
-      };
-      maskImg.src = initialMaskSrc;
-    } else {
-      history = [];
-      historyIndex = -1;
-      saveToHistory();
-      centerCanvas();
+        preparedImageSrc = baseImageSrc;
+      }
+    } catch (error) {
+      failLoad(error);
     }
   }
 
@@ -239,8 +300,9 @@
     // Center the canvas/image in the container
     if (!containerEl) return;
     const containerRect = containerEl.getBoundingClientRect();
-    offsetX = Math.round((containerRect.width - canvasWidth) / 2);
-    offsetY = Math.round((containerRect.height - canvasHeight) / 2);
+    const ratio = Math.min(1, maxWidth / (canvasWidth || 1), maxHeight / (canvasHeight || 1));
+    offsetX = Math.round((containerRect.width - canvasWidth * ratio) / 2);
+    offsetY = Math.round((containerRect.height - canvasHeight * ratio) / 2);
     scale = 1;
   }
 
@@ -249,36 +311,78 @@
     if (!ctx || !canvasEl) return;
 
     const imageData = ctx.getImageData(0, 0, canvasEl.width, canvasEl.height);
-    const nextHistory = [...history.slice(0, historyIndex + 1), imageData];
-    let historyBytes = nextHistory.reduce((total, item) => total + item.data.byteLength, 0);
+    const nextHistory = [
+      ...history.slice(0, historyIndex + 1),
+      {
+        mask: imageData,
+        imageSrc: baseImageSrc,
+        width: originalWidth,
+        height: originalHeight,
+      },
+    ];
+    // This map only counts retained buffers during one history update.
+    // eslint-disable-next-line svelte/prefer-svelte-reactivity
+    const imageSources = new Map<string, number>();
+    let historyBytes = 0;
+    for (const item of nextHistory) {
+      historyBytes += item.mask.data.byteLength;
+      if (!imageSources.has(item.imageSrc)) historyBytes += item.imageSrc.length * 2;
+      imageSources.set(item.imageSrc, (imageSources.get(item.imageSrc) ?? 0) + 1);
+    }
     // Keep the current snapshot even if it alone exceeds the budget.
     while (
       nextHistory.length > 1 &&
       (nextHistory.length > MAX_HISTORY_ENTRIES || historyBytes > MAX_HISTORY_BYTES)
     ) {
-      historyBytes -= nextHistory.shift()!.data.byteLength;
+      const removed = nextHistory.shift()!;
+      historyBytes -= removed.mask.data.byteLength;
+      const references = imageSources.get(removed.imageSrc)! - 1;
+      imageSources.set(removed.imageSrc, references);
+      if (!references) historyBytes -= removed.imageSrc.length * 2;
     }
     history = nextHistory;
     historyIndex = history.length - 1;
   }
 
-  function undo() {
+  function setPreparedImage(imageSrc: string) {
+    preparedImageSrc = imageSrc;
+    if (baseImageSrc !== imageSrc) imageLoading = true;
+    baseImageSrc = imageSrc;
+  }
+
+  function restoreSnapshot(snapshot: PaintSnapshot) {
     const ctx = getContext();
-    if (historyIndex > 0 && ctx && canvasEl) {
+    if (!canvasEl || !ctx) return;
+    const resized = originalWidth !== snapshot.width || originalHeight !== snapshot.height;
+    originalWidth = snapshot.width;
+    originalHeight = snapshot.height;
+    flushSync(() => {
+      canvasWidth = snapshot.mask.width;
+      canvasHeight = snapshot.mask.height;
+    });
+    canvasEl.width = snapshot.mask.width;
+    canvasEl.height = snapshot.mask.height;
+    ctx.putImageData(snapshot.mask, 0, 0);
+    setPreparedImage(snapshot.imageSrc);
+    if (resized) centerCanvas();
+  }
+
+  function undo() {
+    if (isEditable() && historyIndex > 0 && canvasEl) {
       historyIndex--;
-      ctx.putImageData(history[historyIndex], 0, 0);
+      restoreSnapshot(history[historyIndex]);
     }
   }
 
   function redo() {
-    const ctx = getContext();
-    if (historyIndex < history.length - 1 && ctx && canvasEl) {
+    if (isEditable() && historyIndex < history.length - 1 && canvasEl) {
       historyIndex++;
-      ctx.putImageData(history[historyIndex], 0, 0);
+      restoreSnapshot(history[historyIndex]);
     }
   }
 
   function clearCanvas() {
+    if (!isEditable()) return;
     const ctx = getContext();
     if (!ctx || !canvasEl) return;
     ctx.clearRect(0, 0, canvasEl.width, canvasEl.height);
@@ -289,29 +393,19 @@
     isEraser = !isEraser;
   }
 
-  function getPointerPos(e: MouseEvent | TouchEvent): { x: number; y: number } | null {
+  function getPointerPos(e: PointerEvent): { x: number; y: number } | null {
     if (!containerEl) return null;
 
     // Use container rect instead of canvas rect since canvas has transform applied
     const rect = containerEl.getBoundingClientRect();
-    let clientX: number, clientY: number;
-
-    if ('touches' in e) {
-      if (e.touches.length === 0) return null;
-      clientX = e.touches[0].clientX;
-      clientY = e.touches[0].clientY;
-    } else {
-      clientX = e.clientX;
-      clientY = e.clientY;
-    }
-
     // Get coordinates relative to container
-    const containerX = clientX - rect.left;
-    const containerY = clientY - rect.top;
+    const containerX = e.clientX - rect.left;
+    const containerY = e.clientY - rect.top;
 
     // Convert to canvas coordinates by reversing the transform
-    const x = (containerX - offsetX) / scale;
-    const y = (containerY - offsetY) / scale;
+    const ratio = Math.min(1, maxWidth / (canvasWidth || 1), maxHeight / (canvasHeight || 1));
+    const x = (containerX - offsetX) / (scale * ratio);
+    const y = (containerY - offsetY) / (scale * ratio);
 
     return { x, y };
   }
@@ -359,9 +453,7 @@
   }
 
   function resetView() {
-    scale = 1;
-    offsetX = 0;
-    offsetY = 0;
+    centerCanvas();
   }
 
   function zoomIn() {
@@ -387,13 +479,18 @@
     }
   }
 
-  function startDrawing(e: MouseEvent | TouchEvent) {
+  function startDrawing(e: PointerEvent) {
+    if (!isEditable()) return;
+    if (!e.isPrimary) {
+      stopDrawing();
+      return;
+    }
+    if (e.button !== 0 && e.button !== 1) return;
+    if (e.isTrusted) canvasEl?.setPointerCapture(e.pointerId);
     // Check if we should pan instead of draw
-    if (e instanceof MouseEvent) {
-      if (spacePressed || e.button === 1) {
-        startPan(e);
-        return;
-      }
+    if (spacePressed || e.button === 1) {
+      startPan(e);
+      return;
     }
 
     const ctx = getContext();
@@ -401,18 +498,30 @@
     if (!pos || !ctx) return;
 
     isDrawing = true;
+    containerEl?.focus({ preventScroll: true });
+    const ratio = Math.min(1, maxWidth / (canvasWidth || 1), maxHeight / (canvasHeight || 1));
+    ctx.globalCompositeOperation = isEraser ? 'destination-out' : 'source-over';
+    ctx.fillStyle = 'black';
+    ctx.beginPath();
+    ctx.arc(pos.x, pos.y, getBrushSize() / ratio / 2, 0, Math.PI * 2);
+    ctx.fill();
     ctx.beginPath();
     ctx.moveTo(pos.x, pos.y);
   }
 
-  function draw(e: MouseEvent | TouchEvent) {
+  function draw(e: PointerEvent) {
+    if (!e.isPrimary) {
+      stopDrawing();
+      return;
+    }
     const ctx = getContext();
-    if (!isDrawing || !ctx) return;
+    if (!isEditable() || !isDrawing || !ctx) return;
 
     const pos = getPointerPos(e);
     if (!pos) return;
 
-    ctx.lineWidth = brushSize;
+    const ratio = Math.min(1, maxWidth / (canvasWidth || 1), maxHeight / (canvasHeight || 1));
+    ctx.lineWidth = getBrushSize() / ratio;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
 
@@ -445,60 +554,46 @@
   }
 
   function exportMask() {
-    if (saving) return;
-    const ctx = getContext();
-    if (!canvasEl || !ctx || !imgEl) return;
+    if (!isEditable()) return;
+    stopDrawing();
+    try {
+      const ctx = getContext();
+      if (!canvasEl || !ctx || !imgEl) return;
 
-    // Create mask at actual image size (not display size)
-    const maskCanvas = document.createElement('canvas');
-    maskCanvas.width = originalWidth;
-    maskCanvas.height = originalHeight;
-    const maskCtx = maskCanvas.getContext('2d');
+      // Export alpha as grayscale without thresholding or resampling.
+      const maskCanvas = document.createElement('canvas');
+      maskCanvas.width = originalWidth;
+      maskCanvas.height = originalHeight;
+      const maskCtx = maskCanvas.getContext('2d');
 
-    if (!maskCtx) return;
+      if (!maskCtx) throw new Error('Unable to create the export canvas');
+      const displayImageData = ctx.getImageData(0, 0, canvasEl.width, canvasEl.height);
+      const displayMaskImageData = maskCtx.createImageData(canvasEl.width, canvasEl.height);
 
-    // Fill background with black
-    maskCtx.fillStyle = 'black';
-    maskCtx.fillRect(0, 0, maskCanvas.width, maskCanvas.height);
-
-    // Scale up the display canvas mask to actual size
-    const displayMaskCanvas = document.createElement('canvas');
-    displayMaskCanvas.width = canvasEl.width;
-    displayMaskCanvas.height = canvasEl.height;
-    const displayMaskCtx = displayMaskCanvas.getContext('2d');
-    if (!displayMaskCtx) return;
-
-    // Get display canvas content and draw to display mask canvas
-    const displayImageData = ctx.getImageData(0, 0, canvasEl.width, canvasEl.height);
-    const displayMaskImageData = displayMaskCtx.createImageData(canvasEl.width, canvasEl.height);
-
-    // Convert drawn parts to white
-    for (let i = 0; i < displayImageData.data.length; i += 4) {
-      const alpha = displayImageData.data[i + 3];
-      if (alpha > 10) {
-        displayMaskImageData.data[i] = 255; // R
-        displayMaskImageData.data[i + 1] = 255; // G
-        displayMaskImageData.data[i + 2] = 255; // B
+      for (let i = 0; i < displayImageData.data.length; i += 4) {
+        const alpha = displayImageData.data[i + 3];
+        displayMaskImageData.data[i] = alpha; // R
+        displayMaskImageData.data[i + 1] = alpha; // G
+        displayMaskImageData.data[i + 2] = alpha; // B
         displayMaskImageData.data[i + 3] = 255; // A
       }
+      maskCtx.putImageData(displayMaskImageData, 0, 0);
+
+      const maskDataUrl = maskCanvas.toDataURL('image/png');
+
+      // Export the current background image at actual size
+      const imageCanvas = document.createElement('canvas');
+      imageCanvas.width = originalWidth;
+      imageCanvas.height = originalHeight;
+      const imageCtx = imageCanvas.getContext('2d');
+      if (!imageCtx) throw new Error('Unable to create the export canvas');
+      imageCtx.drawImage(imgEl, 0, 0, originalWidth, originalHeight);
+      const imageDataUrl = imageCanvas.toDataURL('image/png');
+
+      handleMaskExport(maskDataUrl, imageDataUrl);
+    } catch (error) {
+      reportError('toast.paint_save_failed', error);
     }
-    displayMaskCtx.putImageData(displayMaskImageData, 0, 0);
-
-    // Scale up to actual size
-    maskCtx.drawImage(displayMaskCanvas, 0, 0, originalWidth, originalHeight);
-
-    const maskDataUrl = maskCanvas.toDataURL('image/png');
-
-    // Export the current background image at actual size
-    const imageCanvas = document.createElement('canvas');
-    imageCanvas.width = originalWidth;
-    imageCanvas.height = originalHeight;
-    const imageCtx = imageCanvas.getContext('2d');
-    if (!imageCtx) return;
-    imageCtx.drawImage(imgEl, 0, 0, originalWidth, originalHeight);
-    const imageDataUrl = imageCanvas.toDataURL('image/png');
-
-    handleMaskExport(maskDataUrl, imageDataUrl);
   }
 
   let brushCursorEl = $state<HTMLDivElement>();
@@ -508,13 +603,13 @@
     const rect = containerEl.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
-    const displayBrushSize = brushSize * scale;
+    const displayBrushSize = getBrushSize() * scale;
     brushCursorEl.style.width = `${displayBrushSize}px`;
     brushCursorEl.style.height = `${displayBrushSize}px`;
     brushCursorEl.style.transform = `translate(${x - displayBrushSize / 2}px, ${y - displayBrushSize / 2}px)`;
   }
 
-  function handleMouseMove(e: MouseEvent) {
+  function handleMouseMove(e: PointerEvent) {
     updateBrushCursorPosition(e);
     if (isPanning) {
       handlePan(e);
@@ -527,10 +622,12 @@
     if (brushCursorEl) brushCursorEl.style.display = '';
   }
 
-  function handleMouseLeave() {
+  function handleMouseLeave(e: PointerEvent) {
     if (brushCursorEl) brushCursorEl.style.display = 'none';
-    stopDrawing();
-    stopPan();
+    if (!canvasEl?.hasPointerCapture(e.pointerId)) {
+      stopDrawing();
+      stopPan();
+    }
   }
 
   const canUndo = $derived(historyIndex > 0);
@@ -554,6 +651,7 @@
   >('middle-center');
 
   function openResizeModal() {
+    if (!isEditable()) return;
     newWidth = originalWidth;
     newHeight = originalHeight;
     anchorPoint = 'middle-center';
@@ -565,139 +663,123 @@
   }
 
   function applyResize() {
-    if (!canvasEl || !imgEl || newWidth <= 0 || newHeight <= 0) return;
+    if (
+      !isEditable() ||
+      !canvasEl ||
+      !imgEl ||
+      !validDimension(newWidth) ||
+      !validDimension(newHeight)
+    )
+      return;
 
-    const ctx = getContext();
-    if (!ctx) return;
+    try {
+      const ctx = getContext();
+      if (!ctx) throw new Error('Unable to create the paint canvas');
 
-    // Get current mask canvas content (in display size)
-    const currentMaskData = ctx.getImageData(0, 0, canvasWidth, canvasHeight);
+      // Calculate offset based on anchor point (in actual image coordinates)
+      let offsetXPos = 0;
+      let offsetYPos = 0;
 
-    // Calculate offset based on anchor point (in actual image coordinates)
-    let offsetXPos = 0;
-    let offsetYPos = 0;
+      switch (anchorPoint) {
+        case 'top-left':
+          offsetXPos = 0;
+          offsetYPos = 0;
+          break;
+        case 'top-center':
+          offsetXPos = Math.floor((newWidth - originalWidth) / 2);
+          offsetYPos = 0;
+          break;
+        case 'top-right':
+          offsetXPos = newWidth - originalWidth;
+          offsetYPos = 0;
+          break;
+        case 'middle-left':
+          offsetXPos = 0;
+          offsetYPos = Math.floor((newHeight - originalHeight) / 2);
+          break;
+        case 'middle-center':
+          offsetXPos = Math.floor((newWidth - originalWidth) / 2);
+          offsetYPos = Math.floor((newHeight - originalHeight) / 2);
+          break;
+        case 'middle-right':
+          offsetXPos = newWidth - originalWidth;
+          offsetYPos = Math.floor((newHeight - originalHeight) / 2);
+          break;
+        case 'bottom-left':
+          offsetXPos = 0;
+          offsetYPos = newHeight - originalHeight;
+          break;
+        case 'bottom-center':
+          offsetXPos = Math.floor((newWidth - originalWidth) / 2);
+          offsetYPos = newHeight - originalHeight;
+          break;
+        case 'bottom-right':
+          offsetXPos = newWidth - originalWidth;
+          offsetYPos = newHeight - originalHeight;
+          break;
+      }
 
-    switch (anchorPoint) {
-      case 'top-left':
-        offsetXPos = 0;
-        offsetYPos = 0;
-        break;
-      case 'top-center':
-        offsetXPos = Math.floor((newWidth - originalWidth) / 2);
-        offsetYPos = 0;
-        break;
-      case 'top-right':
-        offsetXPos = newWidth - originalWidth;
-        offsetYPos = 0;
-        break;
-      case 'middle-left':
-        offsetXPos = 0;
-        offsetYPos = Math.floor((newHeight - originalHeight) / 2);
-        break;
-      case 'middle-center':
-        offsetXPos = Math.floor((newWidth - originalWidth) / 2);
-        offsetYPos = Math.floor((newHeight - originalHeight) / 2);
-        break;
-      case 'middle-right':
-        offsetXPos = newWidth - originalWidth;
-        offsetYPos = Math.floor((newHeight - originalHeight) / 2);
-        break;
-      case 'bottom-left':
-        offsetXPos = 0;
-        offsetYPos = newHeight - originalHeight;
-        break;
-      case 'bottom-center':
-        offsetXPos = Math.floor((newWidth - originalWidth) / 2);
-        offsetYPos = newHeight - originalHeight;
-        break;
-      case 'bottom-right':
-        offsetXPos = newWidth - originalWidth;
-        offsetYPos = newHeight - originalHeight;
-        break;
+      // Create a new image with white background and the original image placed (at actual size)
+      const tempCanvas = document.createElement('canvas');
+      tempCanvas.width = newWidth;
+      tempCanvas.height = newHeight;
+      const tempCtx = tempCanvas.getContext('2d');
+      if (!tempCtx) throw new Error('Unable to create the resized image');
+
+      // Fill with selected background color
+      tempCtx.fillStyle = fillColor;
+      tempCtx.fillRect(0, 0, newWidth, newHeight);
+
+      // Draw the original image at the offset position (at its current actual size)
+      tempCtx.drawImage(imgEl, offsetXPos, offsetYPos, originalWidth, originalHeight);
+      const resizedImageSrc = tempCanvas.toDataURL('image/png');
+
+      // Move/crop the full-resolution mask using the same offset as the image.
+      const maskTempCanvas = document.createElement('canvas');
+      maskTempCanvas.width = newWidth;
+      maskTempCanvas.height = newHeight;
+      const maskTempCtx = maskTempCanvas.getContext('2d');
+      if (!maskTempCtx) throw new Error('Unable to create the resized mask');
+
+      maskTempCtx.drawImage(canvasEl, offsetXPos, offsetYPos);
+      const resizedMask = maskTempCtx.getImageData(0, 0, newWidth, newHeight);
+
+      // Update canvas dimensions
+      flushSync(() => {
+        canvasWidth = newWidth;
+        canvasHeight = newHeight;
+      });
+      canvasEl.width = newWidth;
+      canvasEl.height = newHeight;
+
+      ctx.putImageData(resizedMask, 0, 0);
+
+      originalWidth = newWidth;
+      originalHeight = newHeight;
+      cancelMaskLoad();
+      setPreparedImage(resizedImageSrc);
+      centerCanvas();
+      saveToHistory();
+      closeResizeModal();
+    } catch (error) {
+      reportError('toast.paint_edit_failed', error);
     }
+  }
 
-    // Create a new image with white background and the original image placed (at actual size)
-    const tempCanvas = document.createElement('canvas');
-    tempCanvas.width = newWidth;
-    tempCanvas.height = newHeight;
-    const tempCtx = tempCanvas.getContext('2d');
-    if (!tempCtx) return;
+  function validDimension(value: unknown): value is number {
+    return typeof value === 'number' && Number.isInteger(value) && value >= 1 && value <= 4096;
+  }
 
-    // Fill with selected background color
-    tempCtx.fillStyle = fillColor;
-    tempCtx.fillRect(0, 0, newWidth, newHeight);
+  function getBrushSize() {
+    return typeof brushSize === 'number' && Number.isFinite(brushSize)
+      ? Math.round(Math.min(150, Math.max(1, brushSize)))
+      : 40;
+  }
 
-    // Draw the original image at the offset position (at its current actual size)
-    tempCtx.drawImage(imgEl, offsetXPos, offsetYPos, originalWidth, originalHeight);
-
-    // Update actual dimensions
-    const oldOriginalWidth = originalWidth;
-    const oldOriginalHeight = originalHeight;
-    originalWidth = newWidth;
-    originalHeight = newHeight;
-
-    // Calculate new display size
-    let displayWidth = newWidth;
-    let displayHeight = newHeight;
-
-    if (displayWidth > maxWidth) {
-      displayHeight = (displayHeight * maxWidth) / displayWidth;
-      displayWidth = maxWidth;
-    }
-    if (displayHeight > maxHeight) {
-      displayWidth = (displayWidth * maxHeight) / displayHeight;
-      displayHeight = maxHeight;
-    }
-    displayWidth = Math.round(displayWidth);
-    displayHeight = Math.round(displayHeight);
-
-    // Update the base image source with the new resized image
-    baseImageSrc = tempCanvas.toDataURL('image/png');
-
-    // Create scaled mask for new display size
-    const maskTempCanvas = document.createElement('canvas');
-    maskTempCanvas.width = displayWidth;
-    maskTempCanvas.height = displayHeight;
-    const maskTempCtx = maskTempCanvas.getContext('2d');
-    if (!maskTempCtx) return;
-
-    // Draw current mask scaled to new display size with offset
-    const scaleX = displayWidth / newWidth;
-    const scaleY = displayHeight / newHeight;
-    const displayOffsetX = Math.round(offsetXPos * scaleX);
-    const displayOffsetY = Math.round(offsetYPos * scaleY);
-    const displayOldWidth = Math.round(oldOriginalWidth * scaleX);
-    const displayOldHeight = Math.round(oldOriginalHeight * scaleY);
-
-    // Scale the old mask to new position
-    const oldMaskCanvas = document.createElement('canvas');
-    oldMaskCanvas.width = canvasWidth;
-    oldMaskCanvas.height = canvasHeight;
-    const oldMaskCtx = oldMaskCanvas.getContext('2d');
-    if (oldMaskCtx) {
-      oldMaskCtx.putImageData(currentMaskData, 0, 0);
-      maskTempCtx.drawImage(
-        oldMaskCanvas,
-        displayOffsetX,
-        displayOffsetY,
-        displayOldWidth,
-        displayOldHeight,
-      );
-    }
-
-    // Update canvas dimensions
-    canvasWidth = displayWidth;
-    canvasHeight = displayHeight;
-    canvasEl.width = displayWidth;
-    canvasEl.height = displayHeight;
-
-    // Apply scaled mask
-    const scaledMaskData = maskTempCtx.getImageData(0, 0, displayWidth, displayHeight);
-    ctx.clearRect(0, 0, displayWidth, displayHeight);
-    ctx.putImageData(scaledMaskData, 0, 0);
-
-    saveToHistory();
-    closeResizeModal();
+  function handleBlur() {
+    spacePressed = false;
+    stopDrawing();
+    stopPan();
   }
 
   const anchorPoints = [
@@ -707,6 +789,8 @@
   ] as const;
 </script>
 
+<svelte:window onblur={handleBlur} />
+
 <div class={className}>
   <ul class="navbar-nav d-flex flex-row p-2 align-items-center gap-2">
     <li class="nav-item d-flex align-items-center gap-2 flex-grow-1">
@@ -714,7 +798,7 @@
         <button
           class="btn btn-secondary btn-sm d-flex align-items-center gap-1"
           onclick={undo}
-          disabled={!canUndo}
+          disabled={editingDisabled || !canUndo}
           title="Undo"
         >
           <Undo size={16} />
@@ -723,7 +807,7 @@
         <button
           class="btn btn-secondary btn-sm d-flex align-items-center gap-1"
           onclick={redo}
-          disabled={!canRedo}
+          disabled={editingDisabled || !canRedo}
           title="Redo"
         >
           <Redo size={16} />
@@ -733,6 +817,7 @@
       <button
         class="btn btn-outline-secondary btn-sm d-flex align-items-center gap-1"
         onclick={clearCanvas}
+        disabled={editingDisabled}
         title="Clear"
       >
         <BrushCleaning size={16} />
@@ -763,7 +848,15 @@
         </button>
       </div>
       <div class="d-flex flex-row align-items-center gap-2">
-        <input class="form-range" type="range" bind:value={brushSize} min="1" max="150" step="1" />
+        <input
+          class="form-range"
+          type="range"
+          disabled={editingDisabled}
+          bind:value={brushSize}
+          min="1"
+          max="150"
+          step="1"
+        />
         <input
           class="form-control"
           type="number"
@@ -773,6 +866,8 @@
           max="150"
           step="1"
           bind:value={brushSize}
+          disabled={editingDisabled}
+          onchange={() => (brushSize = getBrushSize())}
         />
       </div>
       <button
@@ -780,6 +875,7 @@
         class:btn-secondary={isEraser}
         class:btn-outline-secondary={!isEraser}
         onclick={toggleEraser}
+        disabled={editingDisabled}
         title="Eraser"
       >
         <Eraser size={16} />
@@ -787,6 +883,7 @@
       <button
         class="btn btn-outline-secondary btn-sm d-flex align-items-center gap-1"
         onclick={openResizeModal}
+        disabled={editingDisabled}
         title="Resize Canvas"
       >
         <Maximize size={16} />
@@ -797,7 +894,7 @@
       <button
         class="btn btn-primary btn-sm d-flex align-items-center gap-1"
         onclick={exportMask}
-        disabled={saving || loading || !originalWidth || !originalHeight}
+        disabled={editingDisabled}
         title="Export"
       >
         <Save size={16} />
@@ -822,6 +919,7 @@
         tabindex="0"
         onkeydown={handleKeyDown}
         onkeyup={handleKeyUp}
+        onblur={handleBlur}
         onwheel={handleWheel}
       >
         <img
@@ -830,6 +928,7 @@
           {alt}
           draggable="false"
           onload={handleImageLoad}
+          onerror={() => failLoad(new Error('Unable to decode the paint image'))}
           {style}
           style:max-width="{maxWidth}px"
           style:max-height="{maxHeight}px"
@@ -844,20 +943,18 @@
           class:pan-cursor={spacePressed || isPanning}
           width={canvasWidth}
           height={canvasHeight}
-          style:width="{canvasWidth}px"
-          style:height="{canvasHeight}px"
-          onmousedown={startDrawing}
-          onmousemove={handleMouseMove}
-          onmouseup={() => {
+          style:width="{canvasWidth * displayScale}px"
+          style:height="{canvasHeight * displayScale}px"
+          onpointerdown={startDrawing}
+          onpointermove={handleMouseMove}
+          onpointerup={() => {
             stopDrawing();
             stopPan();
           }}
-          onmouseenter={handleMouseEnter}
-          onmouseleave={handleMouseLeave}
-          ontouchstart={startDrawing}
-          ontouchmove={draw}
-          ontouchend={stopDrawing}
-          ontouchcancel={stopDrawing}
+          onpointerenter={handleMouseEnter}
+          onpointerleave={handleMouseLeave}
+          onpointercancel={handleBlur}
+          onlostpointercapture={handleBlur}
           style:transform="translate({offsetX}px, {offsetY}px) scale({scale})"
           style:transform-origin="0 0"
         ></canvas>
@@ -865,8 +962,8 @@
           bind:this={brushCursorEl}
           class="brush-cursor"
           class:eraser-mode={isEraser}
-          style:width="{brushSize * scale}px"
-          style:height="{brushSize * scale}px"
+          style:width="{getBrushSize() * scale}px"
+          style:height="{getBrushSize() * scale}px"
           style:display="none"
         ></div>
       </div>
@@ -945,7 +1042,11 @@
       </div>
       <div class="resize-modal-footer">
         <button class="btn btn-secondary" onclick={closeResizeModal}>Cancel</button>
-        <button class="btn btn-primary" onclick={applyResize}>Apply</button>
+        <button
+          class="btn btn-primary"
+          disabled={editingDisabled || !validDimension(newWidth) || !validDimension(newHeight)}
+          onclick={applyResize}>Apply</button
+        >
       </div>
     </div>
   </div>

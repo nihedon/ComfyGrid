@@ -15,6 +15,7 @@ from fastapi import (APIRouter, Depends, File, Form, Request, Response,
 from fastapi.responses import FileResponse, JSONResponse
 from huggingface_hub import ModelCard
 from pydantic import BaseModel
+from PIL import Image
 
 from comfygrid.core.paths import resolve_within
 from comfygrid.infrastructure import model_repository
@@ -227,7 +228,7 @@ def get_thumbnail(path: str, comfy_service: ComfyUIService = Depends(get_comfy_s
 def prepare_paint_data(file: UploadFile = File(...)):
     try:
         return file_service.process_image_for_paint(file.file.read())
-    except (OSError, ValueError) as e:
+    except (OSError, ValueError, Image.DecompressionBombError) as e:
         logger.warning("Invalid paint image: %s", e)
         return JSONResponse({"error": "Invalid image"}, status_code=400)
 
@@ -252,6 +253,8 @@ def apply_mask(
         save_path.parent.mkdir(parents=True, exist_ok=True)
         file_service.apply_mask(file.file.read(), mask.file.read(), save_path)
         return {"message": "uploaded"}
+    except (ValueError, Image.UnidentifiedImageError, Image.DecompressionBombError) as e:
+        return JSONResponse({"error": str(e)}, status_code=400)
     except Exception as e:
         logger.error("Error in apply_mask: %s", e)
         return JSONResponse({"error": str(e)}, status_code=500)

@@ -253,6 +253,8 @@
     "toast.send_to_input_success": "Inputフォルダへファイルを転送しました",
     "toast.send_to_input_failed": "Inputフォルダへのファイル転送に失敗しました",
     "toast.paint_save_failed": "編集した画像の保存に失敗しました: {reason}",
+    "toast.paint_load_failed": "編集用の画像の読み込みに失敗しました: {reason}",
+    "toast.paint_edit_failed": "画像の編集に失敗しました: {reason}",
     "toast.comfyui_transition_failed": "ComfyUIの操作に失敗しました: {reason}",
     "toast.metadata_load_failed": "メタデータの取得に失敗しました",
     "contextmenu.free_memory": "メモリの解放",

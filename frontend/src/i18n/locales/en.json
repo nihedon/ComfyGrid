@@ -253,6 +253,8 @@
     "toast.send_to_input_success": "Sent file to input folder",
     "toast.send_to_input_failed": "Failed to send file to input folder",
     "toast.paint_save_failed": "Failed to save the edited image: {reason}",
+    "toast.paint_load_failed": "Failed to load the image for editing: {reason}",
+    "toast.paint_edit_failed": "Failed to edit the image: {reason}",
     "toast.comfyui_transition_failed": "ComfyUI operation failed: {reason}",
     "toast.metadata_load_failed": "Failed to load metadata",
     "contextmenu.free_memory": "Free Memory",

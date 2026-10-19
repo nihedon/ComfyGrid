@@ -17,11 +17,33 @@
   let cacheBuster = $state(Math.random());
   let isFullscreen = $state(false);
   let imageRetryCount = 0;
+  let retryTimer: ReturnType<typeof setTimeout> | undefined;
+  let uploadGeneration = 0;
+  let uploading = $state(false);
+
+  $effect(() => {
+    const target = widget;
+    uploading = false;
+    return () => {
+      void target;
+      uploadGeneration++;
+      clearTimeout(retryTimer);
+    };
+  });
+
+  $effect(() => {
+    const { filename, subfolder, type } = widget.image ?? {};
+    void [filename, subfolder, type];
+    imageDimension = null;
+    imageRetryCount = 0;
+    clearTimeout(retryTimer);
+    return () => clearTimeout(retryTimer);
+  });
 
   const previewUrl = $derived.by(() => {
     if (!widget.image) return '';
     const { filename, subfolder, type } = widget.image;
-    return `/api/view?type=${type}&filename=${encodeURIComponent(filename)}&subfolder=${subfolder}&rand=${cacheBuster}`;
+    return `/api/view?${new URLSearchParams({ type, filename, subfolder, rand: String(cacheBuster) })}`;
   });
 
   async function refreshImages() {
@@ -35,13 +57,16 @@
 
   function openPaintModal() {
     if (!widget.image) return;
+    const target = widget;
+    const baseImage = { ...widget.image };
 
-    modalState.setup(widget.image, previewUrl, (filename: string) => {
-      widget.image.filename = filename;
+    modalState.setup(baseImage, previewUrl, (filename: string) => {
+      const value = [baseImage.subfolder, filename].filter(Boolean).join('/');
+      target.image = { ...baseImage, filename, type: 'input' };
       cacheBuster = Math.random(); // Force refresh preview
 
-      widget.updateSelect({ value: filename, addOptions: [filename] });
-      widget.onDrawBackground();
+      target.updateSelect({ value, addOptions: [value] });
+      target.onDrawBackground();
       void refreshImages();
     });
   }
@@ -66,26 +91,48 @@
       const file = files[0];
       imageRetryCount = 0;
 
-      const res = await comfyUiApiClient.uploadImage(file);
-      const filename = res.ok && res.json?.name ? res.json.name : file.name;
-      const subfolder = res.ok && res.json?.subfolder != null ? res.json.subfolder : '';
-      const type = res.ok && res.json?.type != null ? res.json.type : 'input';
-
+      const generation = ++uploadGeneration;
+      const target = widget;
+      const previousImage = { ...target.image };
+      uploading = true;
       try {
-        widget.callback(files);
-      } catch (err) {
-        logger.error('Widget callback error ignored', err);
+        const res = await comfyUiApiClient.uploadImage(file);
+        if (
+          generation !== uploadGeneration ||
+          widget !== target ||
+          target.image.filename !== previousImage.filename ||
+          target.image.subfolder !== previousImage.subfolder ||
+          target.image.type !== previousImage.type
+        )
+          return;
+        if (
+          !res.ok ||
+          typeof res.json?.name !== 'string' ||
+          !res.json.name ||
+          (res.json.subfolder != null && typeof res.json.subfolder !== 'string') ||
+          (res.json.type != null && typeof res.json.type !== 'string')
+        )
+          throw new Error(`HTTP ${res.status}`);
+        const filename = res.json.name;
+        const subfolder = res.json.subfolder ?? '';
+        const type = res.json.type ?? 'input';
+        const value = [subfolder, filename].filter(Boolean).join('/');
+        target.image = {
+          filename,
+          subfolder,
+          type,
+        };
+        cacheBuster = Math.random();
+        target.updateSelect({ value, addOptions: [value] });
+        target.onDrawBackground();
+        await refreshImages();
+      } catch (error) {
+        if (generation !== uploadGeneration) return;
+        logger.error('Image upload failed', error);
+        appState.toastState.addToast({ type: 'error', message: $t('toast.send_to_input_failed') });
+      } finally {
+        if (generation === uploadGeneration) uploading = false;
       }
-
-      widget.image = {
-        filename,
-        subfolder,
-        type,
-      };
-      cacheBuster = Math.random();
-      widget.updateSelect({ value: filename, addOptions: [filename] });
-      widget.onDrawBackground();
-      await refreshImages();
     }
   }
 
@@ -100,6 +147,7 @@
   let imageDimension = $state<{ width: number; height: number } | null>(null);
 
   function handleImageLoad(e: Event) {
+    clearTimeout(retryTimer);
     imageRetryCount = 0;
     const img = e.currentTarget as HTMLImageElement;
     if (img.naturalWidth && img.naturalHeight) {
@@ -110,7 +158,8 @@
   function handleImageError() {
     if (imageRetryCount < 5) {
       imageRetryCount++;
-      setTimeout(() => {
+      clearTimeout(retryTimer);
+      retryTimer = setTimeout(() => {
         cacheBuster = Math.random();
       }, 300);
     }
@@ -131,6 +180,7 @@
       <button
         class="btn btn-primary btn-sm btn-icon"
         onclick={openPaintModal}
+        disabled={uploading || !widget.image?.filename}
         data-bs-toggle="modal"
         data-bs-target="#models-modal-paint"
       >
