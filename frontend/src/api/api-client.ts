@@ -324,12 +324,18 @@ class ComfyGridApiClient {
         });
     }
 
+    async postPaintData(image: Blob, signal?: AbortSignal): Promise<ApiResultJson<{ image: string; mask: string; error?: string }>> {
+        const formData = new FormData();
+        formData.append('file', image, 'paint-image');
+        return await fetchApiJson('/comfygrid/api/paint_data', { method: 'POST', body: formData, signal }, true);
+    }
+
     async postApplyMask(payload: {
         file: { blob: Blob; filename: string };
         mask: { blob: Blob; filename: string };
         filename: string;
         subfolder: string;
-    }): Promise<ApiResultJson<{ message: string }>> {
+    }): Promise<ApiResultJson<{ message: string; error?: string }>> {
         // Create FormData
         const { file, mask, filename, subfolder } = payload;
         const formData = new FormData();
@@ -338,10 +344,14 @@ class ComfyGridApiClient {
         formData.append('filename', filename);
         formData.append('subfolder', subfolder);
 
-        return await fetchApiJson('/comfygrid/api/apply_mask', {
-            method: 'POST',
-            body: formData,
-        });
+        return await fetchApiJson(
+            '/comfygrid/api/apply_mask',
+            {
+                method: 'POST',
+                body: formData,
+            },
+            true,
+        );
     }
 
     async getExtensionResources(): Promise<ApiResultJson<Array<string>>> {

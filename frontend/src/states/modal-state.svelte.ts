@@ -1,6 +1,9 @@
+import { get } from 'svelte/store';
 import { comfyGridApiClient } from '@/api/api-client';
+import { t } from '@/i18n/i18n';
 import type { Model, ModelTypes } from '@/states/storage-state.svelte';
 import logger from '@/utils/logger';
+import { toastState } from './toast-state.svelte';
 
 class ModalState {
     #selectedModelPath: string = $state();
@@ -120,11 +123,17 @@ class InpaintModalState {
                 subfolder: baseImage.subfolder,
             });
 
-            if (res.ok && res.json?.message === 'uploaded') {
-                handleUpload?.(filename);
+            if (!res.ok || res.json?.message !== 'uploaded') {
+                throw new Error(res.json?.error || (res.ok ? 'Unexpected image save response' : `HTTP ${res.status}`));
             }
+            handleUpload?.(filename);
         } catch (e) {
             logger.error('Failed to apply mask', e);
+            const reason = e instanceof Error ? e.message : String(e);
+            toastState.addToast({
+                type: 'error',
+                message: get(t)('toast.paint_save_failed', { reason }, `Failed to save the edited image: ${reason}`),
+            });
         }
     }
 

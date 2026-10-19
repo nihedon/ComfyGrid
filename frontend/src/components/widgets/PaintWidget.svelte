@@ -11,6 +11,7 @@
     ZoomIn,
     ZoomOut,
   } from '@lucide/svelte';
+  import { comfyGridApiClient } from '@/api/api-client';
   import logger from '@/utils/logger';
 
   let {
@@ -106,10 +107,29 @@
     loading = true;
     try {
       const response = await fetch(imageUrl, { signal });
-      const data = await response.json();
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const contentType = response.headers.get('Content-Type')?.split(';')[0].trim().toLowerCase();
+      let data: { image: string; mask?: string };
+      if (contentType?.startsWith('image/') || contentType === 'application/octet-stream') {
+        const image = await response.blob();
+        if (signal.aborted) return;
+        const prepared = await comfyGridApiClient.postPaintData(image, signal);
+        if (!prepared.ok) throw new Error(prepared.json?.error || `HTTP ${prepared.status}`);
+        data = prepared.json;
+      } else {
+        data = await response.json();
+      }
       if (signal.aborted) return;
+      if (
+        !data ||
+        typeof data.image !== 'string' ||
+        !data.image ||
+        (data.mask !== undefined && typeof data.mask !== 'string')
+      ) {
+        throw new Error('Invalid paint data');
+      }
 
-      initialMaskSrc = data.mask;
+      initialMaskSrc = data.mask ?? '';
       baseImageSrc = data.image;
     } catch (e) {
       if (signal.aborted) return;
@@ -775,6 +795,7 @@
         class="btn btn-primary btn-sm d-flex align-items-center gap-1"
         data-bs-dismiss="modal"
         onclick={exportMask}
+        disabled={loading || !originalWidth || !originalHeight}
         title="Export"
       >
         <Save size={16} />

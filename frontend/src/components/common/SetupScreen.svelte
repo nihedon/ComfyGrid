@@ -231,7 +231,7 @@
                 required
               />
             </div>
-            <div class="mb-4">
+            <div class="mb-4 d-none">
               <span class="form-label d-block" id="profile-mode-label">{$t('setup.mode')}</span>
               <div class="mode-options" role="group" aria-labelledby="profile-mode-label">
                 <input

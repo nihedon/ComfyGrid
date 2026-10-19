@@ -223,6 +223,15 @@ def get_thumbnail(path: str, comfy_service: ComfyUIService = Depends(get_comfy_s
     return Response(content=result, media_type=media_type)
 
 
+@router.post("/paint_data")
+def prepare_paint_data(file: UploadFile = File(...)):
+    try:
+        return file_service.process_image_for_paint(file.file.read())
+    except (OSError, ValueError) as e:
+        logger.warning("Invalid paint image: %s", e)
+        return JSONResponse({"error": "Invalid image"}, status_code=400)
+
+
 @router.post("/apply_mask")
 def apply_mask(
     file: UploadFile = File(...),

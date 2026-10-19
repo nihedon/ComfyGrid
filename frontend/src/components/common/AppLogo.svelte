@@ -6,10 +6,38 @@
   }: { size?: number; animated?: boolean; muted?: boolean } = $props();
 
   const tiles = [
-    { column: 1, row: 1, width: 2, height: 2, color: '#4b7bec', lowerColor: '#658ce8' },
-    { column: 3, row: 1, width: 1, height: 2, color: '#f25565', lowerColor: '#ee7d8a' },
-    { column: 1, row: 3, width: 2, height: 1, color: '#f4bd45', lowerColor: '#e7cb77' },
-    { column: 3, row: 3, width: 1, height: 1, color: '#22b99a', lowerColor: '#6ac9b6' },
+    {
+      column: 1,
+      row: 1,
+      width: 2,
+      height: 2,
+      color: 'oklch(59.75% 0.1778 264.02)',
+      lowerColor: 'oklch(69.75% 0.1278 264.02)',
+    },
+    {
+      column: 3,
+      row: 1,
+      width: 1,
+      height: 2,
+      color: 'oklch(68.18% 0.1716 14.56)',
+      lowerColor: 'oklch(78.18% 0.1216 14.56)',
+    },
+    {
+      column: 1,
+      row: 3,
+      width: 2,
+      height: 1,
+      color: 'oklch(83.38% 0.1372 81.85)',
+      lowerColor: 'oklch(93.38% 0.0872 81.85)',
+    },
+    {
+      column: 3,
+      row: 3,
+      width: 1,
+      height: 1,
+      color: 'oklch(71.22% 0.1187 180.78)',
+      lowerColor: 'oklch(81.22% 0.0687 180.78)',
+    },
   ];
 </script>
 
