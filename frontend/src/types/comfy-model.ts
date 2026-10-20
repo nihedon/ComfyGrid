@@ -20,6 +20,7 @@ export interface ComfyCanvas extends LGraphCanvas {
 
 export interface ComfyApp {
     comfyGridWorkflows?: ComfyWorkflowApi;
+    comfyGridDomWidgets?: ComfyDomWidgetApi;
     /** @deprecated use rootGraph instead */
     graph: ComfyGraph;
     rootGraph: ComfyGraph;
@@ -34,6 +35,11 @@ export interface ComfyApp {
     queuePrompt: (number: number, batchCount?: number) => Promise<QueuePromptResponse>;
     registerExtension: (extension: ComfyExtension) => void;
     refreshComboInNodes: () => Promise<void>;
+}
+
+export interface ComfyDomWidgetApi {
+    getWidgetElement(node: ComfyNode, widget: ComfyWidget): HTMLElement | null;
+    dispose(): void;
 }
 
 export interface ComfyApi {

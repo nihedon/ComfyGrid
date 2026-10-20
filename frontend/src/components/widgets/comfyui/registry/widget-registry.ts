@@ -34,6 +34,10 @@ const widgetRegistry: Record<string, Component> = {
     ImagePreviewWidget: ImagePreviewWidget,
     DOMWidget: DOMWidget,
     DOMWidgetImpl: DOMWidget,
+    boundingboxes: DOMWidget,
+    load3D: DOMWidget,
+    load3DAdvanced: DOMWidget,
+    cameraAngle: DOMWidget,
 };
 
 /**
