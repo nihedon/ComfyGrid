@@ -1,4 +1,5 @@
 import type { INodeInputSlot, LGraph, LGraphCanvas, LGraphGroup, LGraphNode } from 'litegraph.js';
+import type { ComfyWorkflowApi } from './comfy-workflow';
 import type { ComfyExtension, ComfyLink, ImageInfo, PromptData, QueuePromptResponse, WidgetContext } from './model-shared';
 
 interface ComfyInputNodeSlot extends INodeInputSlot {
@@ -18,6 +19,7 @@ export interface ComfyCanvas extends LGraphCanvas {
 }
 
 export interface ComfyApp {
+    comfyGridWorkflows?: ComfyWorkflowApi;
     /** @deprecated use rootGraph instead */
     graph: ComfyGraph;
     rootGraph: ComfyGraph;

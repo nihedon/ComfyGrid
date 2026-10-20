@@ -3,7 +3,9 @@
   import { appState } from '@/states/app-state.svelte';
   import type { ComfyWindow } from '@/states/comfyui-state.svelte';
 
-  let iframeRef = $state<HTMLIFrameElement>()!;
+  let iframeRef = $state<HTMLIFrameElement>();
+  let registeredFrame: HTMLIFrameElement | undefined;
+  let destroyed = false;
 
   const uiState = appState.uiState;
   const comfyUiState = appState.comfyUiState;
@@ -16,6 +18,7 @@
 
   $effect(() => {
     if (!iframeRef) return;
+    registeredFrame = iframeRef;
     comfyUiState.iframe = iframeRef;
     comfyUiState.window = iframeRef.contentWindow as ComfyWindow;
   });
@@ -28,18 +31,21 @@
   });
 
   onDestroy(() => {
-    if (comfyUiState.iframe === iframeRef) {
+    destroyed = true;
+    if (registeredFrame && comfyUiState.iframe === registeredFrame) {
       comfyUiState.iframe = null;
       comfyUiState.window = null;
     }
   });
 
-  function injectBridge() {
-    const iframeDoc = iframeRef.contentDocument || iframeRef.contentWindow?.document;
+  function injectBridge(frame: HTMLIFrameElement) {
+    if (destroyed || !comfyUiState.started || (iframeRef && iframeRef !== frame)) return;
+    const iframeDoc = frame.contentDocument || frame.contentWindow?.document;
     if (!iframeDoc) return;
 
-    comfyUiState.iframe = iframeRef;
-    comfyUiState.window = iframeRef.contentWindow as ComfyWindow;
+    registeredFrame = frame;
+    comfyUiState.iframe = frame;
+    comfyUiState.window = frame.contentWindow as ComfyWindow;
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const app = comfyUiState.window?.comfyAPI?.app?.app as any;
@@ -57,11 +63,7 @@
   <iframe
     class="w-100 h-100 d-block"
     title="ComfyUI"
-    onload={() => {
-      if (comfyUiState.started) {
-        injectBridge();
-      }
-    }}
+    onload={(event) => injectBridge(event.currentTarget as HTMLIFrameElement)}
     src={frameStarted ? '/' : 'about:blank'}
     bind:this={iframeRef}
   ></iframe>

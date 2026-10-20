@@ -1,8 +1,7 @@
 import { comfyGridApiClient } from '@/api/api-client';
-import { ComfyUiCanvas } from '@/bridge/comfyui-canvas';
 import { workflowManager } from '@/managers/workflow-manager';
 import { appState } from '@/states/app-state.svelte';
-import type { ComfyApp } from '@/types/comfy-model';
+import type { WorkflowCapture } from '@/types/comfy-workflow';
 import type { WorkflowItem, WorkflowSortType } from '@/types/workflow';
 
 export class WorkflowState {
@@ -166,34 +165,35 @@ export class WorkflowState {
 
     async loadWorkflowToComfyUI(item: WorkflowItem) {
         if (item.type !== 'file') return;
-        const res = await comfyGridApiClient.getWorkflowContent(item.path);
+        const targetPath = item.path;
+        const res = await comfyGridApiClient.getWorkflowContent(targetPath);
         if (res.ok && res.json) {
             const app = appState.comfyUiState.app;
             if (app) {
-                await app.loadGraphData(res.json, true, true, item.name, {
+                await app.loadGraphData(res.json, true, true, targetPath, {
                     showMissingNodesDialog: true,
                     showMissingModelsDialog: true,
                 });
+                // Freeze the target image before any asynchronous UI synchronization.
+                const capture = app.comfyGridWorkflows?.captureWorkflow(`workflows/${targetPath}`);
+                const thumbnail = capture ? { ...capture } : null;
                 appState.uiState.activePageId = 'grid';
                 appState.uiState.needRefresh = false;
                 await workflowManager.loadCurrentWorkflow();
 
-                // Capture workflow canvas thumbnail in background
-                void this.captureAndSaveThumbnail(item, app);
+                void this.saveCapturedThumbnail(item, targetPath, thumbnail);
             }
         }
     }
 
-    async captureAndSaveThumbnail(item: WorkflowItem, app: ComfyApp) {
+    private async saveCapturedThumbnail(item: WorkflowItem, targetPath: string, snapshot: WorkflowCapture | null) {
         try {
-            if (!app.canvas) return;
-            await ComfyUiCanvas.fitGraphToCanvas(app.canvas);
-            await new Promise((resolve) => setTimeout(resolve, 150));
-            const dataUrl = await ComfyUiCanvas.captureGraphCanvas(app.canvas);
+            if (!snapshot || snapshot.stale || snapshot.path !== `workflows/${targetPath}`) return;
+            const dataUrl = snapshot.dataUrl;
             if (typeof dataUrl === 'string' && dataUrl.startsWith('data:image/')) {
-                const res = await comfyGridApiClient.saveWorkflowThumbnail(item.path, dataUrl);
+                const res = await comfyGridApiClient.saveWorkflowThumbnail(targetPath, dataUrl);
                 if (res.ok) {
-                    item.has_thumbnail = true;
+                    if (item.path === targetPath) item.has_thumbnail = true;
                     this.thumbnailTimestamp = Date.now();
                 }
             }

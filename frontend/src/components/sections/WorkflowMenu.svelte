@@ -3,36 +3,48 @@
   import AppMenu from '@/components/common/AppMenu.svelte';
   import { t } from '@/i18n/i18n';
   import { appState } from '@/states/app-state.svelte';
-  import type { WorkflowTabItem } from '@/states/comfyui-bridge.svelte';
+  import type { OpenWorkflowInfo } from '@/types/comfy-workflow';
   import type { MenuEntry } from '@/types/menu';
+  import logger from '@/utils/logger';
 
   const uiState = appState.uiState;
 
-  let workflowTabs = $state<WorkflowTabItem[]>([]);
+  let workflowTabs = $state<OpenWorkflowInfo[]>([]);
+  let isSwitching = $state(false);
 
   function refreshWorkflowTabs() {
-    if (appState.bridge) {
-      workflowTabs = appState.bridge.getWorkflowTabs();
-    }
+    workflowTabs = appState.bridge?.getOpenWorkflows() ?? [];
   }
 
-  function handleSelectTab(item: WorkflowTabItem) {
-    if (item.selected) return;
+  async function handleSelectTab(item: OpenWorkflowInfo) {
+    if (item.selected || isSwitching) return;
 
     const app = appState.comfyUiState.app;
-    if (!app) return;
-
-    item.tab.click();
-    if (uiState.activePageId !== 'grid' && uiState.activePageId !== 'comfyui') {
-      uiState.needRefresh = true;
+    const bridge = appState.bridge;
+    if (!app || !bridge) return;
+    isSwitching = true;
+    try {
+      await bridge.selectWorkflow(item.path);
+      if (appState.comfyUiState.app !== app) return;
+      refreshWorkflowTabs();
+      if (uiState.activePageId !== 'grid' && uiState.activePageId !== 'comfyui') {
+        uiState.needRefresh = true;
+      }
+    } catch (error) {
+      if (appState.comfyUiState.app !== app) return;
+      logger.error('Failed to switch ComfyUI workflow tab:', error);
+      appState.toastState.addToast({ type: 'error', message: $t('toast.workflow_apply_failed') });
+    } finally {
+      isSwitching = false;
     }
   }
   const items = $derived(
-    workflowTabs.map((item, index): MenuEntry => ({
-      id: `${item.label}-${index}`,
+    workflowTabs.map((item): MenuEntry => ({
+      id: item.path,
       kind: 'action',
-      label: item.label,
+      label: item.name,
       selected: item.selected,
+      disabled: isSwitching,
       onSelect: () => handleSelectTab(item),
     })),
   );

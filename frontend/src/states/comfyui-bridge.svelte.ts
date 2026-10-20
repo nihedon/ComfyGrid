@@ -4,6 +4,7 @@ import { nodeQueueManager } from '@/bridge/node-queue-manager';
 import { executionManager } from '@/managers/execution-manager';
 import { translationManager } from '@/services/translation-service.svelte';
 import type { ComfyGraph, ComfyNode } from '@/types/comfy-model';
+import type { OpenWorkflowInfo, OpenWorkflowSnapshot, WorkflowCapture } from '@/types/comfy-workflow';
 import logger from '@/utils/logger';
 import { appState } from './app-state.svelte';
 
@@ -22,12 +23,6 @@ async function waitOnDrawBackgroundAll(graph: ComfyGraph) {
     await new Promise((resolve) => requestAnimationFrame(resolve));
 }
 
-export type WorkflowTabItem = {
-    label: string;
-    tab: HTMLButtonElement;
-    selected: boolean;
-};
-
 export class ComfyUiBridge {
     static #instance: ComfyUiBridge;
 
@@ -41,6 +36,30 @@ export class ComfyUiBridge {
     }
 
     private constructor() {}
+
+    getOpenWorkflows(): OpenWorkflowInfo[] {
+        return appState.comfyUiState.app?.comfyGridWorkflows?.listWorkflows() ?? [];
+    }
+
+    async selectWorkflow(path: string): Promise<void> {
+        const api = appState.comfyUiState.app?.comfyGridWorkflows;
+        if (!api?.selectWorkflow) throw new Error('ComfyGrid workflow extension is unavailable. Restart ComfyUI to update it.');
+        await api.selectWorkflow(path);
+    }
+
+    async getOpenWorkflowSnapshots(paths?: string[]): Promise<OpenWorkflowSnapshot[]> {
+        const api = appState.comfyUiState.app?.comfyGridWorkflows;
+        if (!api) throw new Error('ComfyGrid workflow extension is unavailable. Restart ComfyUI to update it.');
+        return api.getWorkflows(paths);
+    }
+
+    getWorkflowCapture(path: string): WorkflowCapture | null {
+        return appState.comfyUiState.app?.comfyGridWorkflows?.getWorkflowCapture(path) ?? null;
+    }
+
+    captureWorkflow(path?: string): WorkflowCapture | null {
+        return appState.comfyUiState.app?.comfyGridWorkflows?.captureWorkflow(path) ?? null;
+    }
 
     duplicateNode(payload: { nodeId: string }): ComfyNode {
         const source = appState.workspaceState.getRealNode(payload.nodeId)?.comfyNode;
@@ -80,24 +99,6 @@ export class ComfyUiBridge {
         }
     }
 
-    /**
-     * Get list of all workflow tab items in ComfyUI.
-     */
-    getWorkflowTabs(): WorkflowTabItem[] {
-        const doc = appState.comfyUiState.window?.document || appState.comfyUiState.iframe?.contentDocument || document;
-        const buttons = doc.querySelectorAll<HTMLButtonElement>('.workflow-tabs > button');
-        const items: WorkflowTabItem[] = [];
-
-        buttons.forEach((btn) => {
-            const labelEl = btn.querySelector('.workflow-label');
-            const label = labelEl?.textContent?.trim() || 'Untitled';
-            const selected = btn.classList.contains('p-togglebutton-checked');
-            items.push({ label, tab: btn, selected });
-        });
-
-        return items;
-    }
-
     async getWorkflow(): Promise<{
         graphId: string;
         name: string;
@@ -113,9 +114,8 @@ export class ComfyUiBridge {
             ComfyUiApiHook.hookForWidgetCallback(topNode);
         }
 
-        const tabs = this.getWorkflowTabs();
-        const activeTab = tabs.find((t) => t.selected);
-        const title = activeTab?.label || 'Untitled';
+        const activeWorkflow = this.getOpenWorkflows().find((workflow) => workflow.selected);
+        const title = activeWorkflow?.name || 'Untitled';
 
         return {
             graphId: app.rootGraph.id,
