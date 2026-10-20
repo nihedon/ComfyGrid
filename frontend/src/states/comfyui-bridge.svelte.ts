@@ -4,7 +4,7 @@ import { nodeQueueManager } from '@/bridge/node-queue-manager';
 import { executionManager } from '@/managers/execution-manager';
 import { translationManager } from '@/services/translation-service.svelte';
 import type { ComfyGraph, ComfyNode } from '@/types/comfy-model';
-import type { OpenWorkflowInfo, OpenWorkflowSnapshot, WorkflowCapture } from '@/types/comfy-workflow';
+import type { OpenWorkflowInfo, OpenWorkflowSnapshot, WorkflowCapture, WorkflowSaveResult } from '@/types/comfy-workflow';
 import logger from '@/utils/logger';
 import { appState } from './app-state.svelte';
 
@@ -45,6 +45,12 @@ export class ComfyUiBridge {
         const api = appState.comfyUiState.app?.comfyGridWorkflows;
         if (!api?.selectWorkflow) throw new Error('ComfyGrid workflow extension is unavailable. Restart ComfyUI to update it.');
         await api.selectWorkflow(path);
+    }
+
+    async saveWorkflow(promptName: (defaultName: string) => string | null): Promise<WorkflowSaveResult | null> {
+        const api = appState.comfyUiState.app?.comfyGridWorkflows;
+        if (!api?.saveWorkflow) throw new Error('ComfyGrid workflow extension is unavailable. Restart ComfyUI to update it.');
+        return api.saveWorkflow(promptName);
     }
 
     async getOpenWorkflowSnapshots(paths?: string[]): Promise<OpenWorkflowSnapshot[]> {

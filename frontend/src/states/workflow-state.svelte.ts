@@ -181,25 +181,30 @@ export class WorkflowState {
                 appState.uiState.needRefresh = false;
                 await workflowManager.loadCurrentWorkflow();
 
-                void this.saveCapturedThumbnail(item, targetPath, thumbnail);
+                void this.saveCapturedThumbnail(targetPath, thumbnail, item);
             }
         }
     }
 
-    private async saveCapturedThumbnail(item: WorkflowItem, targetPath: string, snapshot: WorkflowCapture | null) {
+    async saveCapturedThumbnail(targetPath: string, snapshot: WorkflowCapture | null, item?: WorkflowItem): Promise<boolean> {
         try {
-            if (!snapshot || snapshot.stale || snapshot.path !== `workflows/${targetPath}`) return;
+            if (!snapshot || snapshot.stale || snapshot.path !== `workflows/${targetPath}`) return false;
             const dataUrl = snapshot.dataUrl;
             if (typeof dataUrl === 'string' && dataUrl.startsWith('data:image/')) {
+                const sourceApp = appState.comfyUiState.app;
                 const res = await comfyGridApiClient.saveWorkflowThumbnail(targetPath, dataUrl);
+                if (appState.comfyUiState.app !== sourceApp) return false;
                 if (res.ok) {
-                    if (item.path === targetPath) item.has_thumbnail = true;
+                    const targetItem = item ?? this.items.find((entry) => entry.path === targetPath);
+                    if (targetItem?.path === targetPath) targetItem.has_thumbnail = true;
                     this.thumbnailTimestamp = Date.now();
+                    return true;
                 }
             }
         } catch (e) {
             console.error('Failed to capture workflow thumbnail:', e);
         }
+        return false;
     }
 }
 

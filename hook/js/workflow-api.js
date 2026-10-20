@@ -24,6 +24,7 @@ export function installWorkflowApi(app, host = window) {
   let generation = 0;
   let stable = true;
   let selecting = false;
+  let saving = false;
   let unsubscribe;
   let subscribedStore;
   const originalLoad = app.loadGraphData;
@@ -190,6 +191,87 @@ export function installWorkflowApi(app, host = window) {
           throw new Error("Workflow tab could not be selected");
       } finally {
         selecting = false;
+      }
+    },
+    async saveWorkflow(promptName) {
+      const workflowStore = store();
+      if (disposed || !workflowStore?.saveWorkflow)
+        throw new Error("ComfyGrid workflow saving is unavailable");
+      if (loading || selecting || saving || !stable)
+        throw new Error("Workflow operation is already in progress");
+      const workflow = active();
+      if (!workflow || !workflows().includes(workflow))
+        throw new Error("No active workflow to save");
+      const operation = generation;
+      saving = true;
+      try {
+        let newPath;
+        if (workflow.isTemporary) {
+          if (!workflowStore.renameWorkflow || !workflowStore.getWorkflowByPath)
+            throw new Error("ComfyUI workflow naming is unavailable");
+          const name = await promptName(workflow.filename);
+          if (name == null || !name.trim()) return null;
+          const filename = name.trim();
+          if (
+            filename === "." ||
+            filename === ".." ||
+            /[\\/\x00-\x1f]/.test(filename)
+          )
+            throw new Error("Invalid workflow filename");
+          const directory = workflow.path.slice(
+            0,
+            workflow.path.lastIndexOf("/") + 1,
+          );
+          newPath =
+            directory +
+            (filename.toLowerCase().endsWith(".json")
+              ? filename
+              : filename + ".json");
+          const existing = workflowStore.getWorkflowByPath(newPath);
+          if (existing && existing !== workflow)
+            throw new Error(
+              "A workflow with that filename already exists. Choose another name.",
+            );
+        }
+        if (
+          disposed ||
+          loading ||
+          store() !== workflowStore ||
+          generation !== operation ||
+          workflow !== active() ||
+          !workflows().includes(workflow)
+        )
+          throw new Error("Workflow changed before saving");
+        // Grid edits may not have reached the tracker through a ComfyUI input event.
+        workflow.changeTracker?.checkState?.();
+        // Freeze the image before naming/persistence can yield to another tab.
+        const targetPath = newPath ?? workflow.path;
+        const savedRevision = revisionOf(workflow.activeState);
+        const captured = captureWorkflow(workflow.path);
+        const capture = captured ? { ...captured, path: targetPath } : null;
+        if (newPath && newPath !== workflow.path)
+          await workflowStore.renameWorkflow(workflow, newPath);
+        if (
+          disposed ||
+          store() !== workflowStore ||
+          workflow.path !== targetPath
+        )
+          throw new Error("ComfyGrid workflow extension is unavailable");
+        const info = describe(workflow);
+        // Renaming can yield to edits; do not attach an image of an older state.
+        const thumbnail =
+          capture && revisionOf(workflow.activeState) === savedRevision
+            ? capture
+            : null;
+        await workflowStore.saveWorkflow(workflow);
+        return {
+          ...info,
+          selected: workflow === active(),
+          isModified: Boolean(workflow.isModified),
+          capture: thumbnail,
+        };
+      } finally {
+        saving = false;
       }
     },
     async getWorkflows(paths) {
