@@ -1,6 +1,7 @@
 <script lang="ts">
   import { t } from '@/i18n/i18n';
   import type { ComfyGridWidget } from '@/states/model-state.svelte';
+  import { isScrubbableNumber, scrubbableNumber } from './features/scrubbable-number';
 
   type NumberWidget = ComfyGridWidget<
     number,
@@ -13,6 +14,29 @@
   >;
 
   let { widget }: { widget: NumberWidget } = $props();
+
+  const scrubSettings = $derived({
+    value: widget.value,
+    min: widget.options?.min,
+    max: widget.options?.max,
+    step: widget.options?.step2 ?? widget.options?.step,
+    readonly: widget.readonly,
+  });
+
+  const progress = $derived.by(() => {
+    const { value, min, max } = scrubSettings;
+    if (
+      !Number.isFinite(value) ||
+      typeof min !== 'number' ||
+      typeof max !== 'number' ||
+      !Number.isFinite(min) ||
+      !Number.isFinite(max) ||
+      max <= min ||
+      !Number.isFinite(max - min)
+    )
+      return null;
+    return Math.max(0, Math.min(100, ((value - min) / (max - min)) * 100));
+  });
 
   const minAndMaxAttr = $derived.by(() => {
     let minAndMaxAttr: { min?: number; max?: number } = {};
@@ -68,8 +92,17 @@
     <input
       id={widget.id}
       class="form-control"
+      class:scrubbable={isScrubbableNumber(scrubSettings)}
+      class:has-progress={progress !== null}
+      style:--number-progress={progress === null ? undefined : `${progress}%`}
       type="number"
       value={widget.value}
+      readonly={widget.readonly}
+      use:scrubbableNumber={{
+        getSettings: () => scrubSettings,
+        onPreview: (value) => (widget.value = value),
+        onCommit: () => widget.updateValue(),
+      }}
       {...minAndMaxAttr}
       step={widget?.options?.step2 ?? widget?.options?.step ?? undefined}
       onchange={handleChange}
@@ -77,3 +110,19 @@
     />
   </div>
 </div>
+
+<style>
+  input.has-progress {
+    background-image: linear-gradient(
+      rgba(var(--bs-primary-rgb, 13, 110, 253), 0.2),
+      rgba(var(--bs-primary-rgb, 13, 110, 253), 0.2)
+    );
+    background-size: var(--number-progress) 100%;
+    background-repeat: no-repeat;
+    background-clip: padding-box;
+  }
+
+  input.scrubbable:not(:focus) {
+    cursor: crosshair;
+  }
+</style>
