@@ -2,6 +2,7 @@ import type { Component } from 'svelte';
 import { ComfyGridNode, ComfyGridWidget } from '@/states/model-state.svelte';
 import AudioPlayerWidget from '../AudioPlayerWidget.svelte';
 import ButtonWidget from '../ButtonWidget.svelte';
+import ColorWidget from '../ColorWidget.svelte';
 import ComboWidget from '../ComboWidget.svelte';
 import CustomtextWidget from '../CustomtextWidget.svelte';
 import DOMWidget from '../DOMWidget.svelte';
@@ -21,6 +22,7 @@ import { matchExtensionWithMeta, shouldIgnore } from './extension-loader';
 const widgetRegistry: Record<string, Component> = {
     number: NumberWidget,
     combo: ComboWidget,
+    color: ColorWidget,
     toggle: ToggleWidget,
     slider: RangeWidget,
     button: ButtonWidget,

@@ -165,7 +165,7 @@
             scrollbar-width: thin;
         }
 
-        :not(textarea).form-control {
+        :not(textarea, .form-control-color).form-control {
             padding: 0.15rem 0.75rem !important;
         }
 
