@@ -2,6 +2,7 @@ type PageId = 'grid' | 'comfyui' | 'files' | 'image-info' | 'settings';
 
 class UIState {
     #activePageId: PageId = $state('grid');
+    #activeGridTabId: string = $state('__ungrouped__');
     #isDragging: boolean = $state(false);
     #needRefresh: boolean = $state(false);
     #fileToOpenInImageInfo: File | null = $state(null);
@@ -12,6 +13,13 @@ class UIState {
     }
     set activePageId(activePageId: PageId) {
         this.#activePageId = activePageId;
+    }
+
+    get activeGridTabId(): string {
+        return this.#activeGridTabId;
+    }
+    set activeGridTabId(activeGridTabId: string) {
+        this.#activeGridTabId = activeGridTabId;
     }
 
     get needRefresh(): boolean {

@@ -4,7 +4,11 @@
   import { comfyGridApiClient } from '@/api/api-client';
   import PromptEditor from '@/components/common/PromptEditor.svelte';
   import { t } from '@/i18n/i18n';
-  import { saveLayoutObject, updateBoardFloatingState } from '@/services/gridstack-service';
+  import {
+    activateTabBoardForNode,
+    saveLayoutObject,
+    updateBoardFloatingState,
+  } from '@/services/gridstack-service';
   import { notifyTranslationError } from '@/services/translation-error-service';
   import { translationManager } from '@/services/translation-service.svelte';
   import { appState } from '@/states/app-state.svelte';
@@ -324,6 +328,7 @@
 
   async function moveToBoard(boardId: BoardId) {
     layout.setFloatingWidgets(widget.id, boardId);
+    if (boardId === 'Tab') activateTabBoardForNode(widget.node.id);
     await updateBoardFloatingState(widget.id);
   }
 

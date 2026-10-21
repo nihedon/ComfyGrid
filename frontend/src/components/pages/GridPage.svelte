@@ -19,8 +19,6 @@
   const workspaceState = appState.workspaceState;
   const optionState = appState.optionState;
 
-  let activeTabId: string = $state('__ungrouped__');
-
   const sortedGroups = $derived.by(() => {
     return workspaceState.groups.toSorted(ComfyGridGroup.sortGroupsByPriority);
   });
@@ -109,7 +107,7 @@
                     id="__ungrouped__"
                     classNames={getTabClassNames('__ungrouped__')}
                     text="Nodes"
-                    bind:activeTabId
+                    bind:activeTabId={uiState.activeGridTabId}
                   />
                 {/if}
                 {#each sortedGroups.filter((g) => g.isTabify && workspaceState.hasTabContent(g.id)) as group (group.id)}
@@ -117,7 +115,7 @@
                     id={group.id}
                     classNames={getTabClassNames(group.id)}
                     text={group.title}
-                    bind:activeTabId
+                    bind:activeTabId={uiState.activeGridTabId}
                   />
                 {/each}
               </ul>
@@ -146,7 +144,7 @@
             </div>
             <div class="py-2">
               {#if workspaceState.hasTabContent('__ungrouped__')}
-                {#if '__ungrouped__' == activeTabId}
+                {#if '__ungrouped__' == uiState.activeGridTabId}
                   <InnerTabContainer>
                     <WidgetsSection />
                   </InnerTabContainer>
@@ -154,7 +152,7 @@
               {/if}
               {#each workspaceState.groups as group (group.id)}
                 {#if group.isTabify && workspaceState.hasTabContent(group.id)}
-                  {#if group.id == activeTabId}
+                  {#if group.id == uiState.activeGridTabId}
                     <InnerTabContainer>
                       <WidgetsSection {group} />
                     </InnerTabContainer>

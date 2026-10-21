@@ -266,6 +266,11 @@ export function syncAndSaveLayout() {
     callLayoutChangedCallbacks();
 }
 
+export function activateTabBoardForNode(nodeId: string) {
+    const workspace = appState.workspaceState;
+    appState.uiState.activeGridTabId = workspace.layout.commonTabBoard ? '__ungrouped__' : (workspace.nodeTabMap.get(nodeId) ?? '__ungrouped__');
+}
+
 export async function updateBoardFloatingState(priorityId?: string) {
     logger.trace(`[LAYOUT_LOG] updateBoardFloatingState start (priorityId="${priorityId ?? ''}")`);
     await waitForDom();
