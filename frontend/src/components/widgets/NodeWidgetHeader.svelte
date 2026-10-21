@@ -123,7 +123,7 @@
         : createGridStackMoveMenu($t, moveToBoard),
     ];
     if (isFloating && otherBoardId)
-      items.push({
+      items.unshift({
         id: 'board',
         kind: 'action',
         label: $t(

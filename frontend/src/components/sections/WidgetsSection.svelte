@@ -35,7 +35,7 @@
 
 <div bind:clientWidth={containerWidth}>
   {#if showBoard}
-    <div class="mb-1">
+    <div class="mb-1 px-1">
       <GridStackBoard boardId="Tab" groupId={effectiveGroupId}></GridStackBoard>
     </div>
   {/if}

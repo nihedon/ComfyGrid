@@ -10,6 +10,7 @@
   import { appState } from '@/states/app-state.svelte';
   import { ComfyGridGroup, ComfyGridNode } from '@/states/model-state.svelte';
   import type { BoardId } from '@/types/board';
+  import { createGridBackgroundPaths } from '@/utils/gridstack-background';
   import logger from '@/utils/logger';
   import { debounceOnTick } from '@/utils/schedule';
   import NodeWidget from '../widgets/NodeWidget.svelte';
@@ -97,6 +98,46 @@
   }
 
   let gridInstance = $state<GridStack | null>(null);
+  const showGridBackground = $derived(
+    (appState.optionState.get('ComfyGrid.ui.show_gridstack_grid') as boolean) ?? false,
+  );
+  let backgroundSize = $state({
+    width: 0,
+    height: 0,
+    columns: GRID_COLUMNS,
+    cellHeight: GRID_CELL_HEIGHT,
+  });
+  const backgroundPaths = $derived(
+    showGridBackground
+      ? createGridBackgroundPaths(
+          backgroundSize.width,
+          backgroundSize.height,
+          backgroundSize.columns,
+          backgroundSize.cellHeight,
+        )
+      : { major: '', minor: '' },
+  );
+
+  function updateGridBackground() {
+    if (!showGridBackground || !gridInstance) return;
+    const bounds = container.getBoundingClientRect();
+    const style = getComputedStyle(container);
+    backgroundSize = {
+      width: bounds.width - parseFloat(style.borderLeftWidth) - parseFloat(style.borderRightWidth),
+      height:
+        bounds.height - parseFloat(style.borderTopWidth) - parseFloat(style.borderBottomWidth),
+      columns: gridInstance.getColumn(),
+      cellHeight: gridInstance.getCellHeight(true),
+    };
+  }
+
+  $effect(() => {
+    if (!showGridBackground || !gridInstance) return;
+    const observer = new ResizeObserver(updateGridBackground);
+    observer.observe(container);
+    updateGridBackground();
+    return () => observer.disconnect();
+  });
 
   onMount(() => {
     logger.log(`gridstack init: board "${gridKey}"`);
@@ -118,8 +159,10 @@
     gridInstance = grid;
     workspaceState.setGridStackBoard(gridKey, grid);
     applyFloatingPositions(gridKey);
+    updateGridBackground();
 
     const handleGridChange = (event: Event, items?: unknown) => {
+      updateGridBackground();
       if (isApplyingFloatingPositions(grid)) return;
       logger.trace(`[LAYOUT_LOG] GridStack event: type="${event.type}", board="${gridKey}"`, items);
 
@@ -196,7 +239,23 @@
   });
 </script>
 
-<div id="grid-stack-{gridKey}" class="grid-stack w-100" bind:this={container}>
+<div
+  id="grid-stack-{gridKey}"
+  class="border border-2 border-secondary rounded-2 grid-stack"
+  bind:this={container}
+>
+  {#if showGridBackground && backgroundSize.width > 0 && backgroundSize.height > 0}
+    <svg
+      class="grid-background"
+      aria-hidden="true"
+      focusable="false"
+      viewBox="0 0 {backgroundSize.width} {backgroundSize.height}"
+      preserveAspectRatio="none"
+    >
+      <path class="major" d={backgroundPaths.major} />
+      <path class="minor" d={backgroundPaths.minor} />
+    </svg>
+  {/if}
   {#each nodesInBoard as { group, node } (`node-${group.id}-${node.id}`)}
     {#if workspaceState.layout.floatingNodes.get(node.id) === boardId}
       <div class="grid-stack-item" use:gs={getGSParams(node.id, node)} data-id={node.id}>
@@ -212,6 +271,30 @@
 </div>
 
 <style lang="scss">
+  .grid-stack {
+    box-sizing: content-box;
+  }
+
+  .grid-background {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    fill: none;
+    stroke: var(--bs-body-color);
+    stroke-width: 1;
+    shape-rendering: crispEdges;
+  }
+
+  .major {
+    stroke-opacity: 0.14;
+  }
+
+  .minor {
+    stroke-opacity: 0.03;
+  }
+
   :global(.grid-stack-item > .ui-resizable-handle) {
     opacity: 0 !important;
   }
