@@ -1,5 +1,7 @@
 <script lang="ts">
   import { type Component } from 'svelte';
+  import { ChevronDown, ChevronUp } from '@lucide/svelte';
+  import { t } from '@/i18n/i18n';
   import { notifyNodeChanged } from '@/services/custom-node-service.svelte';
   import { appState } from '@/states/app-state.svelte';
   import type { ComfyGridNode, ComfyGridWidget } from '@/states/model-state.svelte';
@@ -54,7 +56,7 @@
     | { id: string; type: 'single'; widget: ComfyGridWidget; component: Component }
     | { id: string; type: 'single-ce'; widget: ComfyGridWidget; customElement: string };
 
-  const renderableWidgets = $derived.by((): RenderItem[] => {
+  const availableWidgets = $derived.by((): RenderItem[] => {
     const items: RenderItem[] = [];
 
     for (const w of containsWidgets) {
@@ -84,6 +86,11 @@
     }
     return items;
   });
+
+  const hasAdvancedWidgets = $derived(availableWidgets.some((item) => item.widget.advanced));
+  const renderableWidgets = $derived(
+    availableWidgets.filter((item) => widget || node.showAdvanced || !item.widget.advanced),
+  );
 
   function bindCustomElementProps(el: HTMLElement, props: Record<string, unknown>) {
     Object.assign(el, props);
@@ -195,6 +202,19 @@
           />
         {/if}
       {/each}
+    </div>
+  {/if}
+  {#if !widget && !node.collapsed && hasAdvancedWidgets && !node.alwaysShowAdvanced}
+    <div class="card-footer p-0">
+      <button
+        type="button"
+        class="btn btn-sm w-100 d-flex align-items-center justify-content-center gap-2"
+        aria-expanded={node.showAdvanced}
+        onclick={() => (node.showAdvanced = !node.showAdvanced)}
+      >
+        {$t(node.showAdvanced ? 'node.hide_advanced' : 'node.show_advanced')}
+        {#if node.showAdvanced}<ChevronUp size={16} />{:else}<ChevronDown size={16} />{/if}
+      </button>
     </div>
   {/if}
 </div>

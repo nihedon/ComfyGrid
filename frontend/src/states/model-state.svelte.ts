@@ -191,6 +191,8 @@ export class ComfyGridNode {
     readonly #comfyNode: ComfyNode;
     #title: string = $state();
     #collapsed: boolean = $state();
+    #showAdvanced: boolean = $state(false);
+    #alwaysShowAdvanced: boolean = $state(false);
     #mode: ComfyNodeMode = $state();
     #bgcolor: string | null = $state();
     readonly #widgets: ComfyGridWidget[] = $state([]);
@@ -352,6 +354,8 @@ export class ComfyGridNode {
     }
 
     updateWidgets(app: ComfyApp) {
+        this.#showAdvanced = Boolean(this.#comfyNode.showAdvanced);
+        this.#alwaysShowAdvanced = app?.ui?.settings?.getSettingValue?.('Comfy.Node.AlwaysShowAdvancedWidgets') === true;
         const unusedWidgets = [...this.#widgets];
         const newWidgets: ComfyGridWidget[] = [];
         const configs = this.#buildWidgetConfigList();
@@ -391,6 +395,12 @@ export class ComfyGridNode {
     }
     get collapsed() {
         return this.#collapsed;
+    }
+    get showAdvanced() {
+        return this.#showAdvanced || this.#alwaysShowAdvanced;
+    }
+    get alwaysShowAdvanced() {
+        return this.#alwaysShowAdvanced;
     }
     get hasOutputNode() {
         return this.#comfyNode.constructor.nodeData?.output_node;
@@ -433,6 +443,10 @@ export class ComfyGridNode {
     set collapsed(collapsed: boolean) {
         this.#comfyNode.flags.collapsed = collapsed;
         this.#collapsed = collapsed;
+    }
+    set showAdvanced(showAdvanced: boolean) {
+        this.#comfyNode.showAdvanced = showAdvanced;
+        this.#showAdvanced = showAdvanced;
     }
     set mode(mode: ComfyNodeMode) {
         this.#mode = mode;
@@ -492,6 +506,7 @@ export class ComfyGridWidget<V = string, O = undefined> {
     #label: string | undefined = $state();
     #name: string = $state();
     #type: string = $state();
+    #advanced: boolean = $state(false);
     #value: V = $state();
     #rawValue: string | undefined = $state();
     #image: ImageInfo = $state({ filename: '', subfolder: '', type: '' });
@@ -541,6 +556,9 @@ export class ComfyGridWidget<V = string, O = undefined> {
     }
     get type() {
         return this.#type;
+    }
+    get advanced() {
+        return this.#advanced;
     }
     get value() {
         return this.#value;
@@ -651,6 +669,7 @@ export class ComfyGridWidget<V = string, O = undefined> {
         this.#label = this.#comfyWidget.label;
         this.#name = this.#comfyWidget.name;
         this.#type = overrides?.type ?? this.#comfyWidget.type;
+        this.#advanced = this.#comfyWidget.options?.advanced ?? this.#comfyWidget.advanced ?? false;
         this.#value = (typeof this.#comfyWidget.value === 'object' ? safeClone(this.#comfyWidget.value) : this.#comfyWidget.value) as V;
         const draft = this.#type === 'customtext' ? this.#node.comfyNode.properties.rawDraftValues?.[this.#index] : undefined;
         this.#rawValue = draft ?? this.#node.comfyNode.properties.rawValues?.[this.#index] ?? (this.#type === 'customtext' ? undefined : this.#value);

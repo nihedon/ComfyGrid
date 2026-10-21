@@ -189,6 +189,8 @@
     "node.move_to_other_board": "タブ空間に移動",
     "node.move_to_global_board": "グローバル空間に移動",
     "node.focus": "ComfyUI上でノードにフォーカス",
+    "node.show_advanced": "詳細入力を表示",
+    "node.hide_advanced": "詳細入力を非表示",
     "node.menu.mode": "モード",
     "node.menu.execute": "このノードを実行",
     "node.menu.text_type": "テキスト種類",

@@ -19,6 +19,7 @@ export interface ComfyCanvas extends LGraphCanvas {
 }
 
 export interface ComfyApp {
+    ui?: { settings?: { getSettingValue?: (id: string) => unknown } };
     comfyGridWorkflows?: ComfyWorkflowApi;
     comfyGridDomWidgets?: ComfyDomWidgetApi;
     /** @deprecated use rootGraph instead */
@@ -66,6 +67,7 @@ export interface ComfyGroup extends LGraphGroup {
 }
 
 export interface ComfyNode extends LGraphNode {
+    showAdvanced?: boolean;
     block_delete?: boolean;
     ignore_remove?: boolean;
     connectInputToOutput?: () => boolean | undefined;
@@ -94,12 +96,14 @@ export interface ComfyWidget {
     value?: any;
     label?: string;
     options?: {
+        advanced?: boolean;
         // eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
         values?: string[] | Function;
         [key: string]: unknown;
     };
     disabled: boolean;
     hidden?: boolean;
+    advanced?: boolean;
     image?: ImageInfo;
     element?: HTMLElement & { disabled: boolean; readOnly: boolean; placeholder: string };
     inputEl?: HTMLElement & { disabled: boolean; readOnly: boolean; placeholder: string };
