@@ -17,6 +17,10 @@ interface ScrubCallbacks {
 export const PIXELS_PER_STEP = 4;
 const DRAG_THRESHOLD = 3;
 
+export function scrubSpeed(modifiers: { shiftKey: boolean; ctrlKey: boolean }): number {
+    return modifiers.shiftKey ? 0.25 : modifiers.ctrlKey ? 4 : 1;
+}
+
 export function isScrubbableNumber(settings: NumberScrubSettings): settings is ValidSettings {
     return (
         !settings.readonly &&
@@ -47,7 +51,17 @@ export function scrubbedValue(settings: ValidSettings, distance: number): number
 export function scrubbableNumber(input: HTMLInputElement, callbacks: ScrubCallbacks) {
     const document = input.ownerDocument;
     const window = document.defaultView;
-    let gesture: { pointerId: number; startX: number; settings: ValidSettings; value: number; dragged: boolean } | null = null;
+    let gesture: {
+        pointerId: number;
+        startX: number;
+        lastX: number;
+        segmentX: number;
+        distance: number;
+        speed: number;
+        settings: ValidSettings;
+        value: number;
+        dragged: boolean;
+    } | null = null;
     let suppressClick = false;
 
     function finish(commit: boolean) {
@@ -81,10 +95,8 @@ export function scrubbableNumber(input: HTMLInputElement, callbacks: ScrubCallba
             event.button !== 0 ||
             !event.isPrimary ||
             event.pointerType === 'touch' ||
-            event.ctrlKey ||
             event.metaKey ||
             event.altKey ||
-            event.shiftKey ||
             input.disabled ||
             input.readOnly ||
             document.activeElement === input
@@ -94,7 +106,17 @@ export function scrubbableNumber(input: HTMLInputElement, callbacks: ScrubCallba
         if (!isScrubbableNumber(settings)) return;
         // Leave the native number spinner alone; focused inputs retain text selection.
         if (event.clientX >= input.getBoundingClientRect().right - 24) return;
-        gesture = { pointerId: event.pointerId, startX: event.clientX, settings: { ...settings }, value: settings.value, dragged: false };
+        gesture = {
+            pointerId: event.pointerId,
+            startX: event.clientX,
+            lastX: event.clientX,
+            segmentX: event.clientX,
+            distance: 0,
+            speed: scrubSpeed(event),
+            settings: { ...settings },
+            value: settings.value,
+            dragged: false,
+        };
         event.preventDefault();
         event.stopPropagation();
         input.setPointerCapture(event.pointerId);
@@ -104,9 +126,19 @@ export function scrubbableNumber(input: HTMLInputElement, callbacks: ScrubCallba
 
     function pointermove(event: PointerEvent) {
         if (!gesture || gesture.pointerId !== event.pointerId) return;
-        const distance = event.clientX - gesture.startX;
-        if (!gesture.dragged && Math.abs(distance) < DRAG_THRESHOLD) return;
-        gesture.dragged = true;
+        const speed = scrubSpeed(event);
+        if (!gesture.dragged) {
+            if (Math.abs(event.clientX - gesture.startX) < DRAG_THRESHOLD) return;
+            gesture.dragged = true;
+            gesture.speed = speed;
+        } else if (speed !== gesture.speed) {
+            // Keep completed movement unchanged when switching speed mid-drag.
+            gesture.distance += (gesture.lastX - gesture.segmentX) * gesture.speed;
+            gesture.segmentX = gesture.lastX;
+            gesture.speed = speed;
+        }
+        const distance = gesture.distance + (event.clientX - gesture.segmentX) * gesture.speed;
+        gesture.lastX = event.clientX;
         event.preventDefault();
         event.stopPropagation();
         const value = scrubbedValue(gesture.settings, distance);
