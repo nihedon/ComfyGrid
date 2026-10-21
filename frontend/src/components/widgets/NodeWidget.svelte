@@ -299,7 +299,7 @@
 >
   <NodeHeaderMenu {node} {widget} extraItems={layoutMenuItems} disabled={isTitleEditing}>
     {#snippet trigger({ props })}
-      <div {...props} class="card-header" class:mute={node.mode === COMFY_NODE_MODE.MUTE}>
+      <div class="card-header" class:mute={node.mode === COMFY_NODE_MODE.MUTE}>
         {#if !isTitleEditing}
           <div class="card-header-left">
             {#if !widget}
@@ -335,7 +335,7 @@
               if (!widget) {
                 isTitleEditing = true;
               }
-            }}>{title}</span
+            }}><span {...props} class="node-title-text">{title}</span></span
           >
         {:else}
           <input
