@@ -153,7 +153,10 @@ export function scrubbableNumber(input: HTMLInputElement, callbacks: ScrubCallba
         const dragged = gesture.dragged;
         if (dragged) event.stopPropagation();
         finish(true);
-        if (!dragged) input.focus({ preventScroll: true });
+        if (!dragged) {
+            input.focus({ preventScroll: true });
+            input.select();
+        }
     }
 
     function pointercancel(event: PointerEvent) {
