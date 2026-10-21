@@ -161,8 +161,8 @@
         </div>
       {/if}
       {#if !isTitleEditing}
-        <!-- svelte-ignore a11y_no_static_element_interactions -->
         <span
+          {...props}
           class="node-title"
           class:floating={isFloating}
           title="{title} ({node.id})"
@@ -170,7 +170,7 @@
             if (!widget) {
               isTitleEditing = true;
             }
-          }}><span {...props} class="node-title-text">{title}</span></span
+          }}><span class="node-title-text">{title}</span></span
         >
       {:else}
         <input
