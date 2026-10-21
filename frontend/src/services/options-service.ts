@@ -13,7 +13,13 @@ export async function loadOpts() {
         if (res.ok) {
             const data = res.json;
             globalThis.opts = { ...globalThis.opts, ...data.opts };
+            const legacyGrid = globalThis.opts['ComfyGrid.ui.show_gridstack_grid'];
+            if (globalThis.opts['ComfyGrid.ui.gridstack_background'] === undefined && typeof legacyGrid === 'boolean') {
+                globalThis.opts['ComfyGrid.ui.gridstack_background'] = legacyGrid ? 'grid' : 'none';
+            }
+            delete globalThis.opts['ComfyGrid.ui.show_gridstack_grid'];
             globalThis.forms = { ...globalThis.forms, ...data.forms };
+            delete globalThis.forms['ComfyGrid.ui.show_gridstack_grid'];
             globalThis.extForms = { ...globalThis.extForms, ...data.ext_forms };
 
             appState.optionState.opts = globalThis.opts;

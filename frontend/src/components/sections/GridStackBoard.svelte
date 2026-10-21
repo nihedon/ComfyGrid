@@ -98,9 +98,11 @@
   }
 
   let gridInstance = $state<GridStack | null>(null);
-  const showGridBackground = $derived(
-    (appState.optionState.get('ComfyGrid.ui.show_gridstack_grid') as boolean) ?? false,
+  const backgroundMode = $derived(
+    appState.optionState.get('ComfyGrid.ui.gridstack_background') as
+      'none' | 'grid' | 'dots' | undefined,
   );
+  const showGridBackground = $derived(backgroundMode === 'grid' || backgroundMode === 'dots');
   let backgroundSize = $state({
     width: 0,
     height: 0,
@@ -114,6 +116,7 @@
           backgroundSize.height,
           backgroundSize.columns,
           backgroundSize.cellHeight,
+          backgroundMode === 'dots' ? 'dots' : 'grid',
         )
       : { major: '', minor: '' },
   );
@@ -241,12 +244,13 @@
 
 <div
   id="grid-stack-{gridKey}"
-  class="border border-2 border-secondary rounded-2 grid-stack"
+  class="border border-1 border-secondary-subtle rounded-2 grid-stack"
   bind:this={container}
 >
   {#if showGridBackground && backgroundSize.width > 0 && backgroundSize.height > 0}
     <svg
       class="grid-background"
+      class:dots={backgroundMode === 'dots'}
       aria-hidden="true"
       focusable="false"
       viewBox="0 0 {backgroundSize.width} {backgroundSize.height}"
@@ -293,6 +297,20 @@
 
   .minor {
     stroke-opacity: 0.03;
+  }
+
+  .grid-background.dots {
+    stroke-width: 2;
+    stroke-linecap: round;
+    shape-rendering: geometricPrecision;
+  }
+
+  .dots .major {
+    stroke-opacity: 0.3;
+  }
+
+  .dots .minor {
+    stroke-opacity: 0.14;
   }
 
   :global(.grid-stack-item > .ui-resizable-handle) {

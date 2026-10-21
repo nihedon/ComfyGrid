@@ -29,9 +29,10 @@ default = false
 type = "checkbox"
 default = false
 
-[ComfyGrid.ui.show_gridstack_grid]
-type = "checkbox"
-default = false
+[ComfyGrid.ui.gridstack_background]
+type = "dropdown"
+choices = ["none", "grid", "dots"]
+default = "none"
 
 [ComfyGrid.ui.model_thumbnail_width]
 type = "slider"
