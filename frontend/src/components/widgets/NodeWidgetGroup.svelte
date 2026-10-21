@@ -160,7 +160,7 @@
   {#snippet contents()}
     {#if masonryNodes.length > 0}
       <div class="masonry-grid" style:column-count={columnCount}>
-        {#each masonryNodes as node, index (`${node.id}-${index}`)}
+        {#each masonryNodes as node (node.id)}
           <div class="masonry-item">
             <NodeWidget {node} />
           </div>
@@ -169,7 +169,7 @@
     {/if}
     {#if listNodes.length > 0}
       <div class="list-group">
-        {#each listNodes as node, index (`${node.id}-${index}`)}
+        {#each listNodes as node (node.id)}
           <NodeWidget {node} />
         {/each}
       </div>
