@@ -99,6 +99,7 @@ export interface ComfyWidget {
         [key: string]: unknown;
     };
     disabled: boolean;
+    hidden?: boolean;
     image?: ImageInfo;
     element?: HTMLElement & { disabled: boolean; readOnly: boolean; placeholder: string };
     inputEl?: HTMLElement & { disabled: boolean; readOnly: boolean; placeholder: string };

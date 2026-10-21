@@ -356,6 +356,8 @@ export class ComfyGridNode {
         const newWidgets: ComfyGridWidget[] = [];
         const configs = this.#buildWidgetConfigList();
         for (const config of configs) {
+            // Preserve config indices used by saved layouts and widget values.
+            if (config.widget.hidden) continue;
             const targetType = config.overrides?.type ?? config.widget.type;
             const existingIdx = unusedWidgets.findIndex((w) => w.comfyWidget === config.widget && w.type === targetType);
             if (existingIdx !== -1) {
