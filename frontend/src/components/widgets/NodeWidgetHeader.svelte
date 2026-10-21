@@ -1,12 +1,5 @@
 <script lang="ts">
-  import {
-    ArrowBigDown,
-    ArrowBigUp,
-    LayoutDashboard,
-    Locate,
-    PictureInPicture,
-  } from '@lucide/svelte';
-  import AppMenu from '@/components/common/AppMenu.svelte';
+  import { ArrowBigDown, ArrowBigUp, Locate, PictureInPicture } from '@lucide/svelte';
   import { t } from '@/i18n/i18n';
   import { activateTabBoardForNode, updateBoardFloatingState } from '@/services/gridstack-service';
   import { appState } from '@/states/app-state.svelte';
@@ -15,6 +8,7 @@
   import type { MenuEntry } from '@/types/menu';
   import { COMFY_NODE_MODE, type ComfyNodeMode } from '@/types/model-shared';
   import logger from '@/utils/logger';
+  import GridStackMoveButton from './GridStackMoveButton.svelte';
   import NodeHeaderMenu from './NodeHeaderMenu.svelte';
   import NodeModeSelector from './comfyui/features/NodeModeSelector.svelte';
   import TextareaCategory from './comfyui/features/TextareaCategory.svelte';
@@ -135,10 +129,6 @@
       });
     return items;
   });
-
-  const moveMenuItems = $derived(
-    layoutMenuItems.flatMap((item) => (item.kind === 'submenu' ? item.items : [item])),
-  );
 </script>
 
 <NodeHeaderMenu {node} {widget} extraItems={layoutMenuItems} disabled={isTitleEditing}>
@@ -200,20 +190,7 @@
       {/if}
       {#if !isTitleEditing}
         <div class="card-header-right">
-          <AppMenu items={moveMenuItems} align="end">
-            {#snippet trigger({ props })}
-              <button
-                {...props}
-                type="button"
-                class="btn btn-xs btn-icon gridstack-move-button"
-                class:active={isFloating}
-                title={$t('node.menu.move')}
-                aria-label={$t('node.menu.move')}
-              >
-                <LayoutDashboard size={12} />
-              </button>
-            {/snippet}
-          </AppMenu>
+          <GridStackMoveButton items={layoutMenuItems} {isFloating} />
         </div>
       {/if}
     </div>
@@ -221,12 +198,6 @@
 </NodeHeaderMenu>
 
 <style lang="scss">
-  .gridstack-move-button {
-    --bs-btn-active-color: #fff;
-    --bs-btn-active-bg: var(--bs-primary);
-    --bs-btn-active-border-color: var(--bs-primary);
-  }
-
   .btn-sm {
     padding: 0.25rem !important;
   }

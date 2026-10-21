@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onDestroy, untrack } from 'svelte';
-  import { LayoutDashboard } from '@lucide/svelte';
   import { comfyGridApiClient } from '@/api/api-client';
+  import AppMenu from '@/components/common/AppMenu.svelte';
   import PromptEditor from '@/components/common/PromptEditor.svelte';
   import { t } from '@/i18n/i18n';
   import {
@@ -14,7 +14,7 @@
   import { appState } from '@/states/app-state.svelte';
   import type { ComfyGridWidget } from '@/states/model-state.svelte';
   import type { BoardId } from '@/types/board';
-  import NodeHeaderMenu from '../NodeHeaderMenu.svelte';
+  import GridStackMoveButton from '../GridStackMoveButton.svelte';
   import { createGridStackMoveMenu } from '../node-layout-menu';
   import TextareaCategory from './features/TextareaCategory.svelte';
 
@@ -59,9 +59,7 @@
   // eslint-disable-next-line svelte/prefer-svelte-reactivity
   const translationControllers = new Set<AbortController>();
 
-  const floatingButtonTitle = $derived(
-    layout.floatingWidgets.get(widget.id) ? 'node.move_to_group.title' : 'node.move_to_grid.title',
-  );
+  const layoutMenuItems = $derived([createGridStackMoveMenu($t, moveToBoard)]);
 
   async function triggerTranslation(text: string): Promise<void> {
     if (
@@ -320,12 +318,6 @@
     translationManager.unregister(widget.id);
   });
 
-  async function toggleFloating() {
-    const current = layout.floatingWidgets.get(widget.id);
-    layout.setFloatingWidgets(widget.id, current ? '' : 'Global');
-    await updateBoardFloatingState();
-  }
-
   async function moveToBoard(boardId: BoardId) {
     layout.setFloatingWidgets(widget.id, boardId);
     if (boardId === 'Tab') activateTabBoardForNode(widget.node.id);
@@ -398,28 +390,19 @@
     data-name={widget.name}
   >
     <div class="vstack h-100 flex-grow-1 rounded textarea-container">
-      <NodeHeaderMenu
-        node={widget.node}
-        {widget}
-        extraItems={[createGridStackMoveMenu($t, moveToBoard)]}
-      >
+      <AppMenu context items={layoutMenuItems}>
         {#snippet trigger({ props })}
           <div
             {...props}
             class="d-flex border rounded-top border-bottom-0 bg-light d-flex py-0 ps-3 pe-0 align-items-center"
           >
             <TextareaCategory {widget} onManualTranslate={handleManualTranslate} />
-            <button
-              class="btn btn-xs ms-auto d-flex align-items-center justify-content-center"
-              title={$t(floatingButtonTitle)}
-              style="background: var(--background-fill-primary);"
-              onclick={toggleFloating}
-            >
-              <LayoutDashboard size={14} />
-            </button>
+            <div class="ms-auto">
+              <GridStackMoveButton items={layoutMenuItems} />
+            </div>
           </div>
         {/snippet}
-      </NodeHeaderMenu>
+      </AppMenu>
       <div class="d-flex flex-grow-1 overflow-y-hidden">
         {@render textarea()}
       </div>

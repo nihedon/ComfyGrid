@@ -68,7 +68,7 @@
   }
 
   function handleMenuOpen(open: boolean) {
-    if (open) duplicationIssue = getNodeDuplicationIssue(node.comfyNode);
+    if (open && !widget) duplicationIssue = getNodeDuplicationIssue(node.comfyNode);
   }
 
   async function deleteNode() {
@@ -94,6 +94,7 @@
   }
 
   const items = $derived.by((): MenuEntry[] => {
+    if (widget) return extraItems;
     const result: MenuEntry[] = [];
     if (!node.isNote) {
       result.push({
