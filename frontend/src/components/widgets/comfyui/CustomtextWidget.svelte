@@ -5,7 +5,7 @@
   import PromptEditor from '@/components/common/PromptEditor.svelte';
   import { t } from '@/i18n/i18n';
   import {
-    activateTabBoardForNode,
+    activateTabForNode,
     saveLayoutObject,
     updateBoardFloatingState,
   } from '@/services/gridstack-service';
@@ -320,7 +320,7 @@
 
   async function moveToBoard(boardId: BoardId) {
     layout.setFloatingWidgets(widget.id, boardId);
-    if (boardId === 'Tab') activateTabBoardForNode(widget.node.id);
+    if (boardId === 'Tab') activateTabForNode(widget.node.id, boardId);
     await updateBoardFloatingState(widget.id);
   }
 

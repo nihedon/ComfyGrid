@@ -1,7 +1,7 @@
 <script lang="ts">
   import { ArrowBigDown, ArrowBigUp, Locate, PictureInPicture } from '@lucide/svelte';
   import { t } from '@/i18n/i18n';
-  import { activateTabBoardForNode, updateBoardFloatingState } from '@/services/gridstack-service';
+  import { activateTabForNode, updateBoardFloatingState } from '@/services/gridstack-service';
   import { appState } from '@/states/app-state.svelte';
   import type { ComfyGridNode, ComfyGridWidget } from '@/states/model-state.svelte';
   import type { BoardId } from '@/types/board';
@@ -64,6 +64,7 @@
       );
       workspaceState.layout.setFloatingNodes(node.id, next);
     }
+    activateTabForNode(node.id, workspaceState.layout.floatingNodes.get(node.id) || '');
     await updateBoardFloatingState(targetId);
   }
 
@@ -82,7 +83,7 @@
       );
       workspaceState.layout.setFloatingNodes(node.id, targetBoardId);
     }
-    if (targetBoardId === 'Tab') activateTabBoardForNode(node.id);
+    if (targetBoardId === 'Tab') activateTabForNode(node.id, targetBoardId);
     await updateBoardFloatingState(targetId);
   }
 

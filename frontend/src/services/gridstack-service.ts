@@ -266,9 +266,11 @@ export function syncAndSaveLayout() {
     callLayoutChangedCallbacks();
 }
 
-export function activateTabBoardForNode(nodeId: string) {
+export function activateTabForNode(nodeId: string, boardId: BoardId) {
+    if (boardId === 'Global') return;
     const workspace = appState.workspaceState;
-    appState.uiState.activeGridTabId = workspace.layout.commonTabBoard ? '__ungrouped__' : (workspace.nodeTabMap.get(nodeId) ?? '__ungrouped__');
+    appState.uiState.activeGridTabId =
+        boardId === 'Tab' && workspace.layout.commonTabBoard ? '__ungrouped__' : (workspace.nodeTabMap.get(nodeId) ?? '__ungrouped__');
 }
 
 export async function updateBoardFloatingState(priorityId?: string) {
