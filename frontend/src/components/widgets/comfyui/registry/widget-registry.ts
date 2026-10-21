@@ -6,6 +6,7 @@ import ColorWidget from '../ColorWidget.svelte';
 import ComboWidget from '../ComboWidget.svelte';
 import CustomtextWidget from '../CustomtextWidget.svelte';
 import DOMWidget from '../DOMWidget.svelte';
+import DynamicGroupRowWidget from '../DynamicGroupRowWidget.svelte';
 import ImageEditorWidget from '../ImageEditorWidget.svelte';
 import ImagePreviewWidget from '../ImagePreviewWidget.svelte';
 import LabelWidget from '../LabelWidget.svelte';
@@ -26,6 +27,7 @@ const widgetRegistry: Record<string, Component> = {
     toggle: ToggleWidget,
     slider: RangeWidget,
     button: ButtonWidget,
+    dynamic_group_row: DynamicGroupRowWidget,
     customtext: CustomtextWidget,
     text: TextWidget,
     progressText: LabelWidget,

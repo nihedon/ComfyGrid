@@ -232,6 +232,7 @@
     "widget.translate.completed": "翻訳済",
     "widget.translate.failed": "翻訳失敗",
     "widget.translate.manual_button": "翻訳する",
+    "widget.dynamic_group.remove": "{row}を削除",
     "alert_no_positive_prompt_selected": "ポジティブプロンプトが選択されていません。",
     "alert_delete_image": "画像を削除してよろしいですか？",
     "log.comfyui.lifecycle.timeout": "ComfyUIの読み込みが時間内に完了しませんでした。起動ログを確認するか、再試行してください。",
