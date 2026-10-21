@@ -27,6 +27,8 @@ export interface WorkflowSaveResult extends OpenWorkflowInfo {
 
 export interface ComfyWorkflowApi {
     version: 1;
+    isGraphReady?(): boolean;
+    notifyGraphReady?(): void;
     listWorkflows(): OpenWorkflowInfo[];
     selectWorkflow(path: string): Promise<void>;
     saveWorkflow(promptName: (defaultName: string) => string | null): Promise<WorkflowSaveResult | null>;

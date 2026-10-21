@@ -23,9 +23,11 @@ export function installWorkflowApi(app, host = window) {
   let loading = 0;
   let generation = 0;
   let stable = true;
+  let graphReady = false;
   let selecting = false;
   let saving = false;
   let unsubscribe;
+  let unsubscribeStartup;
   let subscribedStore;
   const originalLoad = app.loadGraphData;
   const store = () => app.extensionManager?.workflow;
@@ -74,6 +76,36 @@ export function installWorkflowApi(app, host = window) {
 
   function find(path) {
     return workflows().find((workflow) => workflow.path === path);
+  }
+
+  function notifyGraphReady() {
+    if (disposed || loading || !stable || !(app.rootGraph ?? app.graph)) return;
+    graphReady = true;
+    unsubscribeStartup?.();
+    unsubscribeStartup = undefined;
+    host.parent?.dispatchEvent(
+      new CustomEvent("comfygrid:graph_ready", { detail: { app } }),
+    );
+  }
+
+  function checkEmptyWorkspace() {
+    const graph = app.rootGraph ?? app.graph;
+    // ComfyUI may finish startup without loading a graph when no tab is selected.
+    // setup() runs before restoration, so wait for its workspace spinner to stop.
+    if (
+      disposed ||
+      graphReady ||
+      generation ||
+      loading ||
+      !stable ||
+      app.extensionManager?.spinner !== false ||
+      host.app !== app ||
+      active() ||
+      !app.canvas ||
+      graph?.nodes?.length !== 0
+    )
+      return;
+    notifyGraphReady();
   }
 
   function captureWorkflow(path = active()?.path) {
@@ -137,18 +169,24 @@ export function installWorkflowApi(app, host = window) {
   async function loadGraphData(...args) {
     const operation = ++generation;
     stable = false;
+    graphReady = false;
     loading++;
     try {
       const result = await originalLoad.apply(this, args);
-      stable = operation === generation && loading === 1;
+      stable = result !== false && operation === generation && loading === 1;
       return result;
     } finally {
       loading--;
+      if (stable) notifyGraphReady();
     }
   }
 
   const api = {
     version: 1,
+    isGraphReady() {
+      return !disposed && graphReady && !loading && stable;
+    },
+    notifyGraphReady,
     listWorkflows() {
       if (disposed) return [];
       connectStore();
@@ -314,6 +352,8 @@ export function installWorkflowApi(app, host = window) {
       disposed = true;
       host.removeEventListener("pagehide", api.dispose);
       unsubscribe?.();
+      unsubscribeStartup?.();
+      unsubscribeStartup = undefined;
       captures.clear();
       bytes = 0;
       if (app.loadGraphData === loadGraphData) app.loadGraphData = originalLoad;
@@ -324,5 +364,10 @@ export function installWorkflowApi(app, host = window) {
   app.comfyGridWorkflows = api;
   host.addEventListener("pagehide", api.dispose);
   connectStore();
+  unsubscribeStartup = app.extensionManager?.$subscribe?.(checkEmptyWorkspace, {
+    detached: true,
+    flush: "post",
+  });
+  checkEmptyWorkspace();
   return api;
 }

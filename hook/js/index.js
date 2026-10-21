@@ -9,10 +9,6 @@ app.registerExtension({
     installDomWidgetApi(app);
   },
   afterConfigureGraph() {
-    window.parent?.dispatchEvent(
-      new CustomEvent("comfygrid:graph_ready", {
-        detail: { app },
-      }),
-    );
+    app.comfyGridWorkflows?.notifyGraphReady();
   },
 });
