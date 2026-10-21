@@ -7,6 +7,7 @@
     Locate,
     PictureInPicture,
   } from '@lucide/svelte';
+  import AppMenu from '@/components/common/AppMenu.svelte';
   import { t } from '@/i18n/i18n';
   import { notifyNodeChanged } from '@/services/custom-node-service.svelte';
   import { updateBoardFloatingState } from '@/services/gridstack-service';
@@ -267,12 +268,18 @@
       items.push({
         id: 'board',
         kind: 'action',
-        label: $t('node.move_to_other_board'),
+        label: $t(
+          currentBoardId === 'Global' ? 'node.move_to_other_board' : 'node.move_to_global_board',
+        ),
         icon: currentBoardId === 'Global' ? ArrowBigDown : ArrowBigUp,
         onSelect: () => moveToBoard(otherBoardId),
       });
     return items;
   });
+
+  const moveMenuItems = $derived(
+    layoutMenuItems.flatMap((item) => (item.kind === 'submenu' ? item.items : [item])),
+  );
 
   $effect(() => {
     notifyNodeChanged(node.id, node);
@@ -349,32 +356,20 @@
         {/if}
         {#if !isTitleEditing}
           <div class="card-header-right">
-            {#if isFloating && otherBoardId}
-              <button
-                type="button"
-                class="btn btn-xs btn-icon"
-                title={$t('node.move_to_other_board')}
-                onclick={() => moveToBoard(otherBoardId)}
-              >
-                {#if currentBoardId === 'Global'}
-                  <ArrowBigDown size={12} />
-                {:else}
-                  <ArrowBigUp size={12} />
-                {/if}
-              </button>
-            {/if}
-            <button
-              type="button"
-              class="btn btn-xs btn-icon"
-              title={$t(floatingButtonTitle)}
-              onclick={toggleFloating}
-            >
-              {#if isFloating}
-                <PictureInPicture size={12} />
-              {:else}
-                <LayoutDashboard size={12} />
-              {/if}
-            </button>
+            <AppMenu items={moveMenuItems} align="end">
+              {#snippet trigger({ props })}
+                <button
+                  {...props}
+                  type="button"
+                  class="btn btn-xs btn-icon gridstack-move-button"
+                  class:active={isFloating}
+                  title={$t('node.menu.move')}
+                  aria-label={$t('node.menu.move')}
+                >
+                  <LayoutDashboard size={12} />
+                </button>
+              {/snippet}
+            </AppMenu>
           </div>
         {/if}
       </div>
@@ -405,6 +400,12 @@
 </div>
 
 <style lang="scss">
+  .gridstack-move-button {
+    --bs-btn-active-color: #fff;
+    --bs-btn-active-bg: var(--bs-primary);
+    --bs-btn-active-border-color: var(--bs-primary);
+  }
+
   .btn-sm {
     padding: 0.25rem !important;
   }
