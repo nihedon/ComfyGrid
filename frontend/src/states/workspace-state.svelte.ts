@@ -11,14 +11,13 @@ export class Layout {
     readonly #floatingNodes = new SvelteMap<string, BoardId>();
     readonly #floatingWidgets = new SvelteMap<string, BoardId>();
     readonly #floatingPositions = new SvelteMap<string, Record<string, FloatingPosition>>();
-    readonly #promptWidgetIds = new SvelteSet<string>();
+    readonly #tagWidgetIds = new SvelteSet<string>();
     readonly #jsonWidgetIds = new SvelteSet<string>();
+    readonly #codeMirrorWidgetIds = new SvelteSet<string>();
     readonly #translateWidgetIds = new SvelteSet<string>();
     readonly #translateModels = new SvelteMap<string, string>();
     readonly #translateSystems = new SvelteMap<string, string>();
     readonly #translateSeedModes = new SvelteMap<string, TranslationSeedMode>();
-    #positivePromptWidgetId = $state<string | null>(null);
-    #negativePromptWidgetId = $state<string | null>(null);
     #showRenderableLessNodes = $state<boolean>(false);
     #showControlLessNodes = $state<boolean>(false);
     #showCollapsedNodes = $state<boolean>(false);
@@ -38,18 +37,22 @@ export class Layout {
     get floatingPositions(): ReadonlyMap<string, Record<string, FloatingPosition>> {
         return this.#floatingPositions;
     }
-    isPromptWidget(widgetId: string): boolean {
-        return this.#promptWidgetIds.has(widgetId);
+    isTagWidget(widgetId: string): boolean {
+        return this.#tagWidgetIds.has(widgetId);
     }
     isJsonWidget(widgetId: string): boolean {
         return this.#jsonWidgetIds.has(widgetId);
     }
+    isCodeMirrorWidget(widgetId: string): boolean {
+        return this.#codeMirrorWidgetIds.has(widgetId);
+    }
+    setCodeMirrorWidget(widgetId: string, enabled: boolean) {
+        if (enabled) this.#codeMirrorWidgetIds.add(widgetId);
+        else this.#codeMirrorWidgetIds.delete(widgetId);
+    }
     setJsonWidget(widgetId: string, enabled: boolean) {
         if (enabled) this.#jsonWidgetIds.add(widgetId);
         else this.#jsonWidgetIds.delete(widgetId);
-    }
-    get promptWidgetIds(): ReadonlySet<string> {
-        return this.#promptWidgetIds;
     }
     isTranslateWidget(widgetId: string): boolean {
         return this.#translateWidgetIds.has(widgetId);
@@ -86,12 +89,6 @@ export class Layout {
         } else {
             this.#translateSeedModes.delete(widgetId);
         }
-    }
-    get positivePromptWidgetId(): string | null {
-        return this.#positivePromptWidgetId;
-    }
-    get negativePromptWidgetId(): string | null {
-        return this.#negativePromptWidgetId;
     }
     get showRenderableLessNodes() {
         return this.#showRenderableLessNodes;
@@ -147,23 +144,17 @@ export class Layout {
         boardMap[id] = { ...boardMap[id], ...pos };
         logger.trace(`[LAYOUT_LOG] updateFloatingPosition: board="${boardId}", id="${id}"`, boardMap[id]);
     }
-    addPromptWidgetId(widgetId: string) {
-        this.#promptWidgetIds.add(widgetId);
+    addTagWidgetId(widgetId: string) {
+        this.#tagWidgetIds.add(widgetId);
     }
-    deletePromptWidgetId(widgetId: string) {
-        this.#promptWidgetIds.delete(widgetId);
+    deleteTagWidgetId(widgetId: string) {
+        this.#tagWidgetIds.delete(widgetId);
     }
     addTranslateWidgetId(widgetId: string) {
         this.#translateWidgetIds.add(widgetId);
     }
     deleteTranslateWidgetId(widgetId: string) {
         this.#translateWidgetIds.delete(widgetId);
-    }
-    setPositivePromptWidgetId(positivePromptWidgetId: string | null) {
-        this.#positivePromptWidgetId = positivePromptWidgetId;
-    }
-    setNegativePromptWidgetId(negativePromptWidgetId: string | null) {
-        this.#negativePromptWidgetId = negativePromptWidgetId;
     }
     set showRenderableLessNodes(val: boolean) {
         this.#showRenderableLessNodes = val;
@@ -215,23 +206,20 @@ export class Layout {
             for (const id of Array.from(this.#translateWidgetIds)) {
                 if (!validWidgetIds.has(id)) this.#translateWidgetIds.delete(id);
             }
-            for (const id of Array.from(this.#promptWidgetIds)) {
-                if (!validWidgetIds.has(id)) this.#promptWidgetIds.delete(id);
+            for (const id of Array.from(this.#tagWidgetIds)) {
+                if (!validWidgetIds.has(id)) this.#tagWidgetIds.delete(id);
             }
             for (const id of Array.from(this.#jsonWidgetIds)) {
                 if (!validWidgetIds.has(id)) this.#jsonWidgetIds.delete(id);
+            }
+            for (const id of Array.from(this.#codeMirrorWidgetIds)) {
+                if (!validWidgetIds.has(id)) this.#codeMirrorWidgetIds.delete(id);
             }
             for (const key of Array.from(this.#floatingNodes.keys())) {
                 if (!validNodeIds.has(key)) this.#floatingNodes.delete(key);
             }
             for (const key of Array.from(this.#floatingWidgets.keys())) {
                 if (!validWidgetIds.has(key)) this.#floatingWidgets.delete(key);
-            }
-            if (this.#positivePromptWidgetId && !validWidgetIds.has(this.#positivePromptWidgetId)) {
-                this.#positivePromptWidgetId = null;
-            }
-            if (this.#negativePromptWidgetId && !validWidgetIds.has(this.#negativePromptWidgetId)) {
-                this.#negativePromptWidgetId = null;
             }
         }
 
@@ -266,10 +254,9 @@ export class Layout {
             floatingPositions: allBoardLayouts,
             floatingNodes: Object.fromEntries(Array.from(this.#floatingNodes.entries()).filter(([, boardId]) => Boolean(boardId))),
             floatingWidgets: Object.fromEntries(Array.from(this.#floatingWidgets.entries()).filter(([, boardId]) => Boolean(boardId))),
-            promptWidgetIds: [...this.#promptWidgetIds],
+            tagWidgetIds: [...this.#tagWidgetIds],
             jsonWidgetIds: [...this.#jsonWidgetIds],
-            positivePromptWidgetId: this.#positivePromptWidgetId,
-            negativePromptWidgetId: this.#negativePromptWidgetId,
+            codeMirrorWidgetIds: [...this.#codeMirrorWidgetIds],
             translateWidgetIds: [...this.#translateWidgetIds],
             translateModels: Object.fromEntries(Array.from(this.#translateModels.entries()).filter(([, v]) => Boolean(v))),
             translateSystems: Object.fromEntries(Array.from(this.#translateSystems.entries()).filter(([, v]) => Boolean(v))),
@@ -300,14 +287,14 @@ export class Layout {
         Object.entries(layout.floatingPositions).forEach(([key, value]) => {
             this.#floatingPositions.set(key, value);
         });
-        this.#promptWidgetIds.clear();
+        this.#tagWidgetIds.clear();
         this.#jsonWidgetIds.clear();
+        this.#codeMirrorWidgetIds.clear();
+        (layout.codeMirrorWidgetIds ?? []).forEach((id) => this.#codeMirrorWidgetIds.add(id));
         (layout.jsonWidgetIds ?? []).forEach((id) => this.#jsonWidgetIds.add(id));
-        layout.promptWidgetIds.forEach((widgetId) => {
-            this.#promptWidgetIds.add(widgetId);
+        (layout.tagWidgetIds ?? []).forEach((widgetId) => {
+            this.#tagWidgetIds.add(widgetId);
         });
-        this.#positivePromptWidgetId = layout.positivePromptWidgetId;
-        this.#negativePromptWidgetId = layout.negativePromptWidgetId;
         this.#translateWidgetIds.clear();
         (layout.translateWidgetIds ?? []).forEach((widgetId) => {
             this.#translateWidgetIds.add(widgetId);

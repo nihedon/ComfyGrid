@@ -28,6 +28,7 @@
   import { promptPilotCompletion } from './prompt-editor/prompt-pilot';
   import { ensurePromptPilotModelsLoaded } from './prompt-editor/prompt-pilot/services/loader-service';
   import { CustomSearchPanel } from './prompt-editor/search-panel';
+  import { segmentHighlighter } from './prompt-editor/segment-highlighter';
 
   let {
     value = $bindable(''),
@@ -92,17 +93,23 @@
           },
           ...closeBracketsKeymap,
           ...searchKeymap,
-          ...promptAttentionKeymap,
           ...defaultKeymap,
           ...historyKeymap,
         ]),
         EditorView.lineWrapping,
         EditorState.readOnly.of(readonly),
         cmPlaceholder(placeholder),
-        promptHighlightPlugin,
         bracketMatchingPlugin,
-        completionCompartment.of(enablePromptPilot ? promptPilotCompletion() : []),
-        loraHoverPlugin(),
+        completionCompartment.of(
+          enablePromptPilot
+            ? [
+                promptPilotCompletion(),
+                promptHighlightPlugin,
+                loraHoverPlugin(),
+                keymap.of(promptAttentionKeymap),
+              ]
+            : segmentHighlighter,
+        ),
         highlightSelectionMatches({
           minSelectionLength: 1,
         }),
@@ -145,7 +152,16 @@
     const enabled = enablePromptPilot;
     if (view) {
       view.dispatch({
-        effects: completionCompartment.reconfigure(enabled ? promptPilotCompletion() : []),
+        effects: completionCompartment.reconfigure(
+          enabled
+            ? [
+                promptPilotCompletion(),
+                promptHighlightPlugin,
+                loraHoverPlugin(),
+                keymap.of(promptAttentionKeymap),
+              ]
+            : segmentHighlighter,
+        ),
       });
     }
   });
@@ -170,6 +186,7 @@
   });
 
   $effect(() => {
+    if (!enablePromptPilot) return;
     const coloring = appState.optionState.get('ComfyGrid.prompt_pilot.word_coloring');
     appState.optionState.get('ComfyGrid.prompt_pilot.post_count_threshold');
     appState.optionState.get('ComfyGrid.prompt_pilot.tag_source');
@@ -179,7 +196,7 @@
       });
       if (coloring === 'category') {
         ensurePromptPilotModelsLoaded().then((loaded) => {
-          if (loaded && view) {
+          if (loaded && view && enablePromptPilot) {
             view.dispatch({
               effects: [reconfigureHighlightEffect.of()],
             });

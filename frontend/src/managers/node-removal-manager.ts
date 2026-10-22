@@ -24,11 +24,10 @@ class NodeRemovalManager {
             for (const positions of Object.values(layout.floatingPositions)) {
                 for (const id of removedIds) delete positions[id];
             }
-            layout.promptWidgetIds = layout.promptWidgetIds.filter((id) => !widgetIds.has(id));
+            layout.tagWidgetIds = layout.tagWidgetIds?.filter((id) => !widgetIds.has(id));
             layout.jsonWidgetIds = layout.jsonWidgetIds?.filter((id) => !widgetIds.has(id));
+            layout.codeMirrorWidgetIds = layout.codeMirrorWidgetIds?.filter((id) => !widgetIds.has(id));
             layout.translateWidgetIds = layout.translateWidgetIds?.filter((id) => !widgetIds.has(id));
-            if (layout.positivePromptWidgetId && widgetIds.has(layout.positivePromptWidgetId)) layout.positivePromptWidgetId = null;
-            if (layout.negativePromptWidgetId && widgetIds.has(layout.negativePromptWidgetId)) layout.negativePromptWidgetId = null;
             saveLayout(layout);
             await workflowManager.loadCurrentWorkflow(layout);
         } finally {

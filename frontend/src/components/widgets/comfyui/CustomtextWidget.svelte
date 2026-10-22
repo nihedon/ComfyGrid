@@ -10,6 +10,7 @@
     saveLayoutObject,
     updateBoardFloatingState,
   } from '@/services/gridstack-service';
+  import { getTextCategory } from '@/services/text-widget-service';
   import { notifyTranslationError } from '@/services/translation-error-service';
   import { translationManager } from '@/services/translation-service.svelte';
   import { appState } from '@/states/app-state.svelte';
@@ -31,10 +32,8 @@
 
   const layout = $derived(workspaceState.layout);
 
-  const isPrompt = $derived(layout.isPromptWidget(widget.id));
-  const isPositivePrompt = $derived(layout.positivePromptWidgetId === widget.id);
-  const isNegativePrompt = $derived(layout.negativePromptWidgetId === widget.id);
-  const isTranslate = $derived(layout.isTranslateWidget(widget.id));
+  const category = $derived(getTextCategory(widget));
+  const isTranslate = $derived(category === 'translate');
   const translateSeedMode = $derived(
     layout.getTranslateSeedMode(widget.id) ??
       (appState.optionState.get('ComfyGrid.ollama.seed_mode') === 'random' ? 'random' : 'fixed'),
@@ -42,7 +41,6 @@
   const useOllamaCodeMirror = $derived(
     Boolean(appState.optionState.get('ComfyGrid.ollama.use_codemirror')),
   );
-  const isPromptGroup = $derived(isPrompt || isPositivePrompt || isNegativePrompt);
 
   function getRawInputValue(): string {
     return widget.rawValue ?? widget.value ?? '';
@@ -336,7 +334,7 @@
 </script>
 
 {#snippet textarea()}
-  {#if layout.isJsonWidget(widget.id)}
+  {#if category === 'json'}
     <JsonEditor
       bind:value={widget.value}
       readonly={widget.readonly}
@@ -354,20 +352,19 @@
       oninput={handleInput}
       onblur={handleBlur}
     />
-  {:else if isPromptGroup}
+  {:else if category === 'tags' || category === 'codemirror'}
     <PromptEditor
       rows={options.isFloating ? 1 : 6}
       readonly={widget.readonly}
       placeholder={widget.placeholder}
       bind:value={widget.value}
+      enablePromptPilot={category === 'tags'}
       oninput={handleInput}
       onblur={handleBlur}
     />
   {:else if isTranslate}
     <textarea
       class="flex-grow-1 form-control overflow-y-scroll rounded-top-0"
-      class:positive-prompt={isPositivePrompt}
-      class:prompt={isPromptGroup}
       oninput={handleInput}
       onblur={handleBlur}
       rows={options.isFloating ? 1 : 6}
@@ -379,8 +376,6 @@
   {:else}
     <textarea
       class="flex-grow-1 form-control overflow-y-scroll rounded-top-0"
-      class:positive-prompt={isPositivePrompt}
-      class:prompt={isPromptGroup}
       oninput={handleInput}
       rows={options.isFloating ? 1 : 6}
       style:min-height={options.isFloating ? '0' : undefined}
