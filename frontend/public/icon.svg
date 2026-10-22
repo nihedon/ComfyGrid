@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+  <title>ComfyGrid</title>
+  <g transform="translate(64 64) scale(1 1) rotate(-45) translate(-43 -43)">
+    <rect width="56" height="56" rx="3.5" fill="#348cd2" />
+    <rect x="60" width="26" height="56" rx="3.5" fill="#45cae8" />
+    <rect y="60" width="56" height="26" rx="3.5" fill="#45bd98" />
+    <rect x="60" y="60" width="26" height="26" rx="3.5" fill="#ff6049" />
+  </g>
+</svg>

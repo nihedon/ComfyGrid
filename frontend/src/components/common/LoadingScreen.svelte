@@ -31,7 +31,11 @@
 
 <div id="loading-panel" class:has-transition-error={Boolean(transitionError)}>
   <div class="loading-focus">
-    <AppLogo animated muted={Boolean(transitionError)} />
+    <AppLogo
+      animated
+      rotating={isWaitingForComfyUi || isStartingComfyGrid}
+      muted={Boolean(transitionError)}
+    />
     <div class="loading-status" role="status" aria-live="polite" aria-atomic="true">
       <span class="visually-hidden">{statusText}</span>
       {#key statusText}
