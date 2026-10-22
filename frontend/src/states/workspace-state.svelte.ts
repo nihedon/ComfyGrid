@@ -12,6 +12,7 @@ export class Layout {
     readonly #floatingWidgets = new SvelteMap<string, BoardId>();
     readonly #floatingPositions = new SvelteMap<string, Record<string, FloatingPosition>>();
     readonly #promptWidgetIds = new SvelteSet<string>();
+    readonly #jsonWidgetIds = new SvelteSet<string>();
     readonly #translateWidgetIds = new SvelteSet<string>();
     readonly #translateModels = new SvelteMap<string, string>();
     readonly #translateSystems = new SvelteMap<string, string>();
@@ -39,6 +40,13 @@ export class Layout {
     }
     isPromptWidget(widgetId: string): boolean {
         return this.#promptWidgetIds.has(widgetId);
+    }
+    isJsonWidget(widgetId: string): boolean {
+        return this.#jsonWidgetIds.has(widgetId);
+    }
+    setJsonWidget(widgetId: string, enabled: boolean) {
+        if (enabled) this.#jsonWidgetIds.add(widgetId);
+        else this.#jsonWidgetIds.delete(widgetId);
     }
     get promptWidgetIds(): ReadonlySet<string> {
         return this.#promptWidgetIds;
@@ -210,6 +218,9 @@ export class Layout {
             for (const id of Array.from(this.#promptWidgetIds)) {
                 if (!validWidgetIds.has(id)) this.#promptWidgetIds.delete(id);
             }
+            for (const id of Array.from(this.#jsonWidgetIds)) {
+                if (!validWidgetIds.has(id)) this.#jsonWidgetIds.delete(id);
+            }
             for (const key of Array.from(this.#floatingNodes.keys())) {
                 if (!validNodeIds.has(key)) this.#floatingNodes.delete(key);
             }
@@ -256,6 +267,7 @@ export class Layout {
             floatingNodes: Object.fromEntries(Array.from(this.#floatingNodes.entries()).filter(([, boardId]) => Boolean(boardId))),
             floatingWidgets: Object.fromEntries(Array.from(this.#floatingWidgets.entries()).filter(([, boardId]) => Boolean(boardId))),
             promptWidgetIds: [...this.#promptWidgetIds],
+            jsonWidgetIds: [...this.#jsonWidgetIds],
             positivePromptWidgetId: this.#positivePromptWidgetId,
             negativePromptWidgetId: this.#negativePromptWidgetId,
             translateWidgetIds: [...this.#translateWidgetIds],
@@ -289,6 +301,8 @@ export class Layout {
             this.#floatingPositions.set(key, value);
         });
         this.#promptWidgetIds.clear();
+        this.#jsonWidgetIds.clear();
+        (layout.jsonWidgetIds ?? []).forEach((id) => this.#jsonWidgetIds.add(id));
         layout.promptWidgetIds.forEach((widgetId) => {
             this.#promptWidgetIds.add(widgetId);
         });

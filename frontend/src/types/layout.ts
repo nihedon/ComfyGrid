@@ -15,6 +15,7 @@ export type LayoutType = {
     floatingWidgets: Record<string, BoardId>;
     floatingPositions: Record<string, Record<string, FloatingPosition>>;
     promptWidgetIds: string[];
+    jsonWidgetIds?: string[];
     positivePromptWidgetId: string | null;
     negativePromptWidgetId: string | null;
     translateWidgetIds?: string[];

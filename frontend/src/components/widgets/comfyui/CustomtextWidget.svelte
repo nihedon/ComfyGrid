@@ -2,6 +2,7 @@
   import { onDestroy, untrack } from 'svelte';
   import { comfyGridApiClient } from '@/api/api-client';
   import AppMenu from '@/components/common/AppMenu.svelte';
+  import JsonEditor from '@/components/common/JsonEditor.svelte';
   import PromptEditor from '@/components/common/PromptEditor.svelte';
   import { t } from '@/i18n/i18n';
   import {
@@ -335,7 +336,15 @@
 </script>
 
 {#snippet textarea()}
-  {#if isTranslate && useOllamaCodeMirror}
+  {#if layout.isJsonWidget(widget.id)}
+    <JsonEditor
+      bind:value={widget.value}
+      readonly={widget.readonly}
+      placeholder={widget.placeholder}
+      oninput={handleInput}
+      onblur={handleBlur}
+    />
+  {:else if isTranslate && useOllamaCodeMirror}
     <PromptEditor
       rows={options.isFloating ? 1 : 6}
       readonly={widget.readonly}

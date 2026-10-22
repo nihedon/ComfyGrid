@@ -4,11 +4,12 @@ import { saveLayoutObject } from '@/services/gridstack-service';
 import { appState } from '@/states/app-state.svelte';
 import type { ComfyGridWidget } from '@/states/model-state.svelte';
 
-export const TEXT_CATEGORIES = ['text', 'prompt', 'positive_prompt', 'negative_prompt', 'translate'] as const;
+export const TEXT_CATEGORIES = ['text', 'json', 'prompt', 'positive_prompt', 'negative_prompt', 'translate'] as const;
 export type TextCategory = (typeof TEXT_CATEGORIES)[number];
 
 export function getTextCategory(widget: ComfyGridWidget): TextCategory {
     const layout = appState.workspaceState.layout;
+    if (layout.isJsonWidget(widget.id)) return 'json';
     if (layout.isTranslateWidget(widget.id)) return 'translate';
     if (layout.isPromptWidget(widget.id)) return 'prompt';
     if (layout.positivePromptWidgetId === widget.id) return 'positive_prompt';
@@ -25,6 +26,7 @@ export async function setTextCategory(widget: ComfyGridWidget, category: TextCat
     if (oldPositive === widget.id) layout.setPositivePromptWidgetId(null);
     if (oldNegative === widget.id) layout.setNegativePromptWidgetId(null);
     layout.deleteTranslateWidgetId(widget.id);
+    layout.setJsonWidget(widget.id, category === 'json');
     if (category === 'prompt') layout.addPromptWidgetId(widget.id);
     else if (category === 'positive_prompt') {
         if (oldPositive && oldPositive !== widget.id) layout.addPromptWidgetId(oldPositive);

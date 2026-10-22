@@ -25,6 +25,7 @@ class NodeRemovalManager {
                 for (const id of removedIds) delete positions[id];
             }
             layout.promptWidgetIds = layout.promptWidgetIds.filter((id) => !widgetIds.has(id));
+            layout.jsonWidgetIds = layout.jsonWidgetIds?.filter((id) => !widgetIds.has(id));
             layout.translateWidgetIds = layout.translateWidgetIds?.filter((id) => !widgetIds.has(id));
             if (layout.positivePromptWidgetId && widgetIds.has(layout.positivePromptWidgetId)) layout.positivePromptWidgetId = null;
             if (layout.negativePromptWidgetId && widgetIds.has(layout.negativePromptWidgetId)) layout.negativePromptWidgetId = null;

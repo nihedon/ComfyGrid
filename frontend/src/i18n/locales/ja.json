@@ -227,6 +227,7 @@
     "group.sort.default": "デフォルト順",
     "group.sort.name": "名前順",
     "widget.select.text.title": "テキスト",
+    "widget.select.json.title": "JSON",
     "widget.select.prompt.title": "プロンプト",
     "widget.select.positive_prompt.title": "ポジティブプロンプト",
     "widget.select.negative_prompt.title": "ネガティブプロンプト",

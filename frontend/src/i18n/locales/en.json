@@ -227,6 +227,7 @@
     "group.sort.default": "Default Order",
     "group.sort.name": "Sort by Name",
     "widget.select.text.title": "Text",
+    "widget.select.json.title": "JSON",
     "widget.select.prompt.title": "Prompt",
     "widget.select.positive_prompt.title": "Positive Prompt",
     "widget.select.negative_prompt.title": "Negative Prompt",
