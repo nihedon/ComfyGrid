@@ -7,6 +7,7 @@
   import type { ComfyGridNode, ComfyGridWidget } from '@/states/model-state.svelte';
   import { COMFY_NODE_MODE } from '@/types/model-shared';
   import NodeWidgetHeader from './NodeWidgetHeader.svelte';
+  import DimensionPairWidget from './comfyui/DimensionPairWidget.svelte';
   import { getWidgetComponentWithMeta } from './comfyui/registry/widget-registry';
 
   let { node, widget }: { node: ComfyGridNode; widget?: ComfyGridWidget } = $props();
@@ -92,6 +93,37 @@
     availableWidgets.filter((item) => widget || node.showAdvanced || !item.widget.advanced),
   );
 
+  const groupedWidgets = $derived.by(() => {
+    const items: (
+      RenderItem | { id: string; type: 'dimensions'; first: RenderItem; second: RenderItem }
+    )[] = [];
+    const nativeWidgets = node.comfyNode.widgets;
+    for (let index = 0; index < renderableWidgets.length; index++) {
+      const first = renderableWidgets[index];
+      const second = renderableWidgets[index + 1];
+      if (
+        second &&
+        first.widget.type === 'number' &&
+        second.widget.type === 'number' &&
+        ((first.widget.name === 'width' && second.widget.name === 'height') ||
+          (first.widget.name === 'height' && second.widget.name === 'width')) &&
+        nativeWidgets[nativeWidgets.indexOf(first.widget.comfyWidget) + 1] ===
+          second.widget.comfyWidget
+      ) {
+        items.push({
+          id: `dimensions-${first.id}-${second.id}`,
+          type: 'dimensions',
+          first,
+          second,
+        });
+        index++;
+      } else {
+        items.push(first);
+      }
+    }
+    return items;
+  });
+
   function bindCustomElementProps(el: HTMLElement, props: Record<string, unknown>) {
     Object.assign(el, props);
     return {
@@ -164,6 +196,17 @@
   });
 </script>
 
+{#snippet renderWidget(item: RenderItem)}
+  {#if item.type === 'single'}
+    <item.component widget={item.widget} options={{ isFloating, isTextareaOnly }} />
+  {:else}
+    <svelte:element
+      this={item.customElement}
+      use:bindCustomElementProps={{ widget: item.widget, options: { isFloating, isTextareaOnly } }}
+    />
+  {/if}
+{/snippet}
+
 <div
   class="node-widget"
   class:executing={appState.executionState.runningNodeId == node.id}
@@ -189,17 +232,14 @@
       class:px-2={!widget && !isTextareaOnly}
       data-type={node.type}
     >
-      {#each renderableWidgets as item (item.id)}
-        {#if item.type === 'single'}
-          <item.component widget={item.widget} options={{ isFloating, isTextareaOnly }} />
-        {:else if item.type === 'single-ce'}
-          <svelte:element
-            this={item.customElement}
-            use:bindCustomElementProps={{
-              widget: item.widget,
-              options: { isFloating, isTextareaOnly },
-            }}
-          />
+      {#each groupedWidgets as item (item.id)}
+        {#if item.type === 'dimensions'}
+          <DimensionPairWidget first={item.first.widget} second={item.second.widget}>
+            {@render renderWidget(item.first)}
+            {@render renderWidget(item.second)}
+          </DimensionPairWidget>
+        {:else}
+          {@render renderWidget(item)}
         {/if}
       {/each}
     </div>
