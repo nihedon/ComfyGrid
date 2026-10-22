@@ -29,7 +29,8 @@
 
 <div title={widget.tooltip ?? ''} data-id={widget.id} data-name={widget.name}>
   {#if hasButtonLabels}
-    <div class="btn-group toggle-options w-100" role="group" aria-label={displayLabel}>
+    <span class="col-4 p-0 flex-nowrap text-truncate" title={displayLabel}>{displayLabel}</span>
+    <div class="btn-group toggle-options col-8 p-0" role="group" aria-label={displayLabel}>
       <button
         type="button"
         class="btn btn-sm toggle-choice"
