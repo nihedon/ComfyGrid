@@ -40,6 +40,7 @@
   let initializing = $state(true);
   let launched = $state(false);
   let showScreen = $state(false);
+  let preferencesReady = $state(false);
 
   const comfyUiState = appState.comfyUiState;
   const optionState = appState.optionState;
@@ -69,7 +70,7 @@
 
   // ComfyUI initialization: triggered once when ComfyUI becomes available
   $effect(() => {
-    if (!comfyUiState.started) {
+    if (!comfyUiState.started || !preferencesReady) {
       logger.log('ComfyUI not available');
       return;
     }
@@ -78,7 +79,6 @@
       untrack(async () => {
         setupCallbacks();
 
-        await loadOpts();
         await loadExtensions();
 
         await ensureAllModels();
@@ -110,38 +110,30 @@
     }
   });
 
-  // Initial language load: triggered once on startup to load available translations
-  $effect(() => {
-    if (!optionState.forms.has('ComfyGrid.ui.language')) {
-      return;
-    }
-    const choices = (optionState.forms.get('ComfyGrid.ui.language') as DropdownFormInfo).choices;
-    loadTranslations(choices.filter((c: string) => c !== 'auto')).then(() => {
-      setLanguage(optionState.opts.get('ComfyGrid.ui.language'));
-    });
-  });
-
   // Language change: triggered when the language setting of options changes
   $effect(() => {
-    const selectedLang = optionState.opts.get('ComfyGrid.ui.language');
+    if (!preferencesReady) return;
+    const selectedLang = optionState.get('ComfyGrid.ui.language');
     setLanguage(selectedLang);
   });
 
   // Theme change: triggered when the color theme setting of options changes
   $effect(() => {
-    const theme = optionState.opts.get('ComfyGrid.theme.color_theme');
+    const theme = optionState.get('ComfyGrid.theme.color_theme');
     if (!theme) {
       return;
     }
 
     const root = document.documentElement;
     if (theme === 'auto') {
-      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      if (prefersDark) {
-        root.setAttribute('data-bs-theme', 'dark');
-      } else {
-        root.removeAttribute('data-bs-theme');
-      }
+      const media = window.matchMedia('(prefers-color-scheme: dark)');
+      const applySystemTheme = () => {
+        if (media.matches) root.setAttribute('data-bs-theme', 'dark');
+        else root.removeAttribute('data-bs-theme');
+      };
+      applySystemTheme();
+      media.addEventListener('change', applySystemTheme);
+      return () => media.removeEventListener('change', applySystemTheme);
     } else if (theme !== '') {
       root.setAttribute('data-bs-theme', theme);
     } else {
@@ -217,6 +209,13 @@
     window.addEventListener('comfygrid:open_setup', handleOpenSetup);
     window.addEventListener('comfygrid:graph_ready', handleGraphReady);
     launched = false;
+    await loadOpts();
+    const languageForm = optionState.forms.get('ComfyGrid.ui.language') as
+      DropdownFormInfo | undefined;
+    const choices = languageForm?.choices ?? ['en', 'ja'];
+    await loadTranslations(choices.filter((choice) => choice !== 'auto'));
+    await setLanguage(optionState.get('ComfyGrid.ui.language'));
+    preferencesReady = true;
     await checkSetupStatus();
     showScreen = true;
     document.documentElement.addEventListener('dragenter', handleDragEnter);

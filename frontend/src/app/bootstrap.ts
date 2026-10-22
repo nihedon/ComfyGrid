@@ -6,8 +6,6 @@ import { ensurePromptPilotModelsLoaded } from '@/components/common/prompt-editor
 import { loadRuntimeExtensions } from '@/components/widgets/comfyui/registry/runtime-loader';
 import { setupCustomNodeApi } from '@/services/custom-node-service.svelte';
 import { ComfyUIHealthCheckService } from '@/services/healthcheck-service';
-import { appState } from '@/states/app-state.svelte';
-import logger from '@/utils/logger';
 import App from '../App.svelte';
 import '../styles/app.scss';
 
@@ -29,26 +27,6 @@ globalThis.litHtml = {
 globalThis.opts = {};
 globalThis.forms = {};
 globalThis.extForms = {};
-
-const onChange = (e: MediaQueryListEvent) => {
-    const currentTheme = appState.optionState.opts.get('ui.color_theme');
-    if (currentTheme === 'auto') {
-        if (e.matches) {
-            document.documentElement.dataset.bsTheme = 'dark';
-        } else {
-            delete document.documentElement.dataset.bsTheme;
-        }
-    }
-};
-
-const mediaQuery = globalThis.matchMedia('(prefers-color-scheme: dark)');
-mediaQuery.addEventListener('change', onChange);
-if (import.meta.hot) {
-    import.meta.hot.dispose(() => {
-        logger.log('Disposing bootstrap theme listener');
-        mediaQuery.removeEventListener('change', onChange);
-    });
-}
 
 const comfyUiHealthCheck = new ComfyUIHealthCheckService();
 comfyUiHealthCheck.connect();
