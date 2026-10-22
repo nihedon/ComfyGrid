@@ -1,6 +1,5 @@
 <script lang="ts">
-  import DOMPurify from 'dompurify';
-  import { marked } from 'marked';
+  import MarkdownContent from '@/components/common/MarkdownContent.svelte';
   import type { ComfyGridWidget } from '@/states/model-state.svelte';
 
   let { widget }: { widget: ComfyGridWidget } = $props();
@@ -15,9 +14,6 @@
     );
   });
   const text = $derived(String(widget.value ?? ''));
-  const renderedHtml = $derived(
-    showMarkdown ? DOMPurify.sanitize(marked.parse(text, { async: false })) : '',
-  );
 </script>
 
 <div
@@ -27,10 +23,7 @@
   data-name={widget.name}
 >
   {#if showMarkdown}
-    <div class="markdown-preview">
-      <!-- eslint-disable-next-line svelte/no-at-html-tags -->
-      {@html renderedHtml}
-    </div>
+    <MarkdownContent value={text} />
   {:else}
     <div class="plain-preview">{text}</div>
   {/if}
@@ -45,28 +38,5 @@
   }
   .plain-preview {
     white-space: pre-wrap;
-  }
-  .markdown-preview :global(:last-child) {
-    margin-bottom: 0;
-  }
-  .markdown-preview :global(img) {
-    max-width: 100%;
-    height: auto;
-  }
-  .markdown-preview :global(pre) {
-    max-width: 100%;
-    overflow-x: auto;
-    padding: 0.5rem;
-    background: var(--bs-tertiary-bg);
-  }
-  .markdown-preview :global(table) {
-    display: block;
-    max-width: 100%;
-    overflow-x: auto;
-  }
-  .markdown-preview :global(th),
-  .markdown-preview :global(td) {
-    border: 1px solid var(--bs-border-color);
-    padding: 0.25rem 0.5rem;
   }
 </style>
