@@ -14,6 +14,7 @@ import MarkdownWidget from '../MarkdownWidget.svelte';
 import NumberWidget from '../NumberWidget.svelte';
 import RangeWidget from '../RangeWidget.svelte';
 import ResolutionPreviewWidget from '../ResolutionPreviewWidget.svelte';
+import TextPreviewWidget from '../TextPreviewWidget.svelte';
 import TextWidget from '../TextWidget.svelte';
 import ToggleWidget from '../ToggleWidget.svelte';
 import UploadWidget from '../UploadWidget.svelte';
@@ -44,6 +45,7 @@ const widgetRegistry: Record<string, Component> = {
     load3DAdvanced: DOMWidget,
     cameraAngle: DOMWidget,
     resolutionpreview: ResolutionPreviewWidget,
+    textPreview: TextPreviewWidget,
 };
 
 /**
