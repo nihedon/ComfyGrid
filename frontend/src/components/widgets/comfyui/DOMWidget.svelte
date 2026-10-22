@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { untrack } from 'svelte';
   import { copyWidgetStyles, mountVueWidget } from '@/services/vue-widget-dom-service';
   import { appState } from '@/states/app-state.svelte';
   import type { ComfyGridWidget } from '@/states/model-state.svelte';
@@ -7,6 +8,11 @@
 
   const uiState = $derived(appState.uiState);
   const isViewport = $derived(['cameraAngle', 'load3D', 'load3DAdvanced'].includes(widget.type));
+  // Parent lists may refresh the prop while its actual DOM identity is unchanged.
+  const widgetElement = $derived(widget.element);
+  const nativeNode = $derived(widget.node.comfyNode);
+  const nativeWidget = $derived(widget.comfyWidget);
+  const useVueWidget = $derived(widget.type === 'boundingboxes' || isViewport);
 
   let shadowRoot = $state.raw<ShadowRoot | null>(null);
 
@@ -59,24 +65,32 @@
     const source = appState.comfyUiState.window?.document;
     const api = appState.comfyUiState.app?.comfyGridDomWidgets;
     if (!shadowRoot || !source || uiState.activePageId !== 'grid') return;
-    if (!widget.element && (widget.type === 'boundingboxes' || isViewport)) {
-      if (api)
-        return mountVueWidget(shadowRoot, source, api, widget.node.comfyNode, widget.comfyWidget);
+    if (!widgetElement && useVueWidget) {
+      if (api) {
+        const target = shadowRoot;
+        const node = nativeNode;
+        const sourceWidget = nativeWidget;
+        // Reads performed while discovering/moving the DOM must not become placement dependencies.
+        return untrack(() => mountVueWidget(target, source, api, node, sourceWidget));
+      }
       return;
     }
-    const element = widget.element;
+    const element = widgetElement;
     if (!element) return;
-    copyWidgetStyles(source, shadowRoot);
-    const placeholder = source.createComment('comfygrid-dom-widget');
-    element.before(placeholder);
-    shadowRoot.append(element);
-    const removeBridge = bridgeDragEvents();
-    return () => {
-      removeBridge();
-      if (placeholder.isConnected) placeholder.replaceWith(element);
-      else element.remove();
-      placeholder.remove();
-    };
+    const target = shadowRoot;
+    return untrack(() => {
+      copyWidgetStyles(source, target);
+      const placeholder = source.createComment('comfygrid-dom-widget');
+      element.before(placeholder);
+      target.append(element);
+      const removeBridge = bridgeDragEvents();
+      return () => {
+        removeBridge();
+        if (placeholder.isConnected) placeholder.replaceWith(element);
+        else element.remove();
+        placeholder.remove();
+      };
+    });
   });
 
   function domMount(nodeElement: HTMLDivElement) {
