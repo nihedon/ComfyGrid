@@ -21,7 +21,7 @@ class NodeDuplicationManager {
                 if (layout.tagWidgetIds?.includes(widget.id)) layout.tagWidgetIds.push(copiedId);
                 if (layout.translateWidgetIds?.includes(widget.id)) layout.translateWidgetIds.push(copiedId);
                 if (layout.jsonWidgetIds?.includes(widget.id)) layout.jsonWidgetIds.push(copiedId);
-                if (layout.codeMirrorWidgetIds?.includes(widget.id)) layout.codeMirrorWidgetIds.push(copiedId);
+                if (layout.promptEditorWidgetIds?.includes(widget.id)) layout.promptEditorWidgetIds.push(copiedId);
                 if (layout.translateModels?.[widget.id]) layout.translateModels[copiedId] = layout.translateModels[widget.id];
                 if (layout.translateSystems?.[widget.id]) layout.translateSystems[copiedId] = layout.translateSystems[widget.id];
                 if (layout.translateSeedModes?.[widget.id]) layout.translateSeedModes[copiedId] = layout.translateSeedModes[widget.id];

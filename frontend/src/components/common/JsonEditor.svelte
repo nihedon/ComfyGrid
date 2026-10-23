@@ -1,22 +1,32 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { json, jsonParseLinter } from '@codemirror/lang-json';
-  import { defaultHighlightStyle, syntaxHighlighting } from '@codemirror/language';
   import { linter } from '@codemirror/lint';
   import { Compartment, EditorSelection, EditorState } from '@codemirror/state';
   import { EditorView, placeholder as cmPlaceholder } from '@codemirror/view';
   import { basicSetup } from 'codemirror';
+  import { appState } from '@/states/app-state.svelte';
+  import {
+    promptHighlightPlugin,
+    reconfigureHighlightEffect,
+  } from './prompt-editor/prompt-highlighter';
+  import './prompt-editor/prompt-highlighter.scss';
+  import { promptPilotCompletion } from './prompt-editor/prompt-pilot';
+  import { ensurePromptPilotModelsLoaded } from './prompt-editor/prompt-pilot/services/loader-service';
+  import { segmentHighlighter } from './prompt-editor/segment-highlighter';
 
   let {
     value = $bindable(''),
     readonly = false,
     placeholder = '',
+    enablePromptPilot = false,
     oninput,
     onblur,
   }: {
     value?: string;
     readonly?: boolean;
     placeholder?: string;
+    enablePromptPilot?: boolean;
     oninput?: (event: Event) => void;
     onblur?: (event: FocusEvent) => void;
   } = $props();
@@ -26,6 +36,8 @@
   let error = $state('');
   let applyingExternal = false;
   const configuration = new Compartment();
+  const completionCompartment = new Compartment();
+  const highlightCompartment = new Compartment();
 
   function validate(text: string) {
     try {
@@ -66,6 +78,7 @@
         doc: formatted(value ?? ''),
         extensions: [
           basicSetup,
+          completionCompartment.of(enablePromptPilot ? promptPilotCompletion() : []),
           EditorState.transactionFilter.of((transaction) => {
             if (!transaction.docChanged) return transaction;
             const text = transaction.newDoc.toString();
@@ -94,7 +107,7 @@
             ];
           }),
           json(),
-          syntaxHighlighting(defaultHighlightStyle),
+          highlightCompartment.of(enablePromptPilot ? promptHighlightPlugin : segmentHighlighter),
           linter(jsonParseLinter()),
           EditorView.lineWrapping,
           configuration.of([
@@ -143,6 +156,32 @@
   });
 
   $effect(() => {
+    view?.dispatch({
+      effects: completionCompartment.reconfigure(enablePromptPilot ? promptPilotCompletion() : []),
+    });
+  });
+  $effect(() => {
+    view?.dispatch({
+      effects: highlightCompartment.reconfigure(
+        enablePromptPilot ? promptHighlightPlugin : segmentHighlighter,
+      ),
+    });
+  });
+  $effect(() => {
+    if (!enablePromptPilot) return;
+    const coloring = appState.optionState.get('ComfyGrid.prompt_pilot.word_coloring');
+    appState.optionState.get('ComfyGrid.prompt_pilot.post_count_threshold');
+    appState.optionState.get('ComfyGrid.prompt_pilot.tag_source');
+    if (!view) return;
+    view.dispatch({ effects: reconfigureHighlightEffect.of() });
+    if (coloring === 'category') {
+      ensurePromptPilotModelsLoaded().then((loaded) => {
+        if (loaded && view && enablePromptPilot)
+          view.dispatch({ effects: reconfigureHighlightEffect.of() });
+      });
+    }
+  });
+  $effect(() => {
     const text = value ?? '';
     if (view && view.state.doc.toString() !== formatted(text)) {
       applyingExternal = true;
@@ -173,11 +212,21 @@
 
 <style>
   .json-editor {
+    --prompt-word-l: 0.25;
+    --prompt-word-c: 0.4;
+    --prompt-bracket-color: rgba(185, 28, 28, 0.9);
+    --prompt-weight-color: rgba(29, 78, 216, 0.9);
     min-width: 0;
     width: 100%;
     align-items: stretch !important;
     justify-content: flex-start !important;
     text-align: left;
+  }
+  :global([data-bs-theme='dark']) .json-editor {
+    --prompt-word-l: 0.78;
+    --prompt-word-c: 0.22;
+    --prompt-bracket-color: #f87171;
+    --prompt-weight-color: #60a5fa;
   }
   .editor-host {
     min-height: 0;

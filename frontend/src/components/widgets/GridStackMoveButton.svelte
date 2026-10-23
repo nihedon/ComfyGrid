@@ -16,7 +16,8 @@
     <button
       {...props}
       type="button"
-      class="btn btn-xs btn-icon gridstack-move-button"
+      class="btn btn-xs btn-icon"
+      class:btn-secondary={!isFloating}
       class:active={isFloating}
       title={$t('node.menu.move')}
       aria-label={$t('node.menu.move')}
@@ -25,11 +26,3 @@
     </button>
   {/snippet}
 </AppMenu>
-
-<style lang="scss">
-  .gridstack-move-button {
-    --bs-btn-active-color: #fff;
-    --bs-btn-active-bg: var(--bs-primary);
-    --bs-btn-active-border-color: var(--bs-primary);
-  }
-</style>

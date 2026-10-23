@@ -16,7 +16,7 @@ export type LayoutType = {
     floatingPositions: Record<string, Record<string, FloatingPosition>>;
     tagWidgetIds?: string[];
     jsonWidgetIds?: string[];
-    codeMirrorWidgetIds?: string[];
+    promptEditorWidgetIds?: string[];
     translateWidgetIds?: string[];
     translateModels?: Record<string, string>;
     translateSystems?: Record<string, string>;

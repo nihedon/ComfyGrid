@@ -38,9 +38,6 @@
     layout.getTranslateSeedMode(widget.id) ??
       (appState.optionState.get('ComfyGrid.ollama.seed_mode') === 'random' ? 'random' : 'fixed'),
   );
-  const useOllamaCodeMirror = $derived(
-    Boolean(appState.optionState.get('ComfyGrid.ollama.use_codemirror')),
-  );
 
   function getRawInputValue(): string {
     return widget.rawValue ?? widget.value ?? '';
@@ -336,43 +333,35 @@
 {#snippet textarea()}
   {#if category === 'json'}
     <JsonEditor
+      enablePromptPilot={layout.isTagWidget(widget.id)}
       bind:value={widget.value}
       readonly={widget.readonly}
       placeholder={widget.placeholder}
       oninput={handleInput}
       onblur={handleBlur}
     />
-  {:else if isTranslate && useOllamaCodeMirror}
+  {:else if isTranslate}
     <PromptEditor
       rows={options.isFloating ? 1 : 6}
       readonly={widget.readonly}
       placeholder={widget.placeholder}
       bind:value={getRawInputValue, setRawInputValue}
       enablePromptPilot={false}
+      highlightMode="segments"
       oninput={handleInput}
       onblur={handleBlur}
     />
-  {:else if category === 'tags' || category === 'codemirror'}
+  {:else if category === 'prompt'}
     <PromptEditor
       rows={options.isFloating ? 1 : 6}
       readonly={widget.readonly}
       placeholder={widget.placeholder}
       bind:value={widget.value}
-      enablePromptPilot={category === 'tags'}
+      enablePromptPilot={layout.isTagWidget(widget.id)}
+      highlightMode={layout.isTagWidget(widget.id) ? 'prompt' : 'segments'}
       oninput={handleInput}
       onblur={handleBlur}
     />
-  {:else if isTranslate}
-    <textarea
-      class="flex-grow-1 form-control overflow-y-scroll rounded-top-0"
-      oninput={handleInput}
-      onblur={handleBlur}
-      rows={options.isFloating ? 1 : 6}
-      style:min-height={options.isFloating ? '0' : undefined}
-      readonly={widget.readonly}
-      placeholder={widget.placeholder}
-      bind:value={getRawInputValue, setRawInputValue}
-      bind:this={textareaElement}></textarea>
   {:else}
     <textarea
       class="flex-grow-1 form-control overflow-y-scroll rounded-top-0"

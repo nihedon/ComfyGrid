@@ -13,7 +13,7 @@ export class Layout {
     readonly #floatingPositions = new SvelteMap<string, Record<string, FloatingPosition>>();
     readonly #tagWidgetIds = new SvelteSet<string>();
     readonly #jsonWidgetIds = new SvelteSet<string>();
-    readonly #codeMirrorWidgetIds = new SvelteSet<string>();
+    readonly #promptEditorWidgetIds = new SvelteSet<string>();
     readonly #translateWidgetIds = new SvelteSet<string>();
     readonly #translateModels = new SvelteMap<string, string>();
     readonly #translateSystems = new SvelteMap<string, string>();
@@ -43,12 +43,12 @@ export class Layout {
     isJsonWidget(widgetId: string): boolean {
         return this.#jsonWidgetIds.has(widgetId);
     }
-    isCodeMirrorWidget(widgetId: string): boolean {
-        return this.#codeMirrorWidgetIds.has(widgetId);
+    isPromptEditorWidget(widgetId: string): boolean {
+        return this.#promptEditorWidgetIds.has(widgetId);
     }
-    setCodeMirrorWidget(widgetId: string, enabled: boolean) {
-        if (enabled) this.#codeMirrorWidgetIds.add(widgetId);
-        else this.#codeMirrorWidgetIds.delete(widgetId);
+    setPromptEditorWidget(widgetId: string, enabled: boolean) {
+        if (enabled) this.#promptEditorWidgetIds.add(widgetId);
+        else this.#promptEditorWidgetIds.delete(widgetId);
     }
     setJsonWidget(widgetId: string, enabled: boolean) {
         if (enabled) this.#jsonWidgetIds.add(widgetId);
@@ -212,8 +212,8 @@ export class Layout {
             for (const id of Array.from(this.#jsonWidgetIds)) {
                 if (!validWidgetIds.has(id)) this.#jsonWidgetIds.delete(id);
             }
-            for (const id of Array.from(this.#codeMirrorWidgetIds)) {
-                if (!validWidgetIds.has(id)) this.#codeMirrorWidgetIds.delete(id);
+            for (const id of Array.from(this.#promptEditorWidgetIds)) {
+                if (!validWidgetIds.has(id)) this.#promptEditorWidgetIds.delete(id);
             }
             for (const key of Array.from(this.#floatingNodes.keys())) {
                 if (!validNodeIds.has(key)) this.#floatingNodes.delete(key);
@@ -256,7 +256,7 @@ export class Layout {
             floatingWidgets: Object.fromEntries(Array.from(this.#floatingWidgets.entries()).filter(([, boardId]) => Boolean(boardId))),
             tagWidgetIds: [...this.#tagWidgetIds],
             jsonWidgetIds: [...this.#jsonWidgetIds],
-            codeMirrorWidgetIds: [...this.#codeMirrorWidgetIds],
+            promptEditorWidgetIds: [...this.#promptEditorWidgetIds],
             translateWidgetIds: [...this.#translateWidgetIds],
             translateModels: Object.fromEntries(Array.from(this.#translateModels.entries()).filter(([, v]) => Boolean(v))),
             translateSystems: Object.fromEntries(Array.from(this.#translateSystems.entries()).filter(([, v]) => Boolean(v))),
@@ -272,7 +272,7 @@ export class Layout {
         return exported;
     }
 
-    import(layout: LayoutType) {
+    import(layout: LayoutType & { codeMirrorWidgetIds?: string[] }) {
         logger.trace('[LAYOUT_LOG] Layout.import payload:', layout);
         this.#graphId = layout.graphId;
         this.#floatingNodes.clear();
@@ -289,12 +289,18 @@ export class Layout {
         });
         this.#tagWidgetIds.clear();
         this.#jsonWidgetIds.clear();
-        this.#codeMirrorWidgetIds.clear();
-        (layout.codeMirrorWidgetIds ?? []).forEach((id) => this.#codeMirrorWidgetIds.add(id));
+        this.#promptEditorWidgetIds.clear();
+        const promptIds = layout.promptEditorWidgetIds ?? [...(layout.codeMirrorWidgetIds ?? []), ...(layout.tagWidgetIds ?? [])];
+        for (const id of promptIds) {
+            if (!layout.jsonWidgetIds?.includes(id) && !layout.translateWidgetIds?.includes(id)) this.#promptEditorWidgetIds.add(id);
+        }
         (layout.jsonWidgetIds ?? []).forEach((id) => this.#jsonWidgetIds.add(id));
         (layout.tagWidgetIds ?? []).forEach((widgetId) => {
             this.#tagWidgetIds.add(widgetId);
         });
+        if (layout.promptEditorWidgetIds === undefined) {
+            for (const id of layout.codeMirrorWidgetIds ?? []) this.#tagWidgetIds.add(id);
+        }
         this.#translateWidgetIds.clear();
         (layout.translateWidgetIds ?? []).forEach((widgetId) => {
             this.#translateWidgetIds.add(widgetId);

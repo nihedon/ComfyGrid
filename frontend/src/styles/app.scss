@@ -68,6 +68,13 @@
         @extend .align-items-center;
         @extend .justify-content-center;
         @extend .p-1;
+        border-width: 1px 1px 1px 1px !important;
+
+        &.active {
+            --bs-btn-active-color: #fff;
+            --bs-btn-active-bg: var(--bs-primary);
+            --bs-btn-active-border-color: var(--bs-primary);
+        }
     }
     .model-info-icon-btn {
         @extend .position-absolute;
@@ -193,6 +200,10 @@
             > .node-title {
                 @extend .text-truncate;
                 @extend .fs-6;
+            }
+
+            .page-link {
+                border-width: 1px 1px 1px 1px !important;
             }
         }
     }

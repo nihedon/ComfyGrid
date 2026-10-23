@@ -26,7 +26,7 @@ class NodeRemovalManager {
             }
             layout.tagWidgetIds = layout.tagWidgetIds?.filter((id) => !widgetIds.has(id));
             layout.jsonWidgetIds = layout.jsonWidgetIds?.filter((id) => !widgetIds.has(id));
-            layout.codeMirrorWidgetIds = layout.codeMirrorWidgetIds?.filter((id) => !widgetIds.has(id));
+            layout.promptEditorWidgetIds = layout.promptEditorWidgetIds?.filter((id) => !widgetIds.has(id));
             layout.translateWidgetIds = layout.translateWidgetIds?.filter((id) => !widgetIds.has(id));
             saveLayout(layout);
             await workflowManager.loadCurrentWorkflow(layout);

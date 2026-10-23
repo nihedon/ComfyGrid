@@ -132,10 +132,6 @@ type = "dropdown"
 choices = ["fixed", "random"]
 default = "fixed"
 
-[ComfyGrid.ollama.use_codemirror]
-type = "checkbox"
-default = false
-
 [ComfyGrid.prompt_pilot.enabled]
 type = "checkbox"
 default = true

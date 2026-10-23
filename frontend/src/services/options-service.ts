@@ -20,6 +20,8 @@ export async function loadOpts() {
             delete globalThis.opts['ComfyGrid.ui.show_gridstack_grid'];
             globalThis.forms = { ...globalThis.forms, ...data.forms };
             delete globalThis.forms['ComfyGrid.ui.show_gridstack_grid'];
+            delete globalThis.opts['ComfyGrid.ollama.use_codemirror'];
+            delete globalThis.forms['ComfyGrid.ollama.use_codemirror'];
             globalThis.extForms = { ...globalThis.extForms, ...data.ext_forms };
 
             appState.optionState.opts = globalThis.opts;

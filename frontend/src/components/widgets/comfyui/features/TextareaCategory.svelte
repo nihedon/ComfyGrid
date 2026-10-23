@@ -1,11 +1,12 @@
 <script lang="ts">
-  import { Check, Languages, Loader2, Settings, TriangleAlert, X } from '@lucide/svelte';
+  import { Check, Languages, Loader2, Settings, Tag, TriangleAlert, X } from '@lucide/svelte';
   import AppMenu from '@/components/common/AppMenu.svelte';
   import { t } from '@/i18n/i18n';
   import {
     TEXT_CATEGORIES,
     getTextCategory,
     setTextCategory,
+    toggleTextTags,
   } from '@/services/text-widget-service';
   import { translationManager } from '@/services/translation-service.svelte';
   import { appState } from '@/states/app-state.svelte';
@@ -58,6 +59,22 @@
         </button>
       {/snippet}
     </AppMenu>
+    {#if category === 'prompt' || category === 'json'}
+      <button
+        type="button"
+        class="btn btn-xs btn-icon tags-toggle ms-2"
+        class:btn-secondary={!layout.isTagWidget(widget.id)}
+        class:active={layout.isTagWidget(widget.id)}
+        aria-pressed={layout.isTagWidget(widget.id)}
+        title={$t('widget.tags.toggle')}
+        aria-label={$t('widget.tags.toggle')}
+        onpointerdown={(event) => event.stopPropagation()}
+        onclick={(event) => {
+          event.stopPropagation();
+          void toggleTextTags(widget);
+        }}><Tag size={12} /></button
+      >
+    {/if}
     {#if isTranslate}
       <button
         type="button"
