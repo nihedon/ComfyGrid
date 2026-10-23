@@ -1,6 +1,6 @@
 import { appState } from '@/states/app-state.svelte';
 import logger from '@/utils/logger';
-import { updateComfyUiConnection } from './comfyui-lifecycle-service';
+import { notifyComfyUiStartupLog, updateComfyUiConnection, updateComfyUiDownload } from './comfyui-lifecycle-service';
 
 export class ComfyUIHealthCheckService {
     private ws: WebSocket | null = null;
@@ -34,6 +34,10 @@ export class ComfyUIHealthCheckService {
                 const data = JSON.parse(event.data);
                 if (data.type === 'comfygrid.comfyui_status' && typeof data.started === 'boolean') {
                     updateComfyUiConnection(data.started);
+                } else if (data.type === 'comfygrid.startup_log' && typeof data.message === 'string') {
+                    notifyComfyUiStartupLog();
+                } else if (data.type === 'comfygrid.download_state' && typeof data.active === 'boolean') {
+                    updateComfyUiDownload(data.active);
                 }
             } catch (e) {
                 logger.error('[HealthCheck] Failed to parse message:', e);
@@ -49,6 +53,7 @@ export class ComfyUIHealthCheckService {
             if (this.ws !== socket) return;
             this.ws = null;
             appState.comfyUiState.isBackendConnected = false;
+            updateComfyUiDownload(false);
             if (!this.isClosing) {
                 this.reconnectTimer = setTimeout(() => {
                     this.reconnectTimer = null;

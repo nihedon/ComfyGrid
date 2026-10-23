@@ -9,6 +9,9 @@ import logger from '@/utils/logger';
 
 const state = appState.comfyUiState;
 const TRANSITION_TIMEOUT_MS = 300_000;
+const STARTUP_IDLE_TIMEOUT_MS = 60_000;
+let downloading = false;
+let synchronizing = false;
 let generation = 0;
 let timer: ReturnType<typeof setTimeout> | undefined;
 let previousApp: ComfyApp | null = null;
@@ -19,6 +22,22 @@ let synchronizedApp: ComfyApp | null = null;
 
 function currentApp(): ComfyApp | null {
     return state.window?.comfyAPI?.app?.app ?? null;
+}
+
+function armTimeout() {
+    clearTimeout(timer);
+    if (!state.transition || state.transitionError || (!synchronizing && downloading)) return;
+    const token = generation;
+    timer = setTimeout(() => fail(token, 'log.comfyui.lifecycle.timeout'), synchronizing ? TRANSITION_TIMEOUT_MS : STARTUP_IDLE_TIMEOUT_MS);
+}
+
+export function notifyComfyUiStartupLog() {
+    if (!synchronizing) armTimeout();
+}
+
+export function updateComfyUiDownload(active: boolean) {
+    downloading = active;
+    if (!synchronizing) armTimeout();
 }
 
 function fail(token: number, error: string) {
@@ -50,7 +69,8 @@ function begin(kind: NonNullable<typeof state.transition>): number {
     state.transition = kind;
     state.transitionError = '';
     state.graphReady = false;
-    timer = setTimeout(() => fail(token, 'log.comfyui.lifecycle.timeout'), TRANSITION_TIMEOUT_MS);
+    synchronizing = false;
+    armTimeout();
     return token;
 }
 
@@ -61,6 +81,8 @@ export function cancelComfyUiTransition() {
     previousGraphReady = false;
     restoringApp = null;
     synchronizedApp = null;
+    synchronizing = false;
+    downloading = false;
     state.transition = null;
     state.transitionError = '';
 }
@@ -109,6 +131,8 @@ export async function handleComfyUiGraphReady(app: ComfyApp) {
     const frameVersion = state.frameReloadVersion;
     const isCurrent = () => state.started && token === generation && frameVersion === state.frameReloadVersion && app === currentApp();
     restoringApp = app;
+    synchronizing = true;
+    armTimeout();
     state.graphReady = true;
     try {
         if (synchronizedApp !== app) {
@@ -124,6 +148,7 @@ export async function handleComfyUiGraphReady(app: ComfyApp) {
         previousApp = null;
         state.transitionError = '';
         state.transition = null;
+        synchronizing = false;
     } catch (error) {
         if (isCurrent()) fail(token, error instanceof Error ? error.message : String(error));
     } finally {

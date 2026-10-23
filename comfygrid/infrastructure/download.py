@@ -5,16 +5,40 @@ Common utilities for downloading files with progress tracking.
 import io
 import logging
 import time
+from contextlib import contextmanager
+from contextvars import ContextVar
 from typing import Callable
 
 import httpx
 from tqdm import tqdm
+
+_download_activity: ContextVar[Callable[[bool], None] | None] = ContextVar("download_activity", default=None)
+
+
+@contextmanager
+def observe_downloads(callback: Callable[[bool], None]):
+    token = _download_activity.set(callback)
+    try:
+        yield
+    finally:
+        _download_activity.reset(token)
 
 
 def download_with_progress(url: str, desc: str, progress_callback: Callable[[int, int], None] = None) -> bytes:
     """
     Download a file from a URL, displaying a progress bar, and return the downloaded bytes.
     """
+    callback = _download_activity.get()
+    if callback:
+        callback(True)
+    try:
+        return _download_with_progress(url, desc, progress_callback)
+    finally:
+        if callback:
+            callback(False)
+
+
+def _download_with_progress(url: str, desc: str, progress_callback: Callable[[int, int], None] = None) -> bytes:
     logging.info("Downloading %s from %s", desc, url)
     archive_bytes = io.BytesIO()
 

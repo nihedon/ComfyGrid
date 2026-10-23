@@ -112,8 +112,15 @@ async def launch_comfyui(request: Request, body: LaunchRequest, comfy_service: C
         raise
 
     async def run_background(action):
+        from comfygrid.infrastructure.download import observe_downloads
+
+        def download_activity(active: bool):
+            comfy_service.startup_downloading = active
+            comfy_service._broadcast_startup_log({"type": "comfygrid.download_state", "active": active})
+
         try:
-            await action()
+            with observe_downloads(download_activity):
+                await action()
         except Exception:
             logger.exception("Profile startup failed")
             await comfy_service.exit()

@@ -289,6 +289,7 @@
                     id="profile-script"
                     class="form-control font-monospace"
                     bind:value={editor.draft.script_path}
+                    placeholder="e.g. D:\ComfyUI_windows\ComfyUI\main.py"
                     required
                   /><button
                     class="btn btn-outline-secondary icon-button"
@@ -306,6 +307,7 @@
                     id="profile-python"
                     class="form-control font-monospace"
                     bind:value={editor.draft.python_path}
+                    placeholder="e.g. D:\ComfyUI_windows\python_embeded\python.exe"
                     required
                   /><button
                     class="btn btn-outline-secondary icon-button"

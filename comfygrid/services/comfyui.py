@@ -57,6 +57,7 @@ class ComfyUIService:
     comfyui_args: str = ""
     output_directory: str = ""
     startup_log_clients: list = []
+    startup_downloading: bool = False
     startup_log_queue: Queue
 
     def __new__(cls, *args, **kwargs):
