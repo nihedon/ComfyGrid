@@ -57,7 +57,7 @@
   async function checkSetupStatus() {
     const res = await comfyGridApiClient.getSetupStatus();
     if (res.ok) {
-      launched = res.json.mode === 'launch';
+      launched = res.json.launched;
     }
   }
 

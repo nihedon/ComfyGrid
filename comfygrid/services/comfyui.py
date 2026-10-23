@@ -48,7 +48,7 @@ class ComfyUIService:
     proc = None
     url = None
     started: bool = False
-    mode: Literal["launch", "connect"]
+    mode: Literal["launch", "connect"] | None = None
     comfyui_path: str = ""
     python_path: str = ""
     comfyui_port: int = DEFAULT_COMFYUI_PORT

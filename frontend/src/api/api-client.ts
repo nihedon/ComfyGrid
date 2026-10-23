@@ -74,7 +74,7 @@ class ComfyGridApiClient {
         return await fetchApiJson('/comfygrid/api/restart', { method: 'POST' });
     }
 
-    async getSetupStatus(): Promise<ApiResultJson<{ mode: string }>> {
+    async getSetupStatus(): Promise<ApiResultJson<{ mode: 'launch' | 'connect' | null; launched: boolean }>> {
         return await fetchApiJson('/comfygrid/api/setup/status');
     }
 

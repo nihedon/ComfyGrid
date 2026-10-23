@@ -57,6 +57,7 @@ def delete_profile(profile_id: str, comfy_service: ComfyUIService = Depends(get_
 async def get_setup_status(comfy_service: ComfyUIService = Depends(get_comfy_service)):
     return {
         "mode": comfy_service.mode,
+        "launched": bool(getattr(comfy_service, "setup_starting", False) or comfy_service.proc or comfy_service.started),
         "connect_port": comfy_service.connect_port is not None,
     }
 
