@@ -13,7 +13,7 @@ default = true
 
 [ComfyGrid.ui.node_color]
 type = "radio"
-default = "group"
+default = "none"
 choices = ["none", "node", "group", "node_priority"]
 
 [ComfyGrid.ui.group_tabify]
@@ -23,7 +23,7 @@ default = "all_top_groups"
 
 [ComfyGrid.ui.always_show_node_focus_button]
 type = "checkbox"
-default = false
+default = true
 
 [ComfyGrid.ui.simple_node_mode]
 type = "checkbox"

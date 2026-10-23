@@ -242,11 +242,7 @@
   });
 </script>
 
-<div
-  id="grid-stack-{gridKey}"
-  class="border border-1 border-secondary-subtle rounded-2 grid-stack"
-  bind:this={container}
->
+<div id="grid-stack-{gridKey}" class="grid-stack" bind:this={container}>
   {#if showGridBackground && backgroundSize.width > 0 && backgroundSize.height > 0}
     <svg
       class="grid-background"
