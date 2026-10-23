@@ -163,6 +163,17 @@
         }
     }
 
+    .node-widget > .widget-stack:has(> .dom-container.fit-node) {
+        flex: 1 1 0;
+        height: auto !important;
+        min-height: 0;
+        overflow: hidden !important;
+
+        > :not(.dom-container.fit-node) {
+            flex-shrink: 0;
+        }
+    }
+
     .node-widget {
         @extend .card;
         @extend .grid-stack-item-content;

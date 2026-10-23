@@ -7,6 +7,7 @@
   import type { ComfyGridNode, ComfyGridWidget } from '@/states/model-state.svelte';
   import { COMFY_NODE_MODE } from '@/types/model-shared';
   import NodeWidgetHeader from './NodeWidgetHeader.svelte';
+  import DOMWidget from './comfyui/DOMWidget.svelte';
   import DimensionPairWidget from './comfyui/DimensionPairWidget.svelte';
   import { getWidgetComponentWithMeta } from './comfyui/registry/widget-registry';
 
@@ -89,6 +90,10 @@
   });
 
   const hasAdvancedWidgets = $derived(availableWidgets.some((item) => item.widget.advanced));
+  const hasDomWidget = $derived(
+    availableWidgets.some((item) => item.type === 'single' && item.component === DOMWidget),
+  );
+  const fitDomToNode = $derived(workspaceState.layout.isDomFitNode(node.id));
   const renderableWidgets = $derived(
     availableWidgets.filter((item) => widget || node.showAdvanced || !item.widget.advanced),
   );
@@ -198,7 +203,7 @@
 
 {#snippet renderWidget(item: RenderItem)}
   {#if item.type === 'single'}
-    <item.component widget={item.widget} options={{ isFloating, isTextareaOnly }} />
+    <item.component widget={item.widget} options={{ isFloating, isTextareaOnly, fitDomToNode }} />
   {:else}
     <svelte:element
       this={item.customElement}
@@ -223,6 +228,7 @@
     {widget}
     {isFloating}
     {isInvalid}
+    {hasDomWidget}
     isTextareaOnly={Boolean(isTextareaOnly)}
   />
   {#if !node.collapsed && containsWidgets.length > 0 && containsDrawableWidget}

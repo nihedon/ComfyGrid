@@ -12,6 +12,7 @@ export class Layout {
     readonly #floatingWidgets = new SvelteMap<string, BoardId>();
     readonly #floatingPositions = new SvelteMap<string, Record<string, FloatingPosition>>();
     readonly #tagWidgetIds = new SvelteSet<string>();
+    readonly #fitDomNodeIds = new SvelteSet<string>();
     readonly #jsonWidgetIds = new SvelteSet<string>();
     readonly #promptEditorWidgetIds = new SvelteSet<string>();
     readonly #translateWidgetIds = new SvelteSet<string>();
@@ -39,6 +40,13 @@ export class Layout {
     }
     isTagWidget(widgetId: string): boolean {
         return this.#tagWidgetIds.has(widgetId);
+    }
+    isDomFitNode(nodeId: string): boolean {
+        return this.#fitDomNodeIds.has(nodeId);
+    }
+    setDomFitNode(nodeId: string, enabled: boolean) {
+        if (enabled) this.#fitDomNodeIds.add(nodeId);
+        else this.#fitDomNodeIds.delete(nodeId);
     }
     isJsonWidget(widgetId: string): boolean {
         return this.#jsonWidgetIds.has(widgetId);
@@ -218,6 +226,9 @@ export class Layout {
             for (const key of Array.from(this.#floatingNodes.keys())) {
                 if (!validNodeIds.has(key)) this.#floatingNodes.delete(key);
             }
+            for (const id of this.#fitDomNodeIds) {
+                if (!validNodeIds.has(id)) this.#fitDomNodeIds.delete(id);
+            }
             for (const key of Array.from(this.#floatingWidgets.keys())) {
                 if (!validWidgetIds.has(key)) this.#floatingWidgets.delete(key);
             }
@@ -251,6 +262,7 @@ export class Layout {
 
         const exported = {
             graphId: this.#graphId,
+            fitDomNodeIds: [...this.#fitDomNodeIds],
             floatingPositions: allBoardLayouts,
             floatingNodes: Object.fromEntries(Array.from(this.#floatingNodes.entries()).filter(([, boardId]) => Boolean(boardId))),
             floatingWidgets: Object.fromEntries(Array.from(this.#floatingWidgets.entries()).filter(([, boardId]) => Boolean(boardId))),
@@ -275,6 +287,8 @@ export class Layout {
     import(layout: LayoutType & { codeMirrorWidgetIds?: string[] }) {
         logger.trace('[LAYOUT_LOG] Layout.import payload:', layout);
         this.#graphId = layout.graphId;
+        this.#fitDomNodeIds.clear();
+        for (const id of layout.fitDomNodeIds ?? []) this.#fitDomNodeIds.add(id);
         this.#floatingNodes.clear();
         Object.entries(layout.floatingNodes).forEach(([key, value]) => {
             this.#floatingNodes.set(key, value);

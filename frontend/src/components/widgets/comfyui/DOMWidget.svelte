@@ -4,7 +4,11 @@
   import { appState } from '@/states/app-state.svelte';
   import type { ComfyGridWidget } from '@/states/model-state.svelte';
 
-  let { widget }: { widget: ComfyGridWidget } = $props();
+  let {
+    widget,
+    options,
+  }: { widget: ComfyGridWidget; options?: { isFloating?: boolean; fitDomToNode?: boolean } } =
+    $props();
 
   const uiState = $derived(appState.uiState);
   const isViewport = $derived(['cameraAngle', 'load3D', 'load3DAdvanced'].includes(widget.type));
@@ -107,6 +111,7 @@
 <div
   class="dom-container"
   class:viewport={isViewport}
+  class:fit-node={Boolean(options?.isFloating && options?.fitDomToNode)}
   title={widget.tooltip ?? ''}
   data-id={widget.id}
   data-name={widget.name}
@@ -124,5 +129,15 @@
     flex: 1 1 300px;
     height: 300px;
     min-height: 300px;
+  }
+  .dom-container.fit-node {
+    flex: 1 1 0;
+    align-self: stretch;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    max-width: 100%;
+    max-height: 100%;
+    overflow: hidden;
   }
 </style>

@@ -192,6 +192,7 @@
     "node.move_to_global_board": "Move to global GridStack board",
     "node.focus": "Focus node in ComfyUI",
     "node.show_advanced": "Show advanced inputs",
+    "node.fit_dom": "Fit DOM content to node",
     "node.hide_advanced": "Hide advanced inputs",
     "node.menu.mode": "Mode",
     "node.menu.execute": "Execute this node",

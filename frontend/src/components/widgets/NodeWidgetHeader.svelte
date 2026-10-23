@@ -1,7 +1,11 @@
 <script lang="ts">
-  import { ArrowBigDown, ArrowBigUp, Locate, PictureInPicture } from '@lucide/svelte';
+  import { ArrowBigDown, ArrowBigUp, Locate, PictureInPicture, Shrink } from '@lucide/svelte';
   import { t } from '@/i18n/i18n';
-  import { activateTabForNode, updateBoardFloatingState } from '@/services/gridstack-service';
+  import {
+    activateTabForNode,
+    saveLayoutObject,
+    updateBoardFloatingState,
+  } from '@/services/gridstack-service';
   import { appState } from '@/states/app-state.svelte';
   import type { ComfyGridNode, ComfyGridWidget } from '@/states/model-state.svelte';
   import type { BoardId } from '@/types/board';
@@ -20,12 +24,14 @@
     isFloating,
     isInvalid,
     isTextareaOnly,
+    hasDomWidget = false,
   }: {
     node: ComfyGridNode;
     widget?: ComfyGridWidget;
     isFloating: boolean;
     isInvalid: boolean;
     isTextareaOnly: boolean;
+    hasDomWidget?: boolean;
   } = $props();
 
   const workspaceState = appState.workspaceState;
@@ -191,6 +197,22 @@
       {/if}
       {#if !isTitleEditing}
         <div class="card-header-right">
+          {#if isFloating && hasDomWidget}
+            <button
+              type="button"
+              class="btn btn-xs btn-icon"
+              class:active={workspaceState.layout.isDomFitNode(node.id)}
+              aria-pressed={workspaceState.layout.isDomFitNode(node.id)}
+              title={$t('node.fit_dom')}
+              onclick={() => {
+                workspaceState.layout.setDomFitNode(
+                  node.id,
+                  !workspaceState.layout.isDomFitNode(node.id),
+                );
+                saveLayoutObject(workspaceState.layout);
+              }}><Shrink size={12} /></button
+            >
+          {/if}
           <GridStackMoveButton items={layoutMenuItems} {isFloating} />
         </div>
       {/if}

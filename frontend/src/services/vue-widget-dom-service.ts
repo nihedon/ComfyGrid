@@ -12,6 +12,10 @@ export function copyWidgetStyles(source: Document, target: ShadowRoot) {
     });
     css.push('audio.comfy-audio { height: 40px !important; }');
     css.push(':host { --comfy-img-preview-width: 100%; --comfy-img-preview-height: 100%; }');
+    css.push(
+        ':host(.fit-node) > :not(style) { box-sizing: border-box; width: 100% !important; height: 100% !important; min-width: 0 !important; min-height: 0 !important; max-width: 100% !important; max-height: 100% !important; overflow: hidden; }',
+    );
+    css.push(':host(.fit-node) > [data-testid="bounding-boxes"] > * { flex-shrink: 0; }');
     let style = target.querySelector<HTMLStyleElement>('style[data-comfygrid-styles]');
     if (!style) {
         style = target.ownerDocument.createElement('style');
@@ -20,6 +24,65 @@ export function copyWidgetStyles(source: Document, target: ShadowRoot) {
     }
     const text = css.join('\n').replaceAll(':root', ':host');
     if (style.textContent !== text) style.textContent = text;
+}
+
+function fitBoundingBoxes(target: ShadowRoot): () => void {
+    const host = target.host as HTMLElement;
+    const saved = new Map<HTMLElement, string>();
+    const resize = new ResizeObserver(update);
+    let observed: Element[] = [];
+
+    function update() {
+        const root = target.querySelector<HTMLElement>('[data-testid="bounding-boxes"]');
+        const canvas = root?.querySelector('canvas');
+        const area = canvas?.parentElement;
+        const section = area?.parentElement;
+        if (!root || !area || !section) return;
+        const elements = [host, root, section, ...root.children, ...section.children];
+        if (elements.length !== observed.length || elements.some((element, index) => element !== observed[index])) {
+            resize.disconnect();
+            for (const element of elements) resize.observe(element);
+            observed = elements;
+        }
+        if (!saved.has(area)) saved.set(area, area.style.width);
+        if (!host.classList.contains('fit-node')) {
+            const width = saved.get(area)!;
+            if (area.style.width !== width) area.style.width = width;
+            return;
+        }
+        const styles = getComputedStyle(root);
+        const sectionStyles = getComputedStyle(section);
+        const ratio = getComputedStyle(area).aspectRatio.split('/').map(Number);
+        const aspect = ratio[0] / (ratio[1] || 1);
+        if (!Number.isFinite(aspect) || aspect <= 0) return;
+        const childrenHeight = (parent: HTMLElement, except: HTMLElement) =>
+            Array.from(parent.children).reduce((sum, child) => sum + (child === except ? 0 : child.getBoundingClientRect().height), 0);
+        const gap = (style: CSSStyleDeclaration, count: number) => (parseFloat(style.rowGap) || 0) * Math.max(0, count - 1);
+        const available =
+            root.clientHeight -
+            childrenHeight(root, section) -
+            childrenHeight(section, area) -
+            gap(styles, root.children.length) -
+            gap(sectionStyles, section.children.length) -
+            (parseFloat(styles.paddingTop) || 0) -
+            (parseFloat(styles.paddingBottom) || 0);
+        const width = `${Math.max(0, Math.min(section.clientWidth, available * aspect))}px`;
+        if (area.style.width !== width) area.style.width = width;
+    }
+
+    const mutations = new MutationObserver(update);
+    mutations.observe(target, { childList: true, subtree: true, attributes: true, attributeFilter: ['style'] });
+    const classes = new MutationObserver(update);
+    classes.observe(host, { attributes: true, attributeFilter: ['class'] });
+    resize.observe(host);
+    update();
+    return () => {
+        resize.disconnect();
+        mutations.disconnect();
+        classes.disconnect();
+        for (const [element, width] of saved) element.style.width = width;
+        saved.clear();
+    };
 }
 
 function preserveInheritance(element: HTMLElement, host: HTMLElement) {
@@ -46,6 +109,7 @@ export function mountVueWidget(target: ShadowRoot, source: Document, api: ComfyD
     const targetOptions = { childList: true, subtree: true, attributes: true, attributeFilter: ['aria-controls', 'aria-expanded'] };
     const host = target.host as HTMLElement;
     const originalStyle = host.getAttribute('style');
+    const stopFitting = fitBoundingBoxes(target);
 
     function restorePortal(element: HTMLElement, anchor: Comment) {
         if (anchor.isConnected && element.isConnected) anchor.replaceWith(element);
@@ -151,7 +215,7 @@ export function mountVueWidget(target: ShadowRoot, source: Document, api: ComfyD
     }
 
     const Observer = source.defaultView?.MutationObserver;
-    if (!Observer) return () => {};
+    if (!Observer) return stopFitting;
     const observer = new Observer(schedule);
     observer.observe(source.body, { childList: true, subtree: true });
     const targetObserver = new Observer(schedule);
@@ -165,6 +229,7 @@ export function mountVueWidget(target: ShadowRoot, source: Document, api: ComfyD
 
     return () => {
         stopped = true;
+        stopFitting();
         observer.disconnect();
         targetObserver.disconnect();
         stylesObserver.disconnect();
