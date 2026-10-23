@@ -166,7 +166,7 @@ def make_directory(output_dir: Path, image_info: dict) -> Path:
         save_dir = output_dir / save_dir / subdir
     else:
         save_dir = output_dir / save_dir
-    save_dir.mkdir(exist_ok=True)
+    save_dir.mkdir(parents=True, exist_ok=True)
     return save_dir
 
 
