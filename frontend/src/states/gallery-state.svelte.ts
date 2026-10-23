@@ -74,6 +74,7 @@ export type GalleryNode = {
 
 class GalleryState {
     readonly #jobs = new SvelteMap<string, GalleryJobRecord>();
+    readonly #pendingSaves = new WeakMap<GalleryNodeRecord, { pending: number; saved: boolean }>();
 
     #selectedJobIndex = $state<number>(0);
     #selectedNodeIndex = $state<number | undefined>();
@@ -261,6 +262,26 @@ class GalleryState {
         const node = this.#findNode(jobId, nodeId, batchJobIndex);
         if (!node) return;
         node.saved = true;
+    }
+
+    beginSave(jobId: string, nodeId: string, batchJobIndex: number): (success: boolean) => void {
+        const node = this.#findNode(jobId, nodeId, batchJobIndex);
+        if (!node) return () => {};
+        const save = this.#pendingSaves.get(node) ?? { pending: 0, saved: node.saved };
+        this.#pendingSaves.set(node, save);
+        save.pending++;
+        node.saved = true;
+
+        let settled = false;
+        return (success) => {
+            if (settled) return;
+            settled = true;
+            save.saved ||= success;
+            save.pending--;
+            // Keep optimistic feedback while pending, without undoing a successful save.
+            node.saved = save.saved || save.pending > 0;
+            if (save.pending === 0) this.#pendingSaves.delete(node);
+        };
     }
 
     markDownloaded(jobId: string, nodeId: string, batchJobIndex: number): void {

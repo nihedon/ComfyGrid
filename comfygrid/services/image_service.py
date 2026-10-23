@@ -17,6 +17,8 @@ from comfygrid.services.converters.image_converter import convert_image
 from comfygrid.services.converters.video_converter import (
     embed_video_metadata, is_video_file, read_video_metadata_from_bytes)
 
+_FETCH_TIMEOUT_SECONDS = 15.0
+
 
 def build_download_media(url: str, image_info: dict) -> tuple[bytes | None, str | None]:
     image_info = complement_image_info(image_info)
@@ -72,7 +74,7 @@ def video_thumbnail_from_url(url: str, size: int) -> bytes | None:
 
 def fetch_bytes(url: str) -> bytes | None:
     try:
-        with urllib.request.urlopen(url) as response:
+        with urllib.request.urlopen(url, timeout=_FETCH_TIMEOUT_SECONDS) as response:
             return response.read()
     except Exception:
         return None

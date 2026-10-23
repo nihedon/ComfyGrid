@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import re
 import threading
@@ -14,10 +15,12 @@ from fastapi import (APIRouter, Depends, File, Form, Request, Response,
 from fastapi.responses import FileResponse, JSONResponse
 from huggingface_hub import ModelCard
 from pydantic import BaseModel
+from PIL import Image
 
+from comfygrid.core.paths import resolve_within
 from comfygrid.infrastructure import model_repository
 from comfygrid.infrastructure.cache import delete_thumbnail_cache
-from comfygrid.services import file_service
+from comfygrid.services import comfyui_input_service, file_service
 from comfygrid.services.comfyui import ComfyUIService
 from comfygrid.services.dependencies import get_comfy_service
 
@@ -85,16 +88,15 @@ def get_file(file_path: str, comfy_service: ComfyUIService = Depends(get_comfy_s
 @router.get("/model_info={path:path}")
 def get_model_info(path: str, comfy_service: ComfyUIService = Depends(get_comfy_service)):
     comfyui_path = Path(comfy_service.comfyui_path)
-    full_path = comfyui_path / path
-
-    if not str(full_path).startswith(str(comfyui_path)):
+    try:
+        full_path = file_service.resolve_model_info_path(comfyui_path, path)
+        description_path = resolve_within(full_path.parent, full_path.with_suffix(".description.txt"))
+        civitai_meta_path = resolve_within(full_path.parent, full_path.with_suffix(".civitai.info"))
+    except ValueError:
         return JSONResponse({"error": "Invalid path"}, status_code=400)
 
-    name_without_ext = full_path.stem
-    root = full_path.parent
     info = {}
 
-    description_path = root / f"{name_without_ext}.description.txt"
     if description_path.exists():
         info["description"] = file_service._read_file(description_path)
 
@@ -108,7 +110,6 @@ def get_model_info(path: str, comfy_service: ComfyUIService = Depends(get_comfy_
         info["favorite"] = db_meta.favorite
         info["trainedWords"] = db_meta.trained_words
     else:
-        civitai_meta_path = root / f"{name_without_ext}.civitai.info"
         if civitai_meta_path.exists():
             try:
                 civitai_meta_file = file_service._read_file(civitai_meta_path)
@@ -140,19 +141,33 @@ def get_model_info(path: str, comfy_service: ComfyUIService = Depends(get_comfy_
 @router.post("/model_info={path:path}")
 async def save_model_info(request: Request, path: str, comfy_service: ComfyUIService = Depends(get_comfy_service)):
     comfyui_path = Path(comfy_service.comfyui_path)
-    full_path = comfyui_path / path
-
-    if not str(full_path).startswith(str(comfyui_path)):
+    try:
+        full_path = file_service.resolve_model_info_path(comfyui_path, path)
+    except ValueError:
         return JSONResponse({"error": "Invalid path"}, status_code=400)
 
-    name_without_ext = full_path.stem
-    root = full_path.parent
-    description_path = root / f"{name_without_ext}.description.txt"
+    try:
+        data = await request.json()
+        # Keep blocking file, database and network work off the event loop.
+        return await asyncio.to_thread(_save_model_info, comfyui_path, full_path, path, data)
+    except Exception as e:
+        logger.error("Error saving model info: %s", e)
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+
+def _save_model_info(comfyui_path: Path, full_path: Path, path: str, data: dict):
+    description_path = full_path.with_suffix(".description.txt")
 
     db_key = str(Path("models") / Path(path).relative_to("models")) if path.startswith("models/") else path
 
     try:
-        data = await request.json()
+        try:
+            if "description" in data:
+                description_path = resolve_within(full_path.parent, description_path)
+            if data.get("previewUrl"):
+                preview_path = resolve_within(full_path.parent, full_path.with_suffix(".preview.png"))
+        except ValueError:
+            return JSONResponse({"error": "Invalid path"}, status_code=400)
 
         if "description" in data:
             description_path.write_text(data["description"], encoding="utf-8")
@@ -174,13 +189,12 @@ async def save_model_info(request: Request, path: str, comfy_service: ComfyUISer
             model_repository.upsert_model_meta(db_key, **upsert_kwargs)
 
         if "previewUrl" in data and data["previewUrl"]:
-            preview_path = root / f"{name_without_ext}.preview.png"
             try:
                 req = urllib.request.Request(
                     data["previewUrl"],
                     headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
                 )
-                with urllib.request.urlopen(req) as response, open(preview_path, 'wb') as out_file:
+                with urllib.request.urlopen(req, timeout=15.0) as response, open(preview_path, 'wb') as out_file:
                     out_file.write(response.read())
                 delete_thumbnail_cache(str(preview_path.resolve()))
             except Exception as e:
@@ -210,22 +224,37 @@ def get_thumbnail(path: str, comfy_service: ComfyUIService = Depends(get_comfy_s
     return Response(content=result, media_type=media_type)
 
 
+@router.post("/paint_data")
+def prepare_paint_data(file: UploadFile = File(...)):
+    try:
+        return file_service.process_image_for_paint(file.file.read())
+    except (OSError, ValueError, Image.DecompressionBombError) as e:
+        logger.warning("Invalid paint image: %s", e)
+        return JSONResponse({"error": "Invalid image"}, status_code=400)
+
+
 @router.post("/apply_mask")
 def apply_mask(
     file: UploadFile = File(...),
     mask: UploadFile = File(...),
     filename: str = Form(...),
-    subfolder: str = Form(...),
+    subfolder: str = Form(""),
     comfy_service: ComfyUIService = Depends(get_comfy_service),
 ):
     if filename is None or filename == "":
         return JSONResponse({"error": "Invalid file name"}, status_code=400)
 
     try:
-        save_dir = Path(comfy_service.comfyui_path, "input", subfolder)
-        save_dir.mkdir(exist_ok=True)
-        file_service.apply_mask(file.file.read(), mask.file.read(), save_dir / filename)
+        save_path = comfyui_input_service.resolve_input_path(comfy_service.comfyui_path, filename, subfolder)
+    except ValueError:
+        return JSONResponse({"error": "Invalid path"}, status_code=400)
+
+    try:
+        save_path.parent.mkdir(parents=True, exist_ok=True)
+        file_service.apply_mask(file.file.read(), mask.file.read(), save_path)
         return {"message": "uploaded"}
+    except (ValueError, Image.UnidentifiedImageError, Image.DecompressionBombError) as e:
+        return JSONResponse({"error": str(e)}, status_code=400)
     except Exception as e:
         logger.error("Error in apply_mask: %s", e)
         return JSONResponse({"error": str(e)}, status_code=500)

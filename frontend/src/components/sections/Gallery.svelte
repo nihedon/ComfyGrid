@@ -1,10 +1,12 @@
 <script lang="ts">
   import { Download, Eye, Info, Save, Trash2, Upload } from '@lucide/svelte';
   import { SvelteMap } from 'svelte/reactivity';
+  import AppMenu from '@/components/common/AppMenu.svelte';
   import { t } from '@/i18n/i18n';
   import { galleryManager } from '@/managers/gallery-manager';
   import { appState } from '@/states/app-state.svelte';
   import type { GalleryJob, GalleryNode } from '@/states/gallery-state.svelte';
+  import type { MenuEntry } from '@/types/menu';
   import ImageCompare from '../widgets/ImageCompare.svelte';
 
   const optionState = appState.optionState;
@@ -26,6 +28,32 @@
   const hasViewedImages = $derived(
     galleryState.galleryJobs.some((job) => job.completed && job.viewed),
   );
+  const clearMenuItems = $derived<MenuEntry[]>([
+    {
+      id: 'saved',
+      kind: 'action',
+      label: $t('gallery.clear_saved'),
+      icon: Save,
+      disabled: !hasSavedImages,
+      onSelect: clearSavedImages,
+    },
+    {
+      id: 'viewed',
+      kind: 'action',
+      label: $t('gallery.clear_viewed'),
+      icon: Eye,
+      disabled: !hasViewedImages,
+      onSelect: clearViewedImages,
+    },
+    {
+      id: 'all',
+      kind: 'action',
+      label: $t('gallery.clear_all'),
+      icon: Trash2,
+      danger: true,
+      onSelect: clearAllImages,
+    },
+  ]);
 
   const selectedNodeName = $derived.by(() => {
     const node = galleryState.currentGalleryNode;
@@ -57,10 +85,7 @@
     const oldIndex = galleryState.currentJobIndex;
     galleryState.deleteJob(galleryState.currentGalleryJob.jobId);
 
-    setTimeout(() => {
-      const nextIndex = Math.min(galleryState.galleryJobs.length - 1, oldIndex);
-      galleryState.selectedJobIndex = Math.max(0, nextIndex);
-    }, 0);
+    galleryState.selectedJobIndex = Math.max(0, oldIndex - 1);
     e.stopPropagation();
   }
 
@@ -467,48 +492,19 @@
       {:else}
         <div class="flex-grow-1"></div>
       {/if}
-      <div class="dropdown">
-        <button
-          class="btn btn-danger dropdown-toggle d-flex align-items-center justify-content-center"
-          type="button"
-          data-bs-toggle="dropdown"
-          aria-expanded="false"
-          title={$t('gallery.clear')}
-        >
-          <Trash2 size={16} />
-        </button>
-        <ul class="dropdown-menu dropdown-menu-end">
-          <li>
-            <button
-              class="dropdown-item d-flex align-items-center gap-2"
-              type="button"
-              onclick={clearSavedImages}
-              disabled={!hasSavedImages}
-            >
-              <Save size={16} />{$t('gallery.clear_saved')}
-            </button>
-          </li>
-          <li>
-            <button
-              class="dropdown-item d-flex align-items-center gap-2"
-              type="button"
-              onclick={clearViewedImages}
-              disabled={!hasViewedImages}
-            >
-              <Eye size={16} />{$t('gallery.clear_viewed')}
-            </button>
-          </li>
-          <li>
-            <button
-              class="dropdown-item text-danger d-flex align-items-center gap-2"
-              type="button"
-              onclick={clearAllImages}
-            >
-              <Trash2 size={16} />{$t('gallery.clear_all')}
-            </button>
-          </li>
-        </ul>
-      </div>
+      <AppMenu items={clearMenuItems} align="end">
+        {#snippet trigger({ props })}
+          <button
+            {...props}
+            class="btn btn-danger dropdown-toggle d-flex align-items-center justify-content-center"
+            type="button"
+            title={$t('gallery.clear')}
+            aria-label={$t('gallery.clear')}
+          >
+            <Trash2 size={16} />
+          </button>
+        {/snippet}
+      </AppMenu>
     </div>
   </div>
 </div>

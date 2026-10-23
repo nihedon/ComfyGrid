@@ -1,26 +1,29 @@
 import type { GridStack, GridStackWidget } from 'gridstack';
 import { SvelteMap, SvelteSet } from 'svelte/reactivity';
 import type { BoardId } from '@/types/board';
-import type { FloatingPosition, LayoutType } from '@/types/layout';
+import type { FloatingPosition, LayoutType, TranslationSeedMode } from '@/types/layout';
 import logger from '@/utils/logger';
 import { appState } from './app-state.svelte';
-import type { ComfyGridGroup, ComfyGridNode } from './model-state.svelte';
+import type { ComfyGridGroup, ComfyGridNode, ComfyGridWidget } from './model-state.svelte';
 
 export class Layout {
     #graphId = $state<string | null>(null);
     readonly #floatingNodes = new SvelteMap<string, BoardId>();
     readonly #floatingWidgets = new SvelteMap<string, BoardId>();
     readonly #floatingPositions = new SvelteMap<string, Record<string, FloatingPosition>>();
-    readonly #promptWidgetIds = new SvelteSet<string>();
+    readonly #tagWidgetIds = new SvelteSet<string>();
+    readonly #fitDomNodeIds = new SvelteSet<string>();
+    readonly #jsonWidgetIds = new SvelteSet<string>();
+    readonly #promptEditorWidgetIds = new SvelteSet<string>();
     readonly #translateWidgetIds = new SvelteSet<string>();
     readonly #translateModels = new SvelteMap<string, string>();
     readonly #translateSystems = new SvelteMap<string, string>();
-    #positivePromptWidgetId = $state<string | null>(null);
-    #negativePromptWidgetId = $state<string | null>(null);
+    readonly #translateSeedModes = new SvelteMap<string, TranslationSeedMode>();
     #showRenderableLessNodes = $state<boolean>(false);
     #showControlLessNodes = $state<boolean>(false);
     #showCollapsedNodes = $state<boolean>(false);
     #showNoteNodes = $state<boolean>(false);
+    #commonTabBoard = $state<boolean>(false);
     #sortOrder = $state<'default' | 'name'>('default');
 
     get graphId() {
@@ -35,11 +38,29 @@ export class Layout {
     get floatingPositions(): ReadonlyMap<string, Record<string, FloatingPosition>> {
         return this.#floatingPositions;
     }
-    isPromptWidget(widgetId: string): boolean {
-        return this.#promptWidgetIds.has(widgetId);
+    isTagWidget(widgetId: string): boolean {
+        return this.#tagWidgetIds.has(widgetId);
     }
-    get promptWidgetIds(): ReadonlySet<string> {
-        return this.#promptWidgetIds;
+    isDomFitNode(nodeId: string): boolean {
+        return this.#fitDomNodeIds.has(nodeId);
+    }
+    setDomFitNode(nodeId: string, enabled: boolean) {
+        if (enabled) this.#fitDomNodeIds.add(nodeId);
+        else this.#fitDomNodeIds.delete(nodeId);
+    }
+    isJsonWidget(widgetId: string): boolean {
+        return this.#jsonWidgetIds.has(widgetId);
+    }
+    isPromptEditorWidget(widgetId: string): boolean {
+        return this.#promptEditorWidgetIds.has(widgetId);
+    }
+    setPromptEditorWidget(widgetId: string, enabled: boolean) {
+        if (enabled) this.#promptEditorWidgetIds.add(widgetId);
+        else this.#promptEditorWidgetIds.delete(widgetId);
+    }
+    setJsonWidget(widgetId: string, enabled: boolean) {
+        if (enabled) this.#jsonWidgetIds.add(widgetId);
+        else this.#jsonWidgetIds.delete(widgetId);
     }
     isTranslateWidget(widgetId: string): boolean {
         return this.#translateWidgetIds.has(widgetId);
@@ -67,11 +88,15 @@ export class Layout {
             this.#translateSystems.delete(widgetId);
         }
     }
-    get positivePromptWidgetId(): string | null {
-        return this.#positivePromptWidgetId;
+    getTranslateSeedMode(widgetId: string): TranslationSeedMode | undefined {
+        return this.#translateSeedModes.get(widgetId);
     }
-    get negativePromptWidgetId(): string | null {
-        return this.#negativePromptWidgetId;
+    setTranslateSeedMode(widgetId: string, mode: TranslationSeedMode | '') {
+        if (mode) {
+            this.#translateSeedModes.set(widgetId, mode);
+        } else {
+            this.#translateSeedModes.delete(widgetId);
+        }
     }
     get showRenderableLessNodes() {
         return this.#showRenderableLessNodes;
@@ -84,6 +109,9 @@ export class Layout {
     }
     get showNoteNodes() {
         return this.#showNoteNodes;
+    }
+    get commonTabBoard() {
+        return this.#commonTabBoard;
     }
     get sortOrder() {
         return this.#sortOrder;
@@ -124,23 +152,17 @@ export class Layout {
         boardMap[id] = { ...boardMap[id], ...pos };
         logger.trace(`[LAYOUT_LOG] updateFloatingPosition: board="${boardId}", id="${id}"`, boardMap[id]);
     }
-    addPromptWidgetId(widgetId: string) {
-        this.#promptWidgetIds.add(widgetId);
+    addTagWidgetId(widgetId: string) {
+        this.#tagWidgetIds.add(widgetId);
     }
-    deletePromptWidgetId(widgetId: string) {
-        this.#promptWidgetIds.delete(widgetId);
+    deleteTagWidgetId(widgetId: string) {
+        this.#tagWidgetIds.delete(widgetId);
     }
     addTranslateWidgetId(widgetId: string) {
         this.#translateWidgetIds.add(widgetId);
     }
     deleteTranslateWidgetId(widgetId: string) {
         this.#translateWidgetIds.delete(widgetId);
-    }
-    setPositivePromptWidgetId(positivePromptWidgetId: string | null) {
-        this.#positivePromptWidgetId = positivePromptWidgetId;
-    }
-    setNegativePromptWidgetId(negativePromptWidgetId: string | null) {
-        this.#negativePromptWidgetId = negativePromptWidgetId;
     }
     set showRenderableLessNodes(val: boolean) {
         this.#showRenderableLessNodes = val;
@@ -153,6 +175,12 @@ export class Layout {
     }
     set showNoteNodes(val: boolean) {
         this.#showNoteNodes = val;
+    }
+    set commonTabBoard(val: boolean) {
+        this.#commonTabBoard = val;
+    }
+    setDisplayOption(option: 'commonTabBoard' | 'showNoteNodes' | 'showCollapsedNodes' | 'showControlLessNodes' | 'showRenderableLessNodes', value: boolean) {
+        this[option] = value;
     }
     set sortOrder(sortOrder: 'default' | 'name') {
         this.#sortOrder = sortOrder;
@@ -180,27 +208,38 @@ export class Layout {
             for (const key of Array.from(this.#translateSystems.keys())) {
                 if (!validWidgetIds.has(key)) this.#translateSystems.delete(key);
             }
+            for (const key of Array.from(this.#translateSeedModes.keys())) {
+                if (!validWidgetIds.has(key)) this.#translateSeedModes.delete(key);
+            }
             for (const id of Array.from(this.#translateWidgetIds)) {
                 if (!validWidgetIds.has(id)) this.#translateWidgetIds.delete(id);
             }
-            for (const id of Array.from(this.#promptWidgetIds)) {
-                if (!validWidgetIds.has(id)) this.#promptWidgetIds.delete(id);
+            for (const id of Array.from(this.#tagWidgetIds)) {
+                if (!validWidgetIds.has(id)) this.#tagWidgetIds.delete(id);
+            }
+            for (const id of Array.from(this.#jsonWidgetIds)) {
+                if (!validWidgetIds.has(id)) this.#jsonWidgetIds.delete(id);
+            }
+            for (const id of Array.from(this.#promptEditorWidgetIds)) {
+                if (!validWidgetIds.has(id)) this.#promptEditorWidgetIds.delete(id);
             }
             for (const key of Array.from(this.#floatingNodes.keys())) {
                 if (!validNodeIds.has(key)) this.#floatingNodes.delete(key);
             }
+            for (const id of this.#fitDomNodeIds) {
+                if (!validNodeIds.has(id)) this.#fitDomNodeIds.delete(id);
+            }
             for (const key of Array.from(this.#floatingWidgets.keys())) {
                 if (!validWidgetIds.has(key)) this.#floatingWidgets.delete(key);
-            }
-            if (this.#positivePromptWidgetId && !validWidgetIds.has(this.#positivePromptWidgetId)) {
-                this.#positivePromptWidgetId = null;
-            }
-            if (this.#negativePromptWidgetId && !validWidgetIds.has(this.#negativePromptWidgetId)) {
-                this.#negativePromptWidgetId = null;
             }
         }
 
         const allBoardLayouts: Record<string, Record<string, FloatingPosition>> = {};
+        for (const [boardId, positions] of this.#floatingPositions) {
+            const key = boardId.split('-')[0];
+            const retained = Object.fromEntries(Object.entries(positions).filter(([id]) => !hasNodes || validNodeIds.has(id) || validWidgetIds.has(id)));
+            allBoardLayouts[key] = { ...allBoardLayouts[key], ...retained };
+        }
         for (const [boardId, grid] of appState.workspaceState.gridStackBoards) {
             const layout = (grid.save(true) ?? []) as GridStackWidget[];
             const idKeyLayout = layout.reduce(
@@ -223,28 +262,33 @@ export class Layout {
 
         const exported = {
             graphId: this.#graphId,
+            fitDomNodeIds: [...this.#fitDomNodeIds],
             floatingPositions: allBoardLayouts,
             floatingNodes: Object.fromEntries(Array.from(this.#floatingNodes.entries()).filter(([, boardId]) => Boolean(boardId))),
             floatingWidgets: Object.fromEntries(Array.from(this.#floatingWidgets.entries()).filter(([, boardId]) => Boolean(boardId))),
-            promptWidgetIds: [...this.#promptWidgetIds],
-            positivePromptWidgetId: this.#positivePromptWidgetId,
-            negativePromptWidgetId: this.#negativePromptWidgetId,
+            tagWidgetIds: [...this.#tagWidgetIds],
+            jsonWidgetIds: [...this.#jsonWidgetIds],
+            promptEditorWidgetIds: [...this.#promptEditorWidgetIds],
             translateWidgetIds: [...this.#translateWidgetIds],
             translateModels: Object.fromEntries(Array.from(this.#translateModels.entries()).filter(([, v]) => Boolean(v))),
             translateSystems: Object.fromEntries(Array.from(this.#translateSystems.entries()).filter(([, v]) => Boolean(v))),
+            translateSeedModes: Object.fromEntries(this.#translateSeedModes),
             showRenderableLessNodes: this.#showRenderableLessNodes,
             showControlLessNodes: this.#showControlLessNodes,
             showCollapsedNodes: this.#showCollapsedNodes,
             showNoteNodes: this.#showNoteNodes,
+            commonTabBoard: this.#commonTabBoard,
             sortOrder: this.#sortOrder,
         };
         logger.trace('[LAYOUT_LOG] Layout.export result:', exported);
         return exported;
     }
 
-    import(layout: LayoutType) {
+    import(layout: LayoutType & { codeMirrorWidgetIds?: string[] }) {
         logger.trace('[LAYOUT_LOG] Layout.import payload:', layout);
         this.#graphId = layout.graphId;
+        this.#fitDomNodeIds.clear();
+        for (const id of layout.fitDomNodeIds ?? []) this.#fitDomNodeIds.add(id);
         this.#floatingNodes.clear();
         Object.entries(layout.floatingNodes).forEach(([key, value]) => {
             this.#floatingNodes.set(key, value);
@@ -257,12 +301,20 @@ export class Layout {
         Object.entries(layout.floatingPositions).forEach(([key, value]) => {
             this.#floatingPositions.set(key, value);
         });
-        this.#promptWidgetIds.clear();
-        layout.promptWidgetIds.forEach((widgetId) => {
-            this.#promptWidgetIds.add(widgetId);
+        this.#tagWidgetIds.clear();
+        this.#jsonWidgetIds.clear();
+        this.#promptEditorWidgetIds.clear();
+        const promptIds = layout.promptEditorWidgetIds ?? [...(layout.codeMirrorWidgetIds ?? []), ...(layout.tagWidgetIds ?? [])];
+        for (const id of promptIds) {
+            if (!layout.jsonWidgetIds?.includes(id) && !layout.translateWidgetIds?.includes(id)) this.#promptEditorWidgetIds.add(id);
+        }
+        (layout.jsonWidgetIds ?? []).forEach((id) => this.#jsonWidgetIds.add(id));
+        (layout.tagWidgetIds ?? []).forEach((widgetId) => {
+            this.#tagWidgetIds.add(widgetId);
         });
-        this.#positivePromptWidgetId = layout.positivePromptWidgetId;
-        this.#negativePromptWidgetId = layout.negativePromptWidgetId;
+        if (layout.promptEditorWidgetIds === undefined) {
+            for (const id of layout.codeMirrorWidgetIds ?? []) this.#tagWidgetIds.add(id);
+        }
         this.#translateWidgetIds.clear();
         (layout.translateWidgetIds ?? []).forEach((widgetId) => {
             this.#translateWidgetIds.add(widgetId);
@@ -274,6 +326,10 @@ export class Layout {
         this.#translateSystems.clear();
         Object.entries(layout.translateSystems ?? {}).forEach(([key, value]) => {
             this.#translateSystems.set(key, value);
+        });
+        this.#translateSeedModes.clear();
+        Object.entries(layout.translateSeedModes ?? {}).forEach(([key, value]) => {
+            if (value === 'fixed' || value === 'random') this.#translateSeedModes.set(key, value);
         });
         if (layout.showRenderableLessNodes !== undefined) {
             this.#showRenderableLessNodes = layout.showRenderableLessNodes;
@@ -293,6 +349,7 @@ export class Layout {
             this.#showCollapsedNodes = false;
         }
         this.#showNoteNodes = layout.showNoteNodes ?? false;
+        this.#commonTabBoard = layout.commonTabBoard ?? false;
         this.#sortOrder = layout.sortOrder ?? 'default';
     }
 }
@@ -400,27 +457,27 @@ class WorkspaceState {
     }
 
     getEffectiveNodes(boardTarget: BoardId | 'default' = '', groupId?: string): ComfyGridNode[] {
-        const commonTabBoard = (appState.optionState.get('ComfyGrid.ui.common_tab_board') as boolean) ?? false;
+        const commonTabBoard = this.#layout.commonTabBoard;
 
-        const nodeGroupMap = this.nodeGroupMap;
+        const nodeTabMap = this.nodeTabMap;
 
         return Array.from(this.#nodes.values()).filter((node) => {
             if (!node.isVisible) return false;
 
             const floatingBoard = this.#layout.floatingNodes.get(node.id);
-            const parentGroup = nodeGroupMap.get(node.id);
+            const tabId = nodeTabMap.get(node.id) ?? '__ungrouped__';
 
             if (floatingBoard) {
                 if (boardTarget === 'Global') return floatingBoard === 'Global';
                 if (boardTarget === 'Tab') {
                     if (commonTabBoard) return floatingBoard === 'Tab';
-                    return floatingBoard === 'Tab' && (groupId === undefined || parentGroup?.id === groupId);
+                    return floatingBoard === 'Tab' && (groupId === undefined || tabId === groupId);
                 }
                 return false;
             }
 
             if (boardTarget === '' || boardTarget === 'default') {
-                return !parentGroup?.isTabify;
+                return tabId === '__ungrouped__';
             }
 
             return false;
@@ -448,49 +505,57 @@ class WorkspaceState {
         return this.#groups.find((g) => g.id === groupId);
     }
 
+    get nodeTabMap(): ReadonlyMap<string, string> {
+        // Nested groups share the tab of their top-level group.
+        // eslint-disable-next-line svelte/prefer-svelte-reactivity
+        const map = new Map<string, string>();
+        for (const group of this.#groups) {
+            const tabId = group.isTabify ? group.id : '__ungrouped__';
+            for (const node of group.allNodes) {
+                map.set(node.id, tabId);
+            }
+        }
+        return map;
+    }
+
     hasEffectiveNodes(boardTarget: BoardId | 'default' = '', groupId?: string): boolean {
         if (this.getEffectiveNodes(boardTarget, groupId).length > 0) {
             return true;
         }
-        if (boardTarget !== 'Tab') {
-            return false;
-        }
-        const commonTabBoard = (appState.optionState.get('ComfyGrid.ui.common_tab_board') as boolean) ?? false;
-        for (const [widgetId, targetBoard] of this.#layout.floatingWidgets) {
-            if (targetBoard !== 'Tab') {
-                continue;
-            }
-            if (commonTabBoard) {
-                return true;
-            }
-            if (groupId) {
-                for (const node of this.#nodes.values()) {
-                    if (node.widgets.some((w) => w.id === widgetId)) {
-                        const parentGroup = this.nodeGroupMap.get(node.id);
-                        if (parentGroup?.id === groupId) {
-                            return true;
-                        }
-                    }
+        return (boardTarget === 'Global' || boardTarget === 'Tab') && this.getEffectiveWidgets(boardTarget, groupId).length > 0;
+    }
+
+    getEffectiveWidgets(boardTarget: BoardId, groupId?: string): Array<{ node: ComfyGridNode; widget: ComfyGridWidget }> {
+        const result: Array<{ node: ComfyGridNode; widget: ComfyGridWidget }> = [];
+        const commonTabBoard = this.#layout.commonTabBoard;
+        const nodeTabMap = this.nodeTabMap;
+        for (const node of this.#nodes.values()) {
+            if (!node.isFloatingVisible) continue;
+            const tabId = nodeTabMap.get(node.id) ?? '__ungrouped__';
+            if (boardTarget === 'Tab' && !commonTabBoard && groupId !== undefined && tabId !== groupId) continue;
+            for (const widget of node.widgets) {
+                if (widget.type === 'customtext' && this.#layout.floatingWidgets.get(widget.id) === boardTarget) {
+                    result.push({ node, widget });
                 }
             }
         }
-        return false;
+        return result;
     }
 
     hasTabContent(tabId: string): boolean {
-        const commonTabBoard = (appState.optionState.get('ComfyGrid.ui.common_tab_board') as boolean) ?? false;
+        const commonTabBoard = this.#layout.commonTabBoard;
 
         if (tabId === '__ungrouped__') {
             const hasDefaultNodes = this.getEffectiveNodes('default').length > 0;
-            const hasCommonTabBoardNodes = commonTabBoard && this.hasEffectiveNodes('Tab');
-            return hasDefaultNodes || hasCommonTabBoardNodes;
+            const hasTabBoardNodes = this.hasEffectiveNodes('Tab', commonTabBoard ? undefined : '__ungrouped__');
+            return hasDefaultNodes || hasTabBoardNodes;
         }
 
         const group = this.getGroup(tabId);
         if (!group) return false;
 
         const hasGroupVisibleNodes = group.hasVisibleNodes;
-        const hasFloatingOnThisTab = !commonTabBoard && (this.getEffectiveNodes('Tab', tabId).length > 0 || this.hasEffectiveNodes('Tab', tabId));
+        const hasFloatingOnThisTab = !commonTabBoard && this.hasEffectiveNodes('Tab', tabId);
 
         return hasGroupVisibleNodes || hasFloatingOnThisTab;
     }
@@ -501,13 +566,11 @@ class WorkspaceState {
     }
 
     getTabNodes(tabId: string): ComfyGridNode[] {
-        const commonTabBoard = (appState.optionState.get('ComfyGrid.ui.common_tab_board') as boolean) ?? false;
+        const commonTabBoard = this.#layout.commonTabBoard;
 
         if (tabId === '__ungrouped__') {
             const nodes = [...this.getEffectiveNodes('default')];
-            if (commonTabBoard) {
-                nodes.push(...this.getEffectiveNodes('Tab'));
-            }
+            nodes.push(...this.getEffectiveNodes('Tab', commonTabBoard ? undefined : '__ungrouped__'));
             return nodes;
         }
 

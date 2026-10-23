@@ -1,60 +1,72 @@
 <script lang="ts">
-  import { Check, Workflow } from '@lucide/svelte';
+  import { Workflow } from '@lucide/svelte';
+  import AppMenu from '@/components/common/AppMenu.svelte';
+  import { t } from '@/i18n/i18n';
   import { appState } from '@/states/app-state.svelte';
-  import type { WorkflowTabItem } from '@/states/comfyui-bridge.svelte';
+  import type { OpenWorkflowInfo } from '@/types/comfy-workflow';
+  import type { MenuEntry } from '@/types/menu';
+  import logger from '@/utils/logger';
 
   const uiState = appState.uiState;
 
-  let workflowTabs = $state<WorkflowTabItem[]>([]);
+  let workflowTabs = $state<OpenWorkflowInfo[]>([]);
+  let isSwitching = $state(false);
 
   function refreshWorkflowTabs() {
-    if (appState.bridge) {
-      workflowTabs = appState.bridge.getWorkflowTabs();
-    }
+    workflowTabs = appState.bridge?.getOpenWorkflows() ?? [];
   }
 
-  function handleSelectTab(item: WorkflowTabItem) {
-    if (item.selected) return;
+  async function handleSelectTab(item: OpenWorkflowInfo) {
+    if (item.selected || isSwitching) return;
 
     const app = appState.comfyUiState.app;
-    if (!app) return;
-
-    item.tab.click();
-    if (uiState.activePageId !== 'grid' && uiState.activePageId !== 'comfyui') {
-      uiState.needRefresh = true;
+    const bridge = appState.bridge;
+    if (!app || !bridge) return;
+    isSwitching = true;
+    try {
+      await bridge.selectWorkflow(item.path);
+      if (appState.comfyUiState.app !== app) return;
+      refreshWorkflowTabs();
+      if (uiState.activePageId !== 'grid' && uiState.activePageId !== 'comfyui') {
+        uiState.needRefresh = true;
+      }
+    } catch (error) {
+      if (appState.comfyUiState.app !== app) return;
+      logger.error('Failed to switch ComfyUI workflow tab:', error);
+      appState.toastState.addToast({ type: 'error', message: $t('toast.workflow_apply_failed') });
+    } finally {
+      isSwitching = false;
     }
   }
+  const items = $derived(
+    workflowTabs.map((item): MenuEntry => ({
+      id: item.path,
+      kind: 'action',
+      label: item.name,
+      selected: item.selected,
+      disabled: isSwitching,
+      onSelect: () => handleSelectTab(item),
+    })),
+  );
 </script>
 
-<div class="dropdown">
-  <button
-    class="dropdown-toggle btn btn-outline-secondary d-flex justify-content-center align-items-center p-1"
-    type="button"
-    data-bs-toggle="dropdown"
-    aria-expanded="false"
-    style="width: 2.2rem; height: 2.2rem;"
-    onclick={refreshWorkflowTabs}
-    onpointerenter={refreshWorkflowTabs}
-    ><Workflow size={18} />
-  </button>
-
-  <ul class="dropdown-menu">
-    {#each workflowTabs as item, index (`${item.label}-${index}`)}
-      <li>
-        <button
-          class="dropdown-item d-flex align-items-center justify-content-between gap-2"
-          class:active={item.selected}
-          onclick={() => handleSelectTab(item)}
-        >
-          <span class="text-truncate">{item.label}</span>
-          {#if item.selected}
-            <Check size={14} />
-          {/if}
-        </button>
-      </li>
-    {/each}
-  </ul>
-</div>
+<AppMenu
+  {items}
+  onOpenChange={(open) => {
+    if (open) refreshWorkflowTabs();
+  }}
+>
+  {#snippet trigger({ props })}
+    <button
+      {...props}
+      class="dropdown-toggle btn btn-outline-secondary d-flex justify-content-center align-items-center p-1"
+      type="button"
+      aria-label={$t('menu.workflows')}
+      style="width: 2.2rem; height: 2.2rem;"
+      ><Workflow size={18} />
+    </button>
+  {/snippet}
+</AppMenu>
 
 <style lang="scss">
   .dropdown-toggle::after {

@@ -1,6 +1,6 @@
 <script lang="ts">
   import { Info } from '@lucide/svelte';
-  import { comfyGridApiClient } from '@/api/api-client';
+  import { fetchModelDetails } from '@/services/models-service';
   import { appState } from '@/states/app-state.svelte';
   import { ComfyGridWidget } from '@/states/model-state.svelte';
   import type { Model, ModelTypes } from '@/states/storage-state.svelte';
@@ -67,19 +67,11 @@
   async function handleDescriptionClick(e: MouseEvent) {
     e.preventDefault();
     e.stopPropagation();
-    if (!currentModel) return;
-
-    if (!currentModel.retrieved) {
-      const res = await comfyGridApiClient.getModelInfo(currentModel.full_path);
-      if (res.ok && res.json) {
-        if (res.json.description) {
-          currentModel.description = res.json.description;
-        }
-        currentModel.retrieved = true;
-      }
-    }
-
-    appState.descriptionModalState.show(currentModel, modelSubdirs ?? []);
+    const target = currentModel;
+    if (!target) return;
+    await fetchModelDetails(target);
+    if (currentModel !== target) return;
+    appState.descriptionModalState.show(target, modelSubdirs ?? []);
   }
 
   function handleMouseEnter() {

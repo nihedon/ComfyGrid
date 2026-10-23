@@ -29,7 +29,7 @@
   function handleDeleteJob(jobId: string) {
     if (executionState.processingJobId === jobId) {
       handleCancel();
-    } else if (executionState.deleteQueueJobId(jobId)) {
+    } else {
       executionState.deleteQueue(jobId);
     }
   }

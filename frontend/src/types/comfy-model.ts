@@ -1,4 +1,5 @@
 import type { INodeInputSlot, LGraph, LGraphCanvas, LGraphGroup, LGraphNode } from 'litegraph.js';
+import type { ComfyWorkflowApi } from './comfy-workflow';
 import type { ComfyExtension, ComfyLink, ImageInfo, PromptData, QueuePromptResponse, WidgetContext } from './model-shared';
 
 interface ComfyInputNodeSlot extends INodeInputSlot {
@@ -18,6 +19,9 @@ export interface ComfyCanvas extends LGraphCanvas {
 }
 
 export interface ComfyApp {
+    ui?: { settings?: { getSettingValue?: (id: string) => unknown } };
+    comfyGridWorkflows?: ComfyWorkflowApi;
+    comfyGridDomWidgets?: ComfyDomWidgetApi;
     /** @deprecated use rootGraph instead */
     graph: ComfyGraph;
     rootGraph: ComfyGraph;
@@ -32,6 +36,11 @@ export interface ComfyApp {
     queuePrompt: (number: number, batchCount?: number) => Promise<QueuePromptResponse>;
     registerExtension: (extension: ComfyExtension) => void;
     refreshComboInNodes: () => Promise<void>;
+}
+
+export interface ComfyDomWidgetApi {
+    getWidgetElement(node: ComfyNode, widget: ComfyWidget): HTMLElement | null;
+    dispose(): void;
 }
 
 export interface ComfyApi {
@@ -58,8 +67,12 @@ export interface ComfyGroup extends LGraphGroup {
 }
 
 export interface ComfyNode extends LGraphNode {
+    showAdvanced?: boolean;
+    block_delete?: boolean;
+    ignore_remove?: boolean;
+    connectInputToOutput?: () => boolean | undefined;
     boundingRect: number[];
-    collapsed: boolean;
+    readonly collapsed: boolean;
     widgets: ComfyWidget[];
     inputs: ComfyInputNodeSlot[];
     images?: ImageInfo[];
@@ -83,11 +96,14 @@ export interface ComfyWidget {
     value?: any;
     label?: string;
     options?: {
+        advanced?: boolean;
         // eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
         values?: string[] | Function;
         [key: string]: unknown;
     };
     disabled: boolean;
+    hidden?: boolean;
+    advanced?: boolean;
     image?: ImageInfo;
     element?: HTMLElement & { disabled: boolean; readOnly: boolean; placeholder: string };
     inputEl?: HTMLElement & { disabled: boolean; readOnly: boolean; placeholder: string };

@@ -187,11 +187,11 @@ export class ComfyUiEventListener {
         });
 
         api.socket.addEventListener('error', () => {
-            appState.dialogState.showErrorDialog({ title: 'Error', message: 'ComfyUI connection error' });
+            logger.warn('ComfyUI connection error; waiting for availability status');
         });
 
         api.socket.addEventListener('close', () => {
-            appState.dialogState.showFatalDialog({ title: 'Closed', message: 'ComfyUI connection closed' });
+            logger.info('ComfyUI connection closed; waiting for availability status');
         });
 
         this.#hookQueuePrompt(api);

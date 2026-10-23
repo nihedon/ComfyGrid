@@ -1,5 +1,7 @@
 import type { BoardId } from './board';
 
+export type TranslationSeedMode = 'fixed' | 'random';
+
 export type FloatingPosition = {
     x: number;
     y: number;
@@ -12,15 +14,18 @@ export type LayoutType = {
     floatingNodes: Record<string, BoardId>;
     floatingWidgets: Record<string, BoardId>;
     floatingPositions: Record<string, Record<string, FloatingPosition>>;
-    promptWidgetIds: string[];
-    positivePromptWidgetId: string | null;
-    negativePromptWidgetId: string | null;
+    fitDomNodeIds?: string[];
+    tagWidgetIds?: string[];
+    jsonWidgetIds?: string[];
+    promptEditorWidgetIds?: string[];
     translateWidgetIds?: string[];
     translateModels?: Record<string, string>;
     translateSystems?: Record<string, string>;
+    translateSeedModes?: Record<string, TranslationSeedMode>;
     showRenderableLessNodes?: boolean;
     showControlLessNodes?: boolean;
     showCollapsedNodes?: boolean;
     showNoteNodes?: boolean;
+    commonTabBoard?: boolean;
     sortOrder: 'default' | 'name';
 };

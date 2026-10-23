@@ -2,15 +2,19 @@ import type { Component } from 'svelte';
 import { ComfyGridNode, ComfyGridWidget } from '@/states/model-state.svelte';
 import AudioPlayerWidget from '../AudioPlayerWidget.svelte';
 import ButtonWidget from '../ButtonWidget.svelte';
+import ColorWidget from '../ColorWidget.svelte';
 import ComboWidget from '../ComboWidget.svelte';
 import CustomtextWidget from '../CustomtextWidget.svelte';
 import DOMWidget from '../DOMWidget.svelte';
+import DynamicGroupRowWidget from '../DynamicGroupRowWidget.svelte';
 import ImageEditorWidget from '../ImageEditorWidget.svelte';
 import ImagePreviewWidget from '../ImagePreviewWidget.svelte';
 import LabelWidget from '../LabelWidget.svelte';
 import MarkdownWidget from '../MarkdownWidget.svelte';
 import NumberWidget from '../NumberWidget.svelte';
 import RangeWidget from '../RangeWidget.svelte';
+import ResolutionPreviewWidget from '../ResolutionPreviewWidget.svelte';
+import TextPreviewWidget from '../TextPreviewWidget.svelte';
 import TextWidget from '../TextWidget.svelte';
 import ToggleWidget from '../ToggleWidget.svelte';
 import UploadWidget from '../UploadWidget.svelte';
@@ -21,9 +25,11 @@ import { matchExtensionWithMeta, shouldIgnore } from './extension-loader';
 const widgetRegistry: Record<string, Component> = {
     number: NumberWidget,
     combo: ComboWidget,
+    color: ColorWidget,
     toggle: ToggleWidget,
     slider: RangeWidget,
     button: ButtonWidget,
+    dynamic_group_row: DynamicGroupRowWidget,
     customtext: CustomtextWidget,
     text: TextWidget,
     progressText: LabelWidget,
@@ -34,6 +40,12 @@ const widgetRegistry: Record<string, Component> = {
     ImagePreviewWidget: ImagePreviewWidget,
     DOMWidget: DOMWidget,
     DOMWidgetImpl: DOMWidget,
+    boundingboxes: DOMWidget,
+    load3D: DOMWidget,
+    load3DAdvanced: DOMWidget,
+    cameraAngle: DOMWidget,
+    resolutionpreview: ResolutionPreviewWidget,
+    textPreview: TextPreviewWidget,
 };
 
 /**

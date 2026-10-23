@@ -47,6 +47,7 @@ class SystemState {
     #connected: boolean = false;
     #eventSource: EventSource = null;
     #activeCount: number = 0;
+    #reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 
     #stats = $state<SystemData>({
         cpu: { total: 0, per_core: [], freq_mhz: null },
@@ -96,19 +97,22 @@ class SystemState {
 
     startMonitoring() {
         this.#activeCount++;
-        if (this.#eventSource) return;
+        if (this.#eventSource || this.#reconnectTimer !== null) return;
         this.#connect();
     }
 
     #connect() {
-        if (this.#eventSource) return;
+        if (this.#activeCount === 0 || this.#eventSource) return;
 
-        this.#eventSource = new EventSource('/comfygrid/api/stats/stream');
-        this.#eventSource.onopen = () => {
+        const source = new EventSource('/comfygrid/api/stats/stream');
+        this.#eventSource = source;
+        source.onopen = () => {
+            if (this.#eventSource !== source) return;
             this.#connected = true;
             this.#error = null;
         };
-        this.#eventSource.onmessage = (e: MessageEvent) => {
+        source.onmessage = (e: MessageEvent) => {
+            if (this.#eventSource !== source) return;
             const d: Snapshot = JSON.parse(e.data);
             const prevHistory = this.#stats.history;
 
@@ -125,15 +129,28 @@ class SystemState {
                 },
             };
         };
-        this.#eventSource.onerror = () => {
-            this.#connected = false;
+        source.onerror = () => {
+            if (this.#eventSource !== source) return;
+            this.#disconnect();
             this.#error = 'Connection Error';
-            this.#eventSource?.close();
-            this.#eventSource = null;
             if (this.#activeCount > 0) {
-                setTimeout(() => this.#connect(), 3000);
+                this.#reconnectTimer = setTimeout(() => {
+                    this.#reconnectTimer = null;
+                    this.#connect();
+                }, 3000);
             }
         };
+    }
+
+    #disconnect() {
+        this.#connected = false;
+        const source = this.#eventSource;
+        this.#eventSource = null;
+        if (!source) return;
+        source.onopen = null;
+        source.onmessage = null;
+        source.onerror = null;
+        source.close();
     }
 
     stopMonitoring() {
@@ -141,10 +158,12 @@ class SystemState {
             this.#activeCount--;
         }
 
-        if (this.#activeCount === 0 && this.#eventSource) {
-            this.#connected = false;
-            this.#eventSource.close();
-            this.#eventSource = null;
+        if (this.#activeCount === 0) {
+            if (this.#reconnectTimer !== null) {
+                clearTimeout(this.#reconnectTimer);
+                this.#reconnectTimer = null;
+            }
+            this.#disconnect();
         }
     }
 }

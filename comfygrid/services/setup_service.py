@@ -1,8 +1,11 @@
 import logging
 import os
 import subprocess
+import tempfile
+import threading
 from pathlib import Path
 from typing import Callable
+from uuid import NAMESPACE_URL, uuid4, uuid5
 
 import toml
 
@@ -16,6 +19,7 @@ from comfygrid.services.extension_service import load_extensions
 from comfygrid.services.git import install_from_git, update_git_repository
 
 CONFIG_PATH = Path("config", "comfyui.toml")
+_config_lock = threading.RLock()
 
 
 def load_config() -> dict:
@@ -28,51 +32,129 @@ def load_config() -> dict:
 
 
 def save_config(config: dict) -> None:
-    with open(CONFIG_PATH, "w", encoding="utf-8") as f:
-        toml.dump(config, f)
+    temporary = None
+    try:
+        with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", dir=CONFIG_PATH.parent, delete=False) as f:
+            temporary = Path(f.name)
+            toml.dump(config, f)
+        os.replace(temporary, CONFIG_PATH)
+    finally:
+        if temporary is not None:
+            temporary.unlink(missing_ok=True)
+
+
+def _profiles(config: dict) -> list[dict]:
+    profiles = []
+    for index, value in enumerate(config.get("workspace", [])):
+        profile = WorkspaceInfo(**value).model_dump(exclude_none=True)
+        profile.setdefault("id", str(uuid5(NAMESPACE_URL, f"comfygrid:{index}:{profile['name']}")))
+        profiles.append(profile)
+    return profiles
 
 
 def get_setup_config() -> dict:
     config = load_config()
     return {
-        "workspaces": config.get("workspace", []),
+        "workspaces": _profiles(config),
         "last_workspace": config.get("last_workspace", ""),
+        "last_profile_id": config.get("last_profile_id"),
+        "connect_host": config.get("connect_host", "127.0.0.1"),
         "connect_port": config.get("connect_port", DEFAULT_COMFYUI_PORT),
     }
 
 
-def save_launch_workspace(workspace: WorkspaceInfo) -> None:
-    config = load_config()
-    workspaces: list[dict] = config.get("workspace", [])
-    existing = next((w for w in workspaces if w["name"] == workspace.name), None)
-    if existing:
-        existing["script_path"] = workspace.script_path
-        existing["python_path"] = workspace.python_path
-        existing["comfyui_port"] = workspace.comfyui_port
-        existing["comfyui_args"] = workspace.comfyui_args
-    else:
-        workspaces.append(
-            {
-                "name": workspace.name,
-                "script_path": workspace.script_path,
-                "python_path": workspace.python_path,
-                "comfyui_port": workspace.comfyui_port,
-                "comfyui_args": workspace.comfyui_args,
-            }
-        )
+def get_profile(profile_id: str) -> WorkspaceInfo:
+    profile = next((p for p in _profiles(load_config()) if p["id"] == profile_id), None)
+    if profile is None:
+        raise KeyError("Profile not found.")
+    return WorkspaceInfo(**profile)
 
-    config["workspace"] = workspaces
-    config["last_workspace"] = workspace.name
-    save_config(config)
-    os.environ["COMFYUI_PORT"] = str(workspace.comfyui_port)
-    os.environ["COMFYUI_TARGET"] = f"127.0.0.1:{workspace.comfyui_port}"
+
+def save_profile(workspace: WorkspaceInfo, profile_id: str | None = None) -> dict:
+    with _config_lock:
+        config = load_config()
+        profiles = _profiles(config)
+        existing = next((p for p in profiles if p["id"] == profile_id), None)
+        if profile_id and existing is None:
+            raise KeyError("Profile not found.")
+        if any(p["id"] != profile_id and p["name"].casefold() == workspace.name.casefold() for p in profiles):
+            raise ValueError("A profile with this name already exists.")
+        profile = workspace.model_dump(exclude_none=True)
+        profile["id"] = profile_id or str(uuid4())
+        if existing is not None:
+            if config.get("last_workspace") == existing["name"]:
+                config["last_workspace"] = profile["name"]
+            profiles[profiles.index(existing)] = profile
+        else:
+            profiles.append(profile)
+        config["workspace"] = profiles
+        save_config(config)
+        return profile
+
+
+def delete_profile(profile_id: str) -> None:
+    with _config_lock:
+        config = load_config()
+        profiles = _profiles(config)
+        removed = next((p for p in profiles if p["id"] == profile_id), None)
+        if removed is None:
+            raise KeyError("Profile not found.")
+        config["workspace"] = [p for p in profiles if p["id"] != profile_id]
+        if config.get("last_profile_id") == profile_id or config.get("last_workspace") == removed["name"]:
+            fallback = config["workspace"][0] if config["workspace"] else {}
+            config["last_profile_id"] = fallback.get("id", "")
+            config["last_workspace"] = next((p["name"] for p in config["workspace"] if p["mode"] == "launch"), "")
+        save_config(config)
+
+
+def activate_profile(workspace: WorkspaceInfo) -> None:
+    with _config_lock:
+        config = load_config()
+        config["last_profile_id"] = workspace.id or ""
+        if workspace.mode == "connect":
+            config["connect_host"] = workspace.connect_host
+            config["connect_port"] = workspace.connect_port
+        else:
+            config["last_workspace"] = workspace.name
+        save_config(config)
+    port = workspace.connect_port if workspace.mode == "connect" else workspace.comfyui_port
+    host = workspace.connect_host if workspace.mode == "connect" else "127.0.0.1"
+    os.environ["COMFYUI_PORT"] = str(port)
+    os.environ["COMFYUI_TARGET"] = f"{host}:{port}"
+
+
+def active_profile_id(service) -> str | None:
+    monitor = getattr(service, "_monitor_task", None)
+    if not (getattr(service, "proc", None) or getattr(service, "started", False) or
+            getattr(service, "setup_starting", False) or (monitor is not None and not monitor.done())):
+        return None
+    explicit = getattr(service, "setup_profile_id", None)
+    if explicit:
+        return explicit
+    for profile in _profiles(load_config()):
+        if profile["mode"] != getattr(service, "mode", None):
+            continue
+        if profile["mode"] == "connect":
+            if (profile["connect_host"], profile["connect_port"]) == (service.connect_host, service.connect_port):
+                return profile["id"]
+        elif (os.path.dirname(profile["script_path"]), profile["comfyui_port"], profile["comfyui_args"]) == (
+                service.comfyui_path, service.comfyui_port, service.comfyui_args):
+            return profile["id"]
+    return None
+
+
+def save_launch_workspace(workspace: WorkspaceInfo) -> None:
+    existing = next((p for p in _profiles(load_config()) if p["name"] == workspace.name), None)
+    profile = save_profile(workspace, existing["id"] if existing else None)
+    activate_profile(WorkspaceInfo(**profile))
 
 
 def save_connect_port(connect_port: int, connect_host: str = "127.0.0.1") -> None:
-    config = load_config()
-    config["connect_host"] = connect_host or "127.0.0.1"
-    config["connect_port"] = connect_port
-    save_config(config)
+    with _config_lock:
+        config = load_config()
+        config["connect_host"] = connect_host or "127.0.0.1"
+        config["connect_port"] = connect_port
+        save_config(config)
     host = connect_host or "127.0.0.1"
     os.environ["COMFYUI_PORT"] = str(connect_port)
     os.environ["COMFYUI_TARGET"] = f"{host}:{connect_port}"

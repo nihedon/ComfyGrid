@@ -68,8 +68,9 @@
     if (dir === 'models') {
       values = Array.from(storageState.models.values());
       values = values.filter((model: Model) => subdirs.some((subdir) => model.category === subdir));
-      if (valueSet) {
-        values = values.filter((model: Model) => valueSet.has(model.path));
+      const allowedValues = valueSet;
+      if (allowedValues) {
+        values = values.filter((model: Model) => allowedValues.has(model.path));
       }
     } else if (dir === 'images') {
       values = Array.from(storageState.images.values());
@@ -155,15 +156,7 @@
     return sortAsc ? sortedList : sortedList.reverse();
   });
 
-  let modelIndexer: SearchIndexer<Model> | null = null;
-
-  $effect(() => {
-    if (!modelIndexer) {
-      modelIndexer = new SearchIndexer(modelList, (m) => m.path ?? '');
-    } else {
-      modelIndexer.update(modelList, (m) => m.path ?? '');
-    }
-  });
+  const modelIndexer = $derived(new SearchIndexer(modelList, (m) => m.path ?? ''));
 
   const folderFilteredModelList = $derived.by(() => {
     if (!selectedFolder) {
@@ -294,28 +287,35 @@
   let isReloading = $state(false);
 
   async function reloadModels() {
+    if (isReloading) return;
     isReloading = true;
     const app = appState.comfyUiState.app;
     appState.toastState.addToast({ type: 'info', message: $t('toast.update_requested') });
-    app?.refreshComboInNodes().then(async () => {
+    try {
+      if (!app) throw new Error('ComfyUI is not available');
+      await app.refreshComboInNodes();
       await workflowManager.loadCurrentWorkflow();
       await refreshModels(dir);
+      goToPage(currentPage);
       appState.toastState.addToast({
         type: 'success',
         message: $t('toast.update_request_completed'),
       });
+    } catch (error) {
+      logger.error('Failed to refresh model list:', error);
+      appState.toastState.addToast({ type: 'error', message: $t('toast.update_request_failed') });
+    } finally {
       isReloading = false;
-    });
+    }
   }
 
   function apply(model: Model) {
     if (action) {
       action(model);
-    }
-    if (modalState.handleSelect) {
-      modalState.handleSelect(model);
-      modalState.clearCallback();
+    } else if (modalState.modelDir && modalState.handleSelect) {
+      const handleSelect = modalState.handleSelect;
       modalState.clearModelDir();
+      handleSelect(model);
     }
   }
 

@@ -25,11 +25,13 @@ class GalleryManager {
         if (!node || !url) return;
 
         // Optimistically mark saved immediately for instant UI feedback
-        appState.galleryState.markSaved(node.jobId, node.nodeId, node.batchJobIndex);
+        const finishSave = appState.galleryState.beginSave(node.jobId, node.nodeId, node.batchJobIndex);
+        let saved = false;
 
         metadata.batchJobIndex = String(node.batchJobIndex);
         try {
             const ret = await comfyGridApiClient.postSaveImage(url, metadata);
+            saved = ret.ok;
             if (!ret.ok) {
                 logger.error('Failed to save image', ret.text);
                 appState.toastState.addToast({ type: 'error', message: 'Failed to save image' });
@@ -37,6 +39,8 @@ class GalleryManager {
         } catch (e) {
             logger.error('Failed to save image', e);
             appState.toastState.addToast({ type: 'error', message: 'Failed to save image' });
+        } finally {
+            finishSave(saved);
         }
     }
 
@@ -77,7 +81,7 @@ class GalleryManager {
 
             const res = await comfyGridApiClient.postUploadToInput(url, filename);
             if (res.ok && res.json.message === 'uploaded') {
-                refreshModels('images');
+                await refreshModels('images');
 
                 for (const node of appState.workspaceState.nodes.values()) {
                     for (const widget of node.widgets) {

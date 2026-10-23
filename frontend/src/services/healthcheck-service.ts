@@ -1,5 +1,6 @@
 import { appState } from '@/states/app-state.svelte';
 import logger from '@/utils/logger';
+import { notifyComfyUiStartupLog, updateComfyUiConnection, updateComfyUiDownload } from './comfyui-lifecycle-service';
 
 export class ComfyUIHealthCheckService {
     private ws: WebSocket | null = null;
@@ -7,7 +8,7 @@ export class ComfyUIHealthCheckService {
     private isClosing = false;
 
     connect() {
-        if (this.ws !== null) return;
+        if (this.ws !== null || this.reconnectTimer !== null) return;
         this.isClosing = false;
         this.openWebSocket();
     }
@@ -18,47 +19,48 @@ export class ComfyUIHealthCheckService {
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
         const url = `${protocol}//${window.location.host}/comfygrid/ws/startup-logs`;
 
-        this.ws = new WebSocket(url);
+        const socket = new WebSocket(url);
+        this.ws = socket;
 
-        this.ws.onopen = () => {
+        socket.onopen = () => {
+            if (this.ws !== socket || this.isClosing) return;
             appState.comfyUiState.isBackendConnected = true;
             logger.info('[HealthCheck] WebSocket connected');
         };
 
-        this.ws.onmessage = (event) => {
+        socket.onmessage = (event) => {
+            if (this.ws !== socket || this.isClosing) return;
             try {
                 const data = JSON.parse(event.data);
-                if (data.type === 'comfygrid.comfyui_status') {
-                    if (data.started) {
-                        appState.comfyUiState.started = true;
-                    } else {
-                        this.handleComfyUiStopped();
-                    }
+                if (data.type === 'comfygrid.comfyui_status' && typeof data.started === 'boolean') {
+                    updateComfyUiConnection(data.started);
+                } else if (data.type === 'comfygrid.startup_log' && typeof data.message === 'string') {
+                    notifyComfyUiStartupLog();
+                } else if (data.type === 'comfygrid.download_state' && typeof data.active === 'boolean') {
+                    updateComfyUiDownload(data.active);
                 }
             } catch (e) {
                 logger.error('[HealthCheck] Failed to parse message:', e);
             }
         };
 
-        this.ws.onerror = () => {
+        socket.onerror = () => {
+            if (this.ws !== socket || this.isClosing) return;
             appState.comfyUiState.isBackendConnected = false;
         };
 
-        this.ws.onclose = () => {
+        socket.onclose = () => {
+            if (this.ws !== socket) return;
             this.ws = null;
             appState.comfyUiState.isBackendConnected = false;
+            updateComfyUiDownload(false);
             if (!this.isClosing) {
-                this.reconnectTimer = setTimeout(() => this.openWebSocket(), 3000);
+                this.reconnectTimer = setTimeout(() => {
+                    this.reconnectTimer = null;
+                    this.openWebSocket();
+                }, 3000);
             }
         };
-    }
-
-    private handleComfyUiStopped() {
-        if (!appState.comfyUiState.started) return;
-        appState.comfyUiState.started = false;
-        appState.comfyUiState.graphReady = false;
-        appState.executionState.clearQueueJobIds();
-        location.reload();
     }
 
     close() {
@@ -68,8 +70,10 @@ export class ComfyUIHealthCheckService {
             this.reconnectTimer = null;
         }
         if (this.ws !== null) {
-            this.ws.close();
+            const socket = this.ws;
             this.ws = null;
+            socket.close();
         }
+        appState.comfyUiState.isBackendConnected = false;
     }
 }

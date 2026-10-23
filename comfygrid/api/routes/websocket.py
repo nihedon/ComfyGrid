@@ -19,6 +19,7 @@ async def _(ws: WebSocket, comfy_service: ComfyUIService = Depends(get_comfy_ser
 
     try:
         await ws.send_json({"type": "comfygrid.comfyui_status", "started": comfy_service.started})
+        await ws.send_json({"type": "comfygrid.download_state", "active": comfy_service.startup_downloading})
 
         if comfy_service.mode == "launch" and comfy_service.started or comfy_service.mode == "connect" and comfy_service.url:
             await ws.send_json({"type": "comfygrid.startup_log", "message": "ComfyUI is already running"})

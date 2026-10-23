@@ -1,6 +1,10 @@
 <script lang="ts">
   import * as bootstrap from 'bootstrap';
 
+  type TransitionPopover = bootstrap.Popover & {
+    _queueCallback: (callback: () => void, element: HTMLElement, animated: boolean) => void;
+  };
+
   let {
     triggerElement,
     contentsElement,
@@ -14,16 +18,32 @@
   } = $props();
 
   $effect(() => {
-    if (!triggerElement || !contentsElement) return;
+    const trigger = triggerElement;
+    const content = contentsElement;
+    if (!trigger || !content) return;
+    let destroyed = false;
+    let clickListenerTimer: ReturnType<typeof setTimeout> | undefined;
 
-    triggerElement.dataset.bsToggle = 'popover';
+    trigger.dataset.bsToggle = 'popover';
 
-    const popover = new bootstrap.Popover(triggerElement, {
-      content: contentsElement,
+    const popover = new bootstrap.Popover(trigger, {
+      content,
       customClass: customClass,
       placement: placement,
       html: true,
-    });
+    }) as TransitionPopover;
+
+    // Bootstrap 5 leaves transition callbacks pending after dispose().
+    const queueCallback = popover._queueCallback.bind(popover);
+    popover._queueCallback = (callback, element, animated) => {
+      queueCallback(
+        () => {
+          if (!destroyed) callback();
+        },
+        element,
+        animated,
+      );
+    };
 
     const handleDocumentClick = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
@@ -41,22 +61,29 @@
 
     const handleShown = () => {
       // Delay attaching to prevent immediate trigger from the same click event
-      setTimeout(() => document.addEventListener('click', handleDocumentClick), 0);
+      clearTimeout(clickListenerTimer);
+      clickListenerTimer = setTimeout(() => {
+        clickListenerTimer = undefined;
+        if (!destroyed) document.addEventListener('click', handleDocumentClick);
+      }, 0);
     };
 
     const handleHidden = () => {
+      clearTimeout(clickListenerTimer);
+      clickListenerTimer = undefined;
       document.removeEventListener('click', handleDocumentClick);
     };
 
-    triggerElement.addEventListener('show.bs.popover', handleShow);
-    triggerElement.addEventListener('shown.bs.popover', handleShown);
-    triggerElement.addEventListener('hidden.bs.popover', handleHidden);
+    trigger.addEventListener('show.bs.popover', handleShow);
+    trigger.addEventListener('shown.bs.popover', handleShown);
+    trigger.addEventListener('hidden.bs.popover', handleHidden);
 
     return () => {
-      document.removeEventListener('click', handleDocumentClick);
-      triggerElement?.removeEventListener('show.bs.popover', handleShow);
-      triggerElement?.removeEventListener('shown.bs.popover', handleShown);
-      triggerElement?.removeEventListener('hidden.bs.popover', handleHidden);
+      destroyed = true;
+      handleHidden();
+      trigger.removeEventListener('show.bs.popover', handleShow);
+      trigger.removeEventListener('shown.bs.popover', handleShown);
+      trigger.removeEventListener('hidden.bs.popover', handleHidden);
       popover.dispose();
     };
   });

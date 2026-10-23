@@ -126,9 +126,6 @@ class WorkflowManager {
         });
 
         const loadedLayout = customLayout ?? loadLayout(graphId);
-        if (customLayout) {
-            saveLayout(customLayout);
-        }
         logger.trace('[WORKFLOW_LOG] loadedLayout:', loadedLayout);
 
         const { floatingPositions: orgFloatingPositions, floatingNodes: orgFloatingNodes, floatingWidgets: orgFloatingWidgets } = loadedLayout;
@@ -149,6 +146,7 @@ class WorkflowManager {
             graphId: graphId,
             floatingNodes,
             floatingWidgets,
+            floatingPositions: this.#rearrangeFloatingPositions(orgFloatingPositions ?? {}, nodes),
             sortOrder: loadedLayout.sortOrder ?? 'default',
         };
 
@@ -156,11 +154,12 @@ class WorkflowManager {
         appState.workspaceState.setGroups(rootGroups);
         appState.workspaceState.setNodes(nodes);
         appState.workspaceState.layout.import(layout);
+        saveLayout(layout);
 
         appState.name = name;
 
         await tick();
-        applyFloatingPositions(undefined, this.#rearrangeFloatingPositions(orgFloatingPositions, nodes));
+        applyFloatingPositions(undefined, layout.floatingPositions);
         await tick();
         callLayoutChangedCallbacks();
         logger.info(`[WORKFLOW_LOG] handleWorkflow finish: graphId=${graphId}`);

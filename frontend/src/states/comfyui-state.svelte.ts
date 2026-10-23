@@ -5,6 +5,9 @@ import { ComfyUiBridge } from './comfyui-bridge.svelte';
 export type ComfyWindow = Window & { comfyAPI: { app: { app: ComfyApp }; api: { api: ComfyApi } } };
 
 class ComfyUiState {
+    transition = $state<'reload' | 'restart' | 'reconnect' | 'loading' | null>(null);
+    transitionError = $state('');
+    frameReloadVersion = $state(0);
     #started: boolean = $state(false);
     #isBackendConnected: boolean = $state(false);
     #graphReady: boolean = $state(false);
@@ -12,7 +15,7 @@ class ComfyUiState {
     #iframe: HTMLIFrameElement | null = $state(null);
     #window: ComfyWindow | null = $state(null);
 
-    readonly comfyAPI = $derived(this.#graphReady ? this.#window.comfyAPI : null);
+    readonly comfyAPI = $derived(this.#graphReady ? this.#window?.comfyAPI : null);
     readonly app = $derived(this.comfyAPI ? this.comfyAPI.app.app : null);
     readonly api = $derived(this.comfyAPI ? this.comfyAPI.api.api : null);
 
@@ -50,7 +53,7 @@ class ComfyUiState {
     set iframe(iframe: HTMLIFrameElement | null) {
         this.#iframe = iframe;
     }
-    set window(window: ComfyWindow) {
+    set window(window: ComfyWindow | null) {
         this.#window = window;
     }
 }

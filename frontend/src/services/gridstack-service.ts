@@ -1,12 +1,20 @@
 import { tick } from 'svelte';
+import type { GridItemHTMLElement } from 'gridstack';
 import { get } from 'svelte/store';
 import { t } from '@/i18n/i18n';
 import { callLayoutChangedCallbacks } from '@/services/callback-service';
 import { appState } from '@/states/app-state.svelte';
 import { Layout } from '@/states/workspace-state.svelte';
+import type { BoardId } from '@/types/board';
 import type { FloatingPosition, LayoutType } from '@/types/layout';
 import logger from '@/utils/logger';
 import { waitForDom } from '@/utils/schedule';
+
+const restoringGrids = new WeakSet<object>();
+
+export function isApplyingFloatingPositions(grid: object): boolean {
+    return restoringGrids.has(grid);
+}
 
 // Svelte action: set GridStack attrs without TS complaining about unknown props
 export function gs(node: HTMLElement, { id = '', x, y, w, h }: { id?: string; x?: number; y?: number; w?: number; h?: number } = {}) {
@@ -22,6 +30,19 @@ export function gs(node: HTMLElement, { id = '', x, y, w, h }: { id?: string; x?
     return {
         update(newParams: { id?: string; x?: number; y?: number; w?: number; h?: number }) {
             apply(newParams);
+        },
+        destroy() {
+            const item = node as GridItemHTMLElement;
+            const grid = item.gridstackNode?.grid;
+            if (!grid?.engine) return;
+            const wasRestoring = restoringGrids.has(grid);
+            restoringGrids.add(grid);
+            try {
+                // Svelte owns the DOM; GridStack must only release its registration and handlers.
+                grid.removeWidget(item, false, false);
+            } finally {
+                if (!wasRestoring) restoringGrids.delete(grid);
+            }
         },
     };
 }
@@ -46,13 +67,12 @@ function makeEptyLayout(graph_id: string): LayoutType {
         floatingPositions: {},
         floatingNodes: {},
         floatingWidgets: {},
-        promptWidgetIds: [],
-        positivePromptWidgetId: null,
-        negativePromptWidgetId: null,
+        tagWidgetIds: [],
         showRenderableLessNodes: false,
         showControlLessNodes: false,
         showCollapsedNodes: false,
         showNoteNodes: false,
+        commonTabBoard: false,
         sortOrder: 'default',
     };
 }
@@ -88,13 +108,12 @@ export function loadLayout(graphId: string): LayoutType {
         floatingPositions: {},
         floatingNodes: {},
         floatingWidgets: {},
-        promptWidgetIds: [],
-        positivePromptWidgetId: null,
-        negativePromptWidgetId: null,
+        tagWidgetIds: [],
         showRenderableLessNodes: false,
         showControlLessNodes: false,
         showCollapsedNodes: false,
         showNoteNodes: false,
+        commonTabBoard: false,
         sortOrder: 'default',
     };
 }
@@ -154,62 +173,84 @@ export function applyFloatingPositions(boardId?: string, initSettings?: Record<s
         const container = grid.el;
         if (!container) continue;
 
-        const children = Array.from(container.children) as HTMLElement[];
-        const boardSettings = initSettings?.[logicalKey] ?? appState.workspaceState.layout?.floatingPositions?.get(logicalKey);
+        const workspace = appState.workspaceState;
+        const groupId = exactGridKey.startsWith('Tab-') ? exactGridKey.slice(4) : '__ungrouped__';
+        const boardTarget = logicalKey as BoardId;
+        const expectedIds = new Set([
+            ...workspace.getEffectiveNodes(boardTarget, groupId).map((node) => node.id),
+            ...workspace.getEffectiveWidgets(boardTarget, groupId).map(({ widget }) => widget.id),
+        ]);
+        const items = (Array.from(container.children) as HTMLElement[]).filter((el) => el.hasAttribute('gs-id'));
+        const children = items.filter((el) => expectedIds.has(el.getAttribute('gs-id')));
+        const savedSettings = initSettings?.[logicalKey] ?? appState.workspaceState.layout?.floatingPositions?.get(logicalKey);
+        // Snapshot geometry without cloning Svelte proxies or retaining reactive references.
+        const boardSettings = savedSettings ? Object.fromEntries(Object.entries(savedSettings).map(([id, { x, y, w, h }]) => [id, { x, y, w, h }])) : undefined;
 
-        // 1. Temporarily enable float mode to place items at exact saved (x, y) without collision displacement
-        grid.float(true);
-
-        // 2. Sync attributes from settings for DOM nodes (if settings available)
-        if (boardSettings) {
-            children.forEach((el) => {
-                const id = el.getAttribute('gs-id');
-                if (id && boardSettings[id]) {
-                    const s = boardSettings[id];
-                    if (s.x !== undefined) el.setAttribute('gs-x', String(s.x));
-                    if (s.y !== undefined) el.setAttribute('gs-y', String(s.y));
-                    if (s.w !== undefined) el.setAttribute('gs-w', String(s.w));
-                    if (s.h !== undefined) el.setAttribute('gs-h', String(s.h));
+        restoringGrids.add(grid);
+        try {
+            // Repair orphaned frames as well as stale engine entries left by older layouts.
+            for (const item of items) {
+                if (!expectedIds.has(item.getAttribute('gs-id'))) {
+                    grid.removeWidget(item, true, false);
+                    item.remove();
                 }
+            }
+            // 1. Temporarily enable float mode to place items at exact saved (x, y) without collision displacement
+            grid.float(true);
+
+            // 2. Sync attributes from settings for DOM nodes (if settings available)
+            if (boardSettings) {
+                children.forEach((el) => {
+                    const id = el.getAttribute('gs-id');
+                    if (id && boardSettings[id]) {
+                        const s = boardSettings[id];
+                        if (s.x !== undefined) el.setAttribute('gs-x', String(s.x));
+                        if (s.y !== undefined) el.setAttribute('gs-y', String(s.y));
+                        if (s.w !== undefined) el.setAttribute('gs-w', String(s.w));
+                        if (s.h !== undefined) el.setAttribute('gs-h', String(s.h));
+                    }
+                });
+            }
+
+            // 3. Stable rebuild from sorted DOM (with priorityId placed first if matched)
+            children.sort((a, b) => {
+                const aId = a.getAttribute('gs-id');
+                const bId = b.getAttribute('gs-id');
+
+                if (priorityId) {
+                    if (aId === priorityId && bId !== priorityId) return -1;
+                    if (bId === priorityId && aId !== priorityId) return 1;
+                }
+
+                const ay = Number(a.getAttribute('gs-y') ?? '9999');
+                const ax = Number(a.getAttribute('gs-x') ?? '0');
+                const by = Number(b.getAttribute('gs-y') ?? '9999');
+                const bx = Number(b.getAttribute('gs-x') ?? '0');
+                if (ay !== by) return ay - by;
+                return ax - bx;
             });
-        }
 
-        // 3. Stable rebuild from sorted DOM (with priorityId placed first if matched)
-        children.sort((a, b) => {
-            const aId = a.getAttribute('gs-id');
-            const bId = b.getAttribute('gs-id');
+            grid.batchUpdate();
+            grid.removeAll(false);
+            children.forEach((child) => {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const anyChild = child as any;
+                if (anyChild.gridstackNode && anyChild.gridstackNode.grid !== grid) {
+                    delete anyChild.gridstackNode;
+                }
+                child.querySelectorAll('.ui-resizable-handle').forEach((h) => h.remove());
+                grid.makeWidget(child);
+            });
+            grid.commit();
 
-            if (priorityId) {
-                if (aId === priorityId && bId !== priorityId) return -1;
-                if (bId === priorityId && aId !== priorityId) return 1;
+            // 4. Restore auto-packing (float: false)
+            grid.float(false);
+
+            if (children.length === 0 && grid.el) {
+                grid.el.style.removeProperty('height');
             }
-
-            const ay = Number(a.getAttribute('gs-y') ?? '9999');
-            const ax = Number(a.getAttribute('gs-x') ?? '0');
-            const by = Number(b.getAttribute('gs-y') ?? '9999');
-            const bx = Number(b.getAttribute('gs-x') ?? '0');
-            if (ay !== by) return ay - by;
-            return ax - bx;
-        });
-
-        grid.batchUpdate();
-        grid.removeAll(false);
-        children.forEach((child) => {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const anyChild = child as any;
-            if (anyChild.gridstackNode && anyChild.gridstackNode.grid !== grid) {
-                delete anyChild.gridstackNode;
-            }
-            child.querySelectorAll('.ui-resizable-handle').forEach((h) => h.remove());
-            grid.makeWidget(child);
-        });
-        grid.commit();
-
-        // 4. Restore auto-packing (float: false)
-        grid.float(false);
-
-        if (children.length === 0 && grid.el) {
-            grid.el.style.removeProperty('height');
+        } finally {
+            restoringGrids.delete(grid);
         }
     }
 }
@@ -219,6 +260,13 @@ export function syncAndSaveLayout() {
     logger.trace('[LAYOUT_LOG] syncAndSaveLayout triggered');
     saveLayoutObject(appState.workspaceState.layout);
     callLayoutChangedCallbacks();
+}
+
+export function activateTabForNode(nodeId: string, boardId: BoardId) {
+    if (boardId === 'Global') return;
+    const workspace = appState.workspaceState;
+    appState.uiState.activeGridTabId =
+        boardId === 'Tab' && workspace.layout.commonTabBoard ? '__ungrouped__' : (workspace.nodeTabMap.get(nodeId) ?? '__ungrouped__');
 }
 
 export async function updateBoardFloatingState(priorityId?: string) {

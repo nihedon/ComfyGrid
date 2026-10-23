@@ -2,6 +2,7 @@ import base64
 import io
 import logging
 import os
+import tempfile
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
@@ -10,9 +11,10 @@ from urllib.parse import quote, unquote, urlsplit, urlunsplit
 import cv2
 import numpy as np
 from charset_normalizer import from_path
-from PIL import Image
+from PIL import Image, ImageOps
 from tqdm import tqdm
 
+from comfygrid.core.paths import resolve_within
 from comfygrid.domain.image import resize_with_crop
 from comfygrid.infrastructure import model_repository
 from comfygrid.infrastructure.cache import cache_thumbnail, load_thumbnail
@@ -196,6 +198,20 @@ def has_unsafe_path_fragment(path: str | None) -> bool:
     return bool(path and ".." in path)
 
 
+def resolve_model_info_path(comfyui_path: Path, path: str) -> Path:
+    try:
+        models_root = Path(os.path.abspath(comfyui_path / "models"))
+        target = Path(os.path.abspath(comfyui_path / path))
+        if target == models_root or not target.is_relative_to(models_root):
+            raise ValueError("Model path must be inside the models directory.")
+        # Model directories can be configured using symlinks and junctions.
+        # File links must still stay inside the selected model directory.
+        model_directory = target.parent.resolve()
+        return resolve_within(model_directory, target.name)
+    except (OSError, RuntimeError) as exc:
+        raise ValueError(f"Invalid model path: {path}") from exc
+
+
 def resolve_file_path(comfyui_path: str, file_path: str) -> Path | None:
     if has_unsafe_path_fragment(file_path):
         return None
@@ -288,23 +304,11 @@ def get_model_thumbnail(comfyui_path: str, path: str) -> tuple[bytes | None, str
 
 
 def process_image_for_paint(image_bytes: bytes) -> dict:
-    img = Image.open(io.BytesIO(image_bytes))
-    original_mode = img.mode
-    mask_img = Image.new("L", img.size, 0)
-
-    if img.mode == "RGBA":
-        r_ch, g_ch, b_ch, a_ch = img.split()
-        mask_img = Image.eval(a_ch, lambda x: 255 - x)
-        img = Image.merge("RGBA", (r_ch, g_ch, b_ch, Image.new("L", img.size, 255)))
-    elif img.mode == "LA":
-        l_ch, a_ch = img.split()
-        mask_img = Image.eval(a_ch, lambda x: 255 - x)
-        img = Image.merge("LA", (l_ch, Image.new("L", img.size, 255)))
-    elif img.mode == "P" and "transparency" in img.info:
-        img = img.convert("RGBA")
-        r_ch, g_ch, b_ch, a_ch = img.split()
-        mask_img = Image.eval(a_ch, lambda x: 255 - x)
-        img = Image.merge("RGBA", (r_ch, g_ch, b_ch, Image.new("L", img.size, 255)))
+    with Image.open(io.BytesIO(image_bytes)) as source:
+        had_alpha = "A" in source.getbands() or "transparency" in source.info
+        img = ImageOps.exif_transpose(source).convert("RGBA")
+    mask_img = Image.eval(img.getchannel("A"), lambda x: 255 - x)
+    img.putalpha(255)
 
     img_buffer = io.BytesIO()
     img.save(img_buffer, format="PNG")
@@ -316,20 +320,34 @@ def process_image_for_paint(image_bytes: bytes) -> dict:
         "mask": f"data:image/png;base64,{base64.b64encode(mask_buffer.getvalue()).decode('utf-8')}",
         "width": img.size[0],
         "height": img.size[1],
-        "had_alpha": original_mode in ("RGBA", "LA") or (original_mode == "P" and "transparency" in img.info),
+        "had_alpha": had_alpha,
     }
 
 
 def apply_mask(img_bytes: bytes, mask_bytes: bytes, save_path: Path) -> None:
-    img = Image.open(io.BytesIO(img_bytes)).convert("RGBA")
-    mask_img = Image.open(io.BytesIO(mask_bytes)).convert("L")
+    try:
+        with Image.open(io.BytesIO(img_bytes)) as source:
+            img = source.convert("RGBA")
+        with Image.open(io.BytesIO(mask_bytes)) as source:
+            mask_img = source.convert("L")
+    except OSError as exc:
+        raise ValueError("Invalid image or mask") from exc
 
     if mask_img.size != img.size:
-        mask_img = mask_img.resize(img.size)
+        raise ValueError("Mask dimensions do not match the image")
 
     alpha = Image.eval(mask_img, lambda x: 255 - x)
     img.putalpha(alpha)
-    img.save(save_path, format="PNG")
+    # Never truncate the existing image if encoding or writing the replacement fails.
+    temporary_path = None
+    try:
+        with tempfile.NamedTemporaryFile(dir=save_path.parent, prefix=".paint-", suffix=".tmp", delete=False) as target:
+            temporary_path = Path(target.name)
+            img.save(target, format="PNG")
+        os.replace(temporary_path, save_path)
+    finally:
+        if temporary_path is not None:
+            temporary_path.unlink(missing_ok=True)
 
 
 def resolve_image_delete_path(

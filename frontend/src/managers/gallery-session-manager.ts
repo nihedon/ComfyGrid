@@ -1,19 +1,28 @@
 /**
- * Tracks prompt jobs that are still active (queued or running). Defines the batch boundary for
- * gallery storage: when {@link GallerySession.activeCount} is zero and a new prompt is queued,
- * {@link ExecutionManager} treats the prior batch as finished — it resets run progress and calls
- * This isolates “when we wipe the gallery between batches” from WebSocket handling.
+ * Tracks active jobs and execution requests waiting for translation or queue submission.
+ * Gallery batch boundaries are decided when the user requests execution, not after translation.
  */
 class GallerySession {
     private readonly activeJobIds = new Set<string>();
+    private pendingExecutionRequests = 0;
 
     get activeCount(): number {
         return this.activeJobIds.size;
     }
 
-    /** True when no jobs are in-flight; caller should clear gallery storage before registering the new prompt. */
+    beginExecutionRequest(): boolean {
+        const newBatch = this.activeJobIds.size === 0 && this.pendingExecutionRequests === 0;
+        this.pendingExecutionRequests++;
+        return newBatch;
+    }
+
+    finishExecutionRequest(): void {
+        this.pendingExecutionRequests = Math.max(0, this.pendingExecutionRequests - 1);
+    }
+
+    /** Retain queue-time clearing for prompts submitted outside ComfyGrid. */
     beginQueuedPrompt(): boolean {
-        return this.activeJobIds.size === 0;
+        return this.activeJobIds.size === 0 && this.pendingExecutionRequests === 0;
     }
 
     trackQueued(jobId: string): void {

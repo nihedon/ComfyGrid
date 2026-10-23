@@ -18,12 +18,17 @@
     callUiLoadedCallbacks,
     setupCallbacks,
   } from '@/services/callback-service';
+  import {
+    cancelComfyUiTransition,
+    handleComfyUiGraphReady,
+  } from '@/services/comfyui-lifecycle-service';
   import { loadExtensions } from '@/services/extension-service';
   import { ensureAllModels } from '@/services/models-service';
   import { loadOpts } from '@/services/options-service';
-  import { workflowManager } from '@/managers/workflow-manager';
+  import { handleWorkflowPaste } from '@/services/workflow-paste-service';
   import { appState } from '@/states/app-state.svelte';
   import type { DropdownFormInfo } from '@/states/option-state.svelte';
+  import type { ComfyApp } from '@/types/comfy-model';
   import logger, { setDebugMode } from '@/utils/logger';
   import Body from './Body.svelte';
   import Header from './Header.svelte';
@@ -35,6 +40,7 @@
   let initializing = $state(true);
   let launched = $state(false);
   let showScreen = $state(false);
+  let preferencesReady = $state(false);
 
   const comfyUiState = appState.comfyUiState;
   const optionState = appState.optionState;
@@ -51,7 +57,7 @@
   async function checkSetupStatus() {
     const res = await comfyGridApiClient.getSetupStatus();
     if (res.ok) {
-      launched = res.json.mode === 'launch';
+      launched = res.json.launched;
     }
   }
 
@@ -64,7 +70,7 @@
 
   // ComfyUI initialization: triggered once when ComfyUI becomes available
   $effect(() => {
-    if (!comfyUiState.started) {
+    if (!comfyUiState.started || !preferencesReady) {
       logger.log('ComfyUI not available');
       return;
     }
@@ -73,7 +79,6 @@
       untrack(async () => {
         setupCallbacks();
 
-        await loadOpts();
         await loadExtensions();
 
         await ensureAllModels();
@@ -99,49 +104,36 @@
   });
 
   $effect(() => {
-    if (appState.comfyUiState.graphReady && !initializing) {
+    if (comfyUiState.graphReady && !initializing && !comfyUiState.transition) {
       callOptionsChangedCallbacks();
       callUiLoadedCallbacks();
-
-      // !!! Waiting for ComfyUI's data structure to be organized as the execution is too early. !!!
-      // setTimeout(() => {
-      //   workflowManager.loadCurrentWorkflow();
-      // }, 1000);
     }
-  });
-
-  // Initial language load: triggered once on startup to load available translations
-  $effect(() => {
-    if (!optionState.forms.has('ComfyGrid.ui.language')) {
-      return;
-    }
-    const choices = (optionState.forms.get('ComfyGrid.ui.language') as DropdownFormInfo).choices;
-    loadTranslations(choices.filter((c: string) => c !== 'auto')).then(() => {
-      setLanguage(optionState.opts.get('ComfyGrid.ui.language'));
-    });
   });
 
   // Language change: triggered when the language setting of options changes
   $effect(() => {
-    const selectedLang = optionState.opts.get('ComfyGrid.ui.language');
+    if (!preferencesReady) return;
+    const selectedLang = optionState.get('ComfyGrid.ui.language');
     setLanguage(selectedLang);
   });
 
   // Theme change: triggered when the color theme setting of options changes
   $effect(() => {
-    const theme = optionState.opts.get('ComfyGrid.theme.color_theme');
+    const theme = optionState.get('ComfyGrid.theme.color_theme');
     if (!theme) {
       return;
     }
 
     const root = document.documentElement;
     if (theme === 'auto') {
-      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      if (prefersDark) {
-        root.setAttribute('data-bs-theme', 'dark');
-      } else {
-        root.removeAttribute('data-bs-theme');
-      }
+      const media = window.matchMedia('(prefers-color-scheme: dark)');
+      const applySystemTheme = () => {
+        if (media.matches) root.setAttribute('data-bs-theme', 'dark');
+        else root.removeAttribute('data-bs-theme');
+      };
+      applySystemTheme();
+      media.addEventListener('change', applySystemTheme);
+      return () => media.removeEventListener('change', applySystemTheme);
     } else if (theme !== '') {
       root.setAttribute('data-bs-theme', theme);
     } else {
@@ -193,11 +185,14 @@
   }
 
   async function handleOpenSetup() {
+    cancelComfyUiTransition();
     try {
       await comfyGridApiClient.postSetupStop();
     } catch (e) {
       logger.error('Failed to stop ComfyUI setup:', e);
     }
+    // A stop notification may have started recovery while the request was pending.
+    cancelComfyUiTransition();
     comfyUiState.started = false;
     comfyUiState.graphReady = false;
     initialized = false;
@@ -205,21 +200,22 @@
     launched = false;
   }
 
-  function handleGraphReady() {
-    comfyUiState.graphReady = true;
-    if (uiState.activePageId === 'grid') {
-      workflowManager.loadCurrentWorkflow().catch((error) => {
-        logger.error('Failed to load current workflow:', error);
-      });
-    } else {
-      uiState.needRefresh = true;
-    }
+  function handleGraphReady(event: Event) {
+    void handleComfyUiGraphReady((event as CustomEvent<{ app: ComfyApp }>).detail?.app);
   }
 
   onMount(async () => {
+    window.addEventListener('paste', handleWorkflowPaste);
     window.addEventListener('comfygrid:open_setup', handleOpenSetup);
     window.addEventListener('comfygrid:graph_ready', handleGraphReady);
     launched = false;
+    await loadOpts();
+    const languageForm = optionState.forms.get('ComfyGrid.ui.language') as
+      DropdownFormInfo | undefined;
+    const choices = languageForm?.choices ?? ['en', 'ja'];
+    await loadTranslations(choices.filter((choice) => choice !== 'auto'));
+    await setLanguage(optionState.get('ComfyGrid.ui.language'));
+    preferencesReady = true;
     await checkSetupStatus();
     showScreen = true;
     document.documentElement.addEventListener('dragenter', handleDragEnter);
@@ -229,6 +225,8 @@
   });
 
   onDestroy(() => {
+    window.removeEventListener('paste', handleWorkflowPaste);
+    cancelComfyUiTransition();
     window.removeEventListener('comfygrid:open_setup', handleOpenSetup);
     window.removeEventListener('comfygrid:graph_ready', handleGraphReady);
     document.documentElement.removeEventListener('dragenter', handleDragEnter);
@@ -244,7 +242,7 @@
       {#if !launched}
         <SetupScreen onLaunched={handleSetupLaunched} />
       {:else}
-        {#if comfyUiState.graphReady && !initializing}
+        {#if comfyUiState.graphReady && !initializing && !comfyUiState.transition}
           <Header />
         {:else}
           <LoadingScreen {initializing} />

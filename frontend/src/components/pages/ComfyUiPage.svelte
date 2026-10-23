@@ -1,24 +1,56 @@
 <script lang="ts">
-  import { executionManager } from '@/managers/execution-manager';
+  import { onDestroy } from 'svelte';
   import { appState } from '@/states/app-state.svelte';
   import type { ComfyWindow } from '@/states/comfyui-state.svelte';
 
-  let iframeRef: HTMLIFrameElement;
+  let iframeRef = $state<HTMLIFrameElement>();
+  let registeredFrame: HTMLIFrameElement | undefined;
+  let destroyed = false;
 
   const uiState = appState.uiState;
   const comfyUiState = appState.comfyUiState;
+  let frameStarted = $state(false);
+  let lastReloadVersion = comfyUiState.frameReloadVersion;
 
-  async function injectBridge() {
-    const iframeDoc = iframeRef.contentDocument || iframeRef.contentWindow?.document;
-    if (!iframeDoc) return;
+  $effect(() => {
+    if (comfyUiState.started) frameStarted = true;
+  });
 
+  $effect(() => {
+    if (!iframeRef) return;
+    registeredFrame = iframeRef;
     comfyUiState.iframe = iframeRef;
     comfyUiState.window = iframeRef.contentWindow as ComfyWindow;
-    await executionManager.syncStateFromComfyUi();
+  });
+
+  $effect(() => {
+    const version = comfyUiState.frameReloadVersion;
+    if (version === lastReloadVersion) return;
+    lastReloadVersion = version;
+    if (iframeRef && frameStarted) iframeRef.src = '/';
+  });
+
+  onDestroy(() => {
+    destroyed = true;
+    if (registeredFrame && comfyUiState.iframe === registeredFrame) {
+      comfyUiState.iframe = null;
+      comfyUiState.window = null;
+    }
+  });
+
+  function injectBridge(frame: HTMLIFrameElement) {
+    if (destroyed || !comfyUiState.started || (iframeRef && iframeRef !== frame)) return;
+    const iframeDoc = frame.contentDocument || frame.contentWindow?.document;
+    if (!iframeDoc) return;
+
+    registeredFrame = frame;
+    comfyUiState.iframe = frame;
+    comfyUiState.window = frame.contentWindow as ComfyWindow;
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const app = comfyUiState.window?.comfyAPI?.app?.app as any;
-    if (app?.graph?._nodes?.length > 0 && !comfyUiState.graphReady) {
+    const graphReady = app?.comfyGridWorkflows?.isGraphReady?.() ?? app?.graph?._nodes?.length > 0;
+    if (graphReady && !comfyUiState.graphReady) {
       window.dispatchEvent(new CustomEvent('comfygrid:graph_ready', { detail: { app } }));
     }
   }
@@ -32,12 +64,8 @@
   <iframe
     class="w-100 h-100 d-block"
     title="ComfyUI"
-    onload={() => {
-      if (comfyUiState.started) {
-        injectBridge();
-      }
-    }}
-    src={comfyUiState.started ? '/' : 'about:blank'}
+    onload={(event) => injectBridge(event.currentTarget as HTMLIFrameElement)}
+    src={frameStarted ? '/' : 'about:blank'}
     bind:this={iframeRef}
   ></iframe>
 </div>

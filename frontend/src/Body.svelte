@@ -15,9 +15,11 @@
 
 <section
   class="h-100 position-relative overflow-y-auto"
-  style:display={comfyUiState.graphReady ? '' : 'none'}
+  style:display={comfyUiState.graphReady && !comfyUiState.transition ? '' : 'none'}
   style:opacity={initializing ? '0' : ''}
-  style:pointer-events={!comfyUiState.graphReady || initializing ? 'none' : ''}
+  style:pointer-events={!comfyUiState.graphReady || initializing || comfyUiState.transition
+    ? 'none'
+    : ''}
 >
   <GridPage />
   <ComfyUiPage />

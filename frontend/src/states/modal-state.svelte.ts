@@ -1,15 +1,24 @@
+import { get } from 'svelte/store';
 import { comfyGridApiClient } from '@/api/api-client';
+import { t } from '@/i18n/i18n';
 import type { Model, ModelTypes } from '@/states/storage-state.svelte';
 import logger from '@/utils/logger';
+import { toastState } from './toast-state.svelte';
 
 class ModalState {
     #selectedModelPath: string = $state();
     #modelDir: ModelTypes = $state();
     #modelSubdirs: string[] = $state();
-    #valueSet: Set<string> | null = $state();
+    #valueSet: ReadonlySet<string> | null | (() => ReadonlySet<string> | null) = $state();
     #handleSelect: (model: Model) => void;
 
-    setup(selectedModelPath: string, modelDir: ModelTypes, modelSubdirs: string[], valueSet: Set<string> | null, onSelect: (model: Model) => void) {
+    setup(
+        selectedModelPath: string,
+        modelDir: ModelTypes,
+        modelSubdirs: string[],
+        valueSet: ReadonlySet<string> | null | (() => ReadonlySet<string> | null),
+        onSelect: (model: Model) => void,
+    ) {
         this.#selectedModelPath = selectedModelPath;
         this.#modelDir = modelDir;
         this.#modelSubdirs = modelSubdirs;
@@ -27,7 +36,7 @@ class ModalState {
         return this.#modelSubdirs;
     }
     get valueSet(): ReadonlySet<string> {
-        return this.#valueSet;
+        return typeof this.#valueSet === 'function' ? this.#valueSet() : this.#valueSet;
     }
     get handleSelect() {
         return this.#handleSelect;
@@ -35,6 +44,8 @@ class ModalState {
 
     clearModelDir() {
         this.#modelDir = null;
+        this.#valueSet = null;
+        this.clearCallback();
     }
 
     clearCallback() {
@@ -76,6 +87,8 @@ class InpaintModalState {
     }
 
     async savePaint(maskDataUrl: string, imageDataUrl: string) {
+        const baseImage = { ...this.#baseImage };
+        const handleUpload = this.#handleUpload;
         try {
             // Get image blob from data URL (this is the potentially resized image)
             const [maskBlob, imageBlob] = await Promise.all([
@@ -92,7 +105,7 @@ class InpaintModalState {
             ]);
 
             // Prepare filename
-            let filename = this.#baseImage.filename;
+            let filename = baseImage.filename;
             const lastDotIndex = filename.lastIndexOf('.');
             if (lastDotIndex !== -1) {
                 filename = filename.substring(0, lastDotIndex);
@@ -107,14 +120,22 @@ class InpaintModalState {
                 file: { blob: imageBlob, filename: 'original.png' },
                 mask: { blob: maskBlob, filename: 'mask.png' },
                 filename,
-                subfolder: this.#baseImage.subfolder,
+                subfolder: baseImage.subfolder,
             });
 
-            if (res.ok && res.json?.message === 'uploaded') {
-                this.handleUpload?.(filename);
+            if (!res.ok || res.json?.message !== 'uploaded') {
+                throw new Error(res.json?.error || (res.ok ? 'Unexpected image save response' : `HTTP ${res.status}`));
             }
+            handleUpload?.(filename);
+            return true;
         } catch (e) {
             logger.error('Failed to apply mask', e);
+            const reason = e instanceof Error ? e.message : String(e);
+            toastState.addToast({
+                type: 'error',
+                message: get(t)('toast.paint_save_failed', { reason }, `Failed to save the edited image: ${reason}`),
+            });
+            return false;
         }
     }
 
@@ -127,6 +148,11 @@ class InpaintModalState {
 class DescriptionModalState {
     #model = $state<Model | null>(null);
     #subdirs = $state<ReadonlyArray<string>>([]);
+    #sessionId = $state(0);
+
+    get sessionId() {
+        return this.#sessionId;
+    }
 
     get model() {
         return this.#model;
@@ -136,11 +162,13 @@ class DescriptionModalState {
     }
 
     show(model: Model, subdirs: ReadonlyArray<string>) {
+        this.#sessionId++;
         this.#model = model;
         this.#subdirs = subdirs;
     }
 
     close() {
+        this.#sessionId++;
         this.#model = null;
     }
 }

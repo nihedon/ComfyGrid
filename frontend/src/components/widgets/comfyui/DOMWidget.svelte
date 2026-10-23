@@ -1,14 +1,24 @@
 <script lang="ts">
+  import { untrack } from 'svelte';
+  import { copyWidgetStyles, mountVueWidget } from '@/services/vue-widget-dom-service';
   import { appState } from '@/states/app-state.svelte';
   import type { ComfyGridWidget } from '@/states/model-state.svelte';
 
-  let { widget }: { widget: ComfyGridWidget } = $props();
+  let {
+    widget,
+    options,
+  }: { widget: ComfyGridWidget; options?: { isFloating?: boolean; fitDomToNode?: boolean } } =
+    $props();
 
   const uiState = $derived(appState.uiState);
+  const isViewport = $derived(['cameraAngle', 'load3D', 'load3DAdvanced'].includes(widget.type));
+  // Parent lists may refresh the prop while its actual DOM identity is unchanged.
+  const widgetElement = $derived(widget.element);
+  const nativeNode = $derived(widget.node.comfyNode);
+  const nativeWidget = $derived(widget.comfyWidget);
+  const useVueWidget = $derived(widget.type === 'boundingboxes' || isViewport);
 
-  let originalParent: HTMLElement | null;
-  // eslint-disable-next-line no-undef
-  let originalNextSibling: ChildNode | null;
+  let shadowRoot = $state.raw<ShadowRoot | null>(null);
 
   function bridgeDragEvents(): () => void {
     const iframeWin = appState.comfyUiState.window;
@@ -55,85 +65,44 @@
     };
   }
 
-  function cloneStyles(doc: HTMLElement | ShadowRoot) {
-    try {
-      const comfyUiDoc = appState.comfyUiState.window?.document;
-      if (!comfyUiDoc) return;
-
-      const styleEl = document.createElement('style');
-      doc.appendChild(styleEl);
-
-      const sheets = Array.from(comfyUiDoc.styleSheets || []).flatMap((sheet) => {
-        try {
-          return Array.from(sheet.cssRules || []).map((rule) => rule.cssText);
-        } catch {
-          return [];
-        }
-      });
-      sheets.push('audio.comfy-audio { height: 40px !important; }');
-      sheets.push(':host { --comfy-img-preview-width: 100%; --comfy-img-preview-height: 100%; }');
-      styleEl.textContent = sheets.join('\n').replaceAll(':root', ':host');
-    } catch (error) {
-      console.error('Error cloning styles in DOMWidget:', error);
-    }
-  }
-
-  function mountElement(element: HTMLElement | ShadowRoot) {
-    if (!widget) return;
-    if (widget.element.parentElement !== null) {
-      originalParent = widget.element.parentElement;
-      originalNextSibling = widget.element.nextSibling;
-    }
-
-    element.appendChild(widget.element);
-  }
-
-  function unmountElement() {
-    if (!widget) return;
-    if (originalParent && originalParent.isConnected) {
-      try {
-        if (originalNextSibling && originalNextSibling.parentNode === originalParent) {
-          originalParent.insertBefore(widget.element, originalNextSibling);
-        } else {
-          originalParent.appendChild(widget.element);
-        }
-        return;
-      } catch (error) {
-        console.warn('Failed to restore widget.element to originalParent, falling back:', error);
-      }
-    }
-
-    const iframeDoc = appState.comfyUiState.window?.document;
-    const domWidget = iframeDoc?.querySelector('.dom-widget');
-    domWidget?.appendChild(widget.element);
-  }
-
-  let shadowRoot: ShadowRoot | null = null;
-
   $effect(() => {
-    if (!shadowRoot) return;
-
-    if (uiState.activePageId === 'grid') {
-      mountElement(shadowRoot);
+    const source = appState.comfyUiState.window?.document;
+    const api = appState.comfyUiState.app?.comfyGridDomWidgets;
+    if (!shadowRoot || !source || uiState.activePageId !== 'grid') return;
+    if (!widgetElement && useVueWidget) {
+      if (api) {
+        const target = shadowRoot;
+        const node = nativeNode;
+        const sourceWidget = nativeWidget;
+        // Reads performed while discovering/moving the DOM must not become placement dependencies.
+        return untrack(() => mountVueWidget(target, source, api, node, sourceWidget));
+      }
+      return;
+    }
+    const element = widgetElement;
+    if (!element) return;
+    const target = shadowRoot;
+    return untrack(() => {
+      copyWidgetStyles(source, target);
+      const placeholder = source.createComment('comfygrid-dom-widget');
+      element.before(placeholder);
+      target.append(element);
       const removeBridge = bridgeDragEvents();
       return () => {
         removeBridge();
+        if (placeholder.isConnected) placeholder.replaceWith(element);
+        else element.remove();
+        placeholder.remove();
       };
-    } else if (uiState.activePageId === 'comfyui') {
-      unmountElement();
-    }
+    });
   });
 
   function domMount(nodeElement: HTMLDivElement) {
-    if (!widget) return;
-
     shadowRoot = nodeElement.attachShadow({ mode: 'open' });
-    cloneStyles(shadowRoot);
 
     return {
       destroy() {
         shadowRoot = null;
-        unmountElement();
       },
     };
   }
@@ -141,6 +110,8 @@
 
 <div
   class="dom-container"
+  class:viewport={isViewport}
+  class:fit-node={Boolean(options?.isFloating && options?.fitDomToNode)}
   title={widget.tooltip ?? ''}
   data-id={widget.id}
   data-name={widget.name}
@@ -149,6 +120,24 @@
 
 <style lang="scss">
   .dom-container {
-    display: initial !important;
+    display: block;
+    min-width: 0;
+  }
+  .dom-container.viewport {
+    display: flex;
+    /* Keep percentage heights resolvable inside auto-height flex layouts. */
+    flex: 1 1 300px;
+    height: 300px;
+    min-height: 300px;
+  }
+  .dom-container.fit-node {
+    flex: 1 1 0;
+    align-self: stretch;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    max-width: 100%;
+    max-height: 100%;
+    overflow: hidden;
   }
 </style>

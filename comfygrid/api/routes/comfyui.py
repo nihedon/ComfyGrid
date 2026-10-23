@@ -17,11 +17,14 @@ async def upload(comfy_service: ComfyUIService = Depends(get_comfy_service), fil
     if filename is None or filename == "":
         return JSONResponse({"error": "Invalid file name"}, status_code=400)
 
-    comfyui_input_service.save_upload_to_input(
-        comfy_service.comfyui_path,
-        file.file,
-        filename,
-    )
+    try:
+        comfyui_input_service.save_upload_to_input(
+            comfy_service.comfyui_path,
+            file.file,
+            filename,
+        )
+    except ValueError:
+        return JSONResponse({"error": "Invalid path"}, status_code=400)
     return {"message": "uploaded"}
 
 
@@ -32,16 +35,24 @@ async def upload_to_input(request: Request, data: dict, comfy_service: ComfyUISe
     if not url or not filename:
         return JSONResponse({"error": "url and filename are required"}, status_code=400)
 
+    try:
+        comfyui_input_service.resolve_input_path(comfy_service.comfyui_path, filename)
+    except ValueError:
+        return JSONResponse({"error": "Invalid path"}, status_code=400)
+
     client: AsyncClient = request.app.state.client
     response = await client.get(url)
     if response.status_code != 200:
         return JSONResponse({"error": "Failed to fetch image"}, status_code=500)
 
-    comfyui_input_service.save_bytes_to_input(
-        comfy_service.comfyui_path,
-        response.content,
-        filename,
-    )
+    try:
+        comfyui_input_service.save_bytes_to_input(
+            comfy_service.comfyui_path,
+            response.content,
+            filename,
+        )
+    except ValueError:
+        return JSONResponse({"error": "Invalid path"}, status_code=400)
     return {"message": "uploaded"}
 
 

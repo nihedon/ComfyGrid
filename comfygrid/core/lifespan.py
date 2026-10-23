@@ -49,7 +49,7 @@ def create_lifespan(settings: AppSettings):
                 await log_processor_task
             except asyncio.CancelledError:
                 pass
-            comfy_service.exit()
+            await comfy_service.exit()
             if settings.env == "prod":
                 stop_caddy()
 

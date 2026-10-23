@@ -9,7 +9,7 @@
     selectNextOccurrence,
     selectSelectionMatches,
   } from '@codemirror/search';
-  import { EditorState } from '@codemirror/state';
+  import { Compartment, EditorState } from '@codemirror/state';
   import {
     EditorView,
     placeholder as cmPlaceholder,
@@ -19,20 +19,25 @@
   import { appState } from '@/states/app-state.svelte';
   import { bracketMatchingPlugin } from './prompt-editor/bracket-matching';
   import { loraHoverPlugin } from './prompt-editor/lora-hover';
+  import { multiSelectionImePlugin } from './prompt-editor/multi-selection-ime';
   import { promptAttentionKeymap } from './prompt-editor/prompt-attention';
   import {
     promptHighlightPlugin,
     reconfigureHighlightEffect,
   } from './prompt-editor/prompt-highlighter';
+  import './prompt-editor/prompt-highlighter.scss';
   import { promptPilotCompletion } from './prompt-editor/prompt-pilot';
   import { ensurePromptPilotModelsLoaded } from './prompt-editor/prompt-pilot/services/loader-service';
   import { CustomSearchPanel } from './prompt-editor/search-panel';
+  import { segmentHighlighter } from './prompt-editor/segment-highlighter';
 
   let {
     value = $bindable(''),
     placeholder = '',
     readonly = false,
     rows = 6,
+    enablePromptPilot = true,
+    highlightMode = 'prompt',
     oninput,
     onblur,
     onkeydown,
@@ -41,6 +46,8 @@
     placeholder?: string;
     readonly?: boolean;
     rows?: number;
+    enablePromptPilot?: boolean;
+    highlightMode?: 'prompt' | 'segments';
     oninput?: (e: Event) => void;
     onblur?: (e: FocusEvent) => void;
     onkeydown?: (e: KeyboardEvent) => void;
@@ -49,6 +56,9 @@
   let container = $state<HTMLDivElement>();
   let view = $state<EditorView>();
   let isInternalChange = false;
+  let isExternalChange = false;
+  const completionCompartment = new Compartment();
+  const highlightCompartment = new Compartment();
 
   const minHeight = $derived(rows === 1 ? '38px' : `${rows * 24}px`);
 
@@ -66,6 +76,7 @@
           createPanel: (v) => new CustomSearchPanel(v),
         }),
         EditorState.allowMultipleSelections.of(true),
+        multiSelectionImePlugin,
         keymap.of([
           {
             key: 'Ctrl-Enter',
@@ -86,23 +97,27 @@
           },
           ...closeBracketsKeymap,
           ...searchKeymap,
-          ...promptAttentionKeymap,
           ...defaultKeymap,
           ...historyKeymap,
         ]),
         EditorView.lineWrapping,
         EditorState.readOnly.of(readonly),
         cmPlaceholder(placeholder),
-        promptHighlightPlugin,
         bracketMatchingPlugin,
-        promptPilotCompletion(),
-        loraHoverPlugin(),
+        completionCompartment.of(
+          enablePromptPilot ? [promptPilotCompletion(), loraHoverPlugin()] : [],
+        ),
+        highlightCompartment.of(
+          highlightMode === 'prompt'
+            ? [promptHighlightPlugin, keymap.of(promptAttentionKeymap)]
+            : segmentHighlighter,
+        ),
         highlightSelectionMatches({
           minSelectionLength: 1,
         }),
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         EditorView.updateListener.of((update: any) => {
-          if (update.docChanged) {
+          if (update.docChanged && !isExternalChange) {
             isInternalChange = true;
             const newDoc = update.state.doc.toString();
             value = newDoc;
@@ -136,20 +151,47 @@
   });
 
   $effect(() => {
+    const enabled = enablePromptPilot;
+    if (view) {
+      view.dispatch({
+        effects: completionCompartment.reconfigure(
+          enabled ? [promptPilotCompletion(), loraHoverPlugin()] : [],
+        ),
+      });
+    }
+  });
+
+  $effect(() => {
+    view?.dispatch({
+      effects: highlightCompartment.reconfigure(
+        highlightMode === 'prompt'
+          ? [promptHighlightPlugin, keymap.of(promptAttentionKeymap)]
+          : segmentHighlighter,
+      ),
+    });
+  });
+
+  $effect(() => {
     const currentValue = value ?? '';
     if (view && !isInternalChange) {
       untrack(() => {
         const currentDoc = view!.state.doc.toString();
         if (currentDoc !== currentValue) {
-          view!.dispatch({
-            changes: { from: 0, to: currentDoc.length, insert: currentValue },
-          });
+          isExternalChange = true;
+          try {
+            view!.dispatch({
+              changes: { from: 0, to: currentDoc.length, insert: currentValue },
+            });
+          } finally {
+            isExternalChange = false;
+          }
         }
       });
     }
   });
 
   $effect(() => {
+    if (highlightMode !== 'prompt') return;
     const coloring = appState.optionState.get('ComfyGrid.prompt_pilot.word_coloring');
     appState.optionState.get('ComfyGrid.prompt_pilot.post_count_threshold');
     appState.optionState.get('ComfyGrid.prompt_pilot.tag_source');
@@ -159,7 +201,7 @@
       });
       if (coloring === 'category') {
         ensurePromptPilotModelsLoaded().then((loaded) => {
-          if (loaded && view) {
+          if (loaded && view && highlightMode === 'prompt') {
             view.dispatch({
               effects: [reconfigureHighlightEffect.of()],
             });
@@ -286,50 +328,6 @@
 
   :global(.cm-line) {
     padding: 0 !important;
-  }
-
-  :global(.cm-prompt-word) {
-    color: var(--word-color, inherit) !important;
-    font-weight: normal !important;
-  }
-
-  :global(.cm-prompt-bracket) {
-    color: var(--prompt-bracket-color) !important;
-    font-weight: 500 !important;
-  }
-
-  :global(.cm-prompt-weight) {
-    color: var(--prompt-weight-color) !important;
-    font-weight: 500 !important;
-  }
-
-  :global(.cm-prompt-comma) {
-    color: var(--bs-secondary-color);
-    opacity: 0.7;
-  }
-
-  :global(.cm-prompt-escape) {
-    color: var(--bs-secondary-color);
-    opacity: 0.6;
-  }
-
-  :global(.cm-prompt-duplicate) {
-    text-decoration: line-through;
-    text-decoration-thickness: 1.5px;
-    opacity: 0.5;
-  }
-
-  :global(.cm-prompt-error) {
-    text-decoration: underline var(--bs-danger, #ef4444) 1.5px !important;
-    text-underline-offset: 1px;
-    background-color: rgba(239, 68, 68, 0.12);
-    border-radius: 2px;
-  }
-
-  :global(.cm-prompt-trailing-space) {
-    background-color: rgba(128, 128, 128, 0.25) !important;
-    display: inline-block;
-    border-radius: 2px !important;
   }
 
   :global(.cm-selectionMatch) {

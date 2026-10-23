@@ -1,24 +1,14 @@
 <script lang="ts">
   import { type Component } from 'svelte';
-  import {
-    ArrowBigDown,
-    ArrowBigUp,
-    Info,
-    LayoutDashboard,
-    Locate,
-    PictureInPicture,
-    Play,
-  } from '@lucide/svelte';
+  import { ChevronDown, ChevronUp } from '@lucide/svelte';
   import { t } from '@/i18n/i18n';
   import { notifyNodeChanged } from '@/services/custom-node-service.svelte';
-  import { updateBoardFloatingState } from '@/services/gridstack-service';
   import { appState } from '@/states/app-state.svelte';
   import type { ComfyGridNode, ComfyGridWidget } from '@/states/model-state.svelte';
-  import type { BoardId } from '@/types/board';
-  import { COMFY_NODE_MODE, type ComfyNodeMode } from '@/types/model-shared';
-  import logger from '@/utils/logger';
-  import NodeModeSelector from './comfyui/features/NodeModeSelector.svelte';
-  import TextareaCategory from './comfyui/features/TextareaCategory.svelte';
+  import { COMFY_NODE_MODE } from '@/types/model-shared';
+  import NodeWidgetHeader from './NodeWidgetHeader.svelte';
+  import DOMWidget from './comfyui/DOMWidget.svelte';
+  import DimensionPairWidget from './comfyui/DimensionPairWidget.svelte';
   import { getWidgetComponentWithMeta } from './comfyui/registry/widget-registry';
 
   let { node, widget }: { node: ComfyGridNode; widget?: ComfyGridWidget } = $props();
@@ -57,33 +47,6 @@
       : workspaceState.hasErrorNode(node.id),
   );
 
-  const alwaysShowFocusButton = $derived(
-    (appState.optionState.get('ComfyGrid.ui.always_show_node_focus_button') as boolean) ?? false,
-  );
-
-  let isTitleEditing = $state(false);
-  let title = $derived.by(() => {
-    if (widget) {
-      return node.title + ' - ' + widget.name;
-    } else {
-      return node.title;
-    }
-  });
-
-  const floatingButtonTitle = $derived(
-    isFloating ? 'node.move_to_group.title' : 'node.move_to_grid.title',
-  );
-
-  const currentBoardId = $derived.by(() => {
-    if (widget) return workspaceState.layout.floatingWidgets.get(widget.id) || '';
-    return workspaceState.layout.floatingNodes.get(node.id) || '';
-  });
-
-  const otherBoardId = $derived.by(() => {
-    if (!isFloating) return '' as BoardId;
-    return (currentBoardId === 'Global' ? 'Tab' : 'Global') as BoardId;
-  });
-
   const isTextareaOnly = $derived.by(() => {
     if (node.widgets.length === 1 && node.widgets[0].type === 'customtext') {
       return node.widgets[0];
@@ -95,7 +58,7 @@
     | { id: string; type: 'single'; widget: ComfyGridWidget; component: Component }
     | { id: string; type: 'single-ce'; widget: ComfyGridWidget; customElement: string };
 
-  const renderableWidgets = $derived.by((): RenderItem[] => {
+  const availableWidgets = $derived.by((): RenderItem[] => {
     const items: RenderItem[] = [];
 
     for (const w of containsWidgets) {
@@ -121,6 +84,46 @@
           widget: w,
           component: matchResult.component,
         });
+      }
+    }
+    return items;
+  });
+
+  const hasAdvancedWidgets = $derived(availableWidgets.some((item) => item.widget.advanced));
+  const hasDomWidget = $derived(
+    availableWidgets.some((item) => item.type === 'single' && item.component === DOMWidget),
+  );
+  const fitDomToNode = $derived(workspaceState.layout.isDomFitNode(node.id));
+  const renderableWidgets = $derived(
+    availableWidgets.filter((item) => widget || node.showAdvanced || !item.widget.advanced),
+  );
+
+  const groupedWidgets = $derived.by(() => {
+    const items: (
+      RenderItem | { id: string; type: 'dimensions'; first: RenderItem; second: RenderItem }
+    )[] = [];
+    const nativeWidgets = node.comfyNode.widgets;
+    for (let index = 0; index < renderableWidgets.length; index++) {
+      const first = renderableWidgets[index];
+      const second = renderableWidgets[index + 1];
+      if (
+        second &&
+        first.widget.type === 'number' &&
+        second.widget.type === 'number' &&
+        ((first.widget.name === 'width' && second.widget.name === 'height') ||
+          (first.widget.name === 'height' && second.widget.name === 'width')) &&
+        nativeWidgets[nativeWidgets.indexOf(first.widget.comfyWidget) + 1] ===
+          second.widget.comfyWidget
+      ) {
+        items.push({
+          id: `dimensions-${first.id}-${second.id}`,
+          type: 'dimensions',
+          first,
+          second,
+        });
+        index++;
+      } else {
+        items.push(first);
       }
     }
     return items;
@@ -193,86 +196,21 @@
     return '#' + fullColorCode + '30';
   });
 
-  async function toggleFloating() {
-    const targetId = widget ? widget.id : node.id;
-    if (widget) {
-      const current = workspaceState.layout.floatingWidgets.get(widget.id);
-      const next = current ? '' : 'Global';
-      logger.trace(
-        `[LAYOUT_LOG] toggleFloating Widget: widgetId=${widget.id}, from="${current}" to="${next}"`,
-      );
-      workspaceState.layout.setFloatingWidgets(widget.id, next);
-    } else {
-      const current = workspaceState.layout.floatingNodes.get(node.id);
-      const next = current ? '' : 'Global';
-      logger.trace(
-        `[LAYOUT_LOG] toggleFloating Node: nodeId=${node.id}, from="${current}" to="${next}"`,
-      );
-      workspaceState.layout.setFloatingNodes(node.id, next);
-    }
-    await updateBoardFloatingState(targetId);
-  }
-
-  async function moveToBoard(targetBoardId: BoardId) {
-    const targetId = widget ? widget.id : node.id;
-    if (widget) {
-      const current = workspaceState.layout.floatingWidgets.get(widget.id);
-      logger.trace(
-        `[LAYOUT_LOG] moveToBoard Widget: widgetId=${widget.id}, from="${current}" to="${targetBoardId}"`,
-      );
-      workspaceState.layout.setFloatingWidgets(widget.id, targetBoardId);
-    } else {
-      const current = workspaceState.layout.floatingNodes.get(node.id);
-      logger.trace(
-        `[LAYOUT_LOG] moveToBoard Node: nodeId=${node.id}, from="${current}" to="${targetBoardId}"`,
-      );
-      workspaceState.layout.setFloatingNodes(node.id, targetBoardId);
-    }
-    await updateBoardFloatingState(targetId);
-  }
-
-  function handleStateChange(e: Event, mode: ComfyNodeMode) {
-    node.mode = mode;
-    e.stopPropagation();
-  }
-
-  function handleExecuteNode() {
-    appState.bridge?.nodeQueue({ nodeId: node.id });
-  }
-
-  function handleChangeTitle() {
-    node.title = node.title.trim();
-  }
-
-  function focusOnMount(e: HTMLInputElement) {
-    e.focus();
-  }
-
-  function getNodeInfo() {
-    return {
-      id: node.id,
-      type: node.type,
-      constructorName: node.constructorName,
-      comfyClass: node.comfyClass,
-      widgets: containsWidgets.map((w) => ({
-        name: w.name,
-        value: w.value,
-        type: w.type,
-        className: w.className,
-      })),
-    };
-  }
-
-  function focusNodeInComfyUI() {
-    appState.comfyUiState.app?.canvas?.animateToBounds(node.comfyNode.boundingRect);
-    appState.uiState.activePageId = 'comfyui';
-    appState.uiState.needRefresh = true;
-  }
-
   $effect(() => {
     notifyNodeChanged(node.id, node);
   });
 </script>
+
+{#snippet renderWidget(item: RenderItem)}
+  {#if item.type === 'single'}
+    <item.component widget={item.widget} options={{ isFloating, isTextareaOnly, fitDomToNode }} />
+  {:else}
+    <svelte:element
+      this={item.customElement}
+      use:bindCustomElementProps={{ widget: item.widget, options: { isFloating, isTextareaOnly } }}
+    />
+  {/if}
+{/snippet}
 
 <div
   class="node-widget"
@@ -285,120 +223,14 @@
   data-id={node.id}
   data-name={node.title}
 >
-  <div class="card-header" class:mute={node.mode === COMFY_NODE_MODE.MUTE}>
-    {#if !isTitleEditing}
-      <div class="card-header-left">
-        {#if !widget}
-          {#if !node.isNote}
-            <NodeModeSelector
-              mode={new Set([node.mode])}
-              handleChange={(e, val) => handleStateChange(e, val)}
-            />
-          {/if}
-          {#if alwaysShowFocusButton || isInvalid}
-            <button
-              type="button"
-              class={`btn btn-xs btn-icon btn-${isInvalid ? 'danger' : 'secondary'}`}
-              title={$t('node.focus')}
-              onclick={focusNodeInComfyUI}
-            >
-              <Locate size={12} />
-            </button>
-          {/if}
-          {#if node.hasOutputNode}
-            <button
-              type="button"
-              class="btn btn-xs btn-primary d-flex align-items-center p-1"
-              onclick={handleExecuteNode}
-            >
-              <Play size={12} />
-            </button>
-          {/if}
-          {#if appState.isDebugMode}
-            <button
-              type="button"
-              class="btn btn-xs btn-icon btn-outline-secondary"
-              title={node.id}
-              onclick={(e) => {
-                e.stopPropagation();
-                const nodeInfo = getNodeInfo();
-                logger.info(nodeInfo);
-                appState.dialogState.showDialog({
-                  type: 'TypeInfo',
-                  title: 'Node Information',
-                  message: JSON.stringify(nodeInfo, null, 2),
-                });
-              }}
-            >
-              <Info size={12} />
-            </button>
-          {/if}
-        {/if}
-        {#if widget || (isTextareaOnly && !node.isNote)}
-          <TextareaCategory widget={widget ?? node.widgets[0]} />
-        {/if}
-      </div>
-    {/if}
-    {#if !isTitleEditing}
-      <!-- svelte-ignore a11y_no_static_element_interactions -->
-      <span
-        class="node-title"
-        class:floating={isFloating}
-        title="{title} ({node.id})"
-        ondblclick={() => {
-          if (!widget) {
-            isTitleEditing = true;
-          }
-        }}>{title}</span
-      >
-    {:else}
-      <input
-        type="text"
-        class="form-control"
-        bind:value={node.title}
-        use:focusOnMount
-        onblur={() => {
-          isTitleEditing = false;
-        }}
-        onkeypress={(e) => {
-          if (e.key === 'Enter') {
-            isTitleEditing = false;
-            handleChangeTitle();
-          }
-        }}
-      />
-    {/if}
-    {#if !isTitleEditing}
-      <div class="card-header-right">
-        {#if isFloating && otherBoardId}
-          <button
-            type="button"
-            class="btn btn-xs btn-icon"
-            title={$t('node.move_to_other_board')}
-            onclick={() => moveToBoard(otherBoardId)}
-          >
-            {#if currentBoardId === 'Global'}
-              <ArrowBigDown size={12} />
-            {:else}
-              <ArrowBigUp size={12} />
-            {/if}
-          </button>
-        {/if}
-        <button
-          type="button"
-          class="btn btn-xs btn-icon"
-          title={$t(floatingButtonTitle)}
-          onclick={toggleFloating}
-        >
-          {#if isFloating}
-            <PictureInPicture size={12} />
-          {:else}
-            <LayoutDashboard size={12} />
-          {/if}
-        </button>
-      </div>
-    {/if}
-  </div>
+  <NodeWidgetHeader
+    {node}
+    {widget}
+    {isFloating}
+    {isInvalid}
+    {hasDomWidget}
+    isTextareaOnly={Boolean(isTextareaOnly)}
+  />
   {#if !node.collapsed && containsWidgets.length > 0 && containsDrawableWidget}
     <div
       class="widget-stack {nodeStyle}"
@@ -406,38 +238,29 @@
       class:px-2={!widget && !isTextareaOnly}
       data-type={node.type}
     >
-      {#each renderableWidgets as item (item.id)}
-        {#if item.type === 'single'}
-          <item.component widget={item.widget} options={{ isFloating, isTextareaOnly }} />
-        {:else if item.type === 'single-ce'}
-          <svelte:element
-            this={item.customElement}
-            use:bindCustomElementProps={{
-              widget: item.widget,
-              options: { isFloating, isTextareaOnly },
-            }}
-          />
+      {#each groupedWidgets as item (item.id)}
+        {#if item.type === 'dimensions'}
+          <DimensionPairWidget first={item.first.widget} second={item.second.widget}>
+            {@render renderWidget(item.first)}
+            {@render renderWidget(item.second)}
+          </DimensionPairWidget>
+        {:else}
+          {@render renderWidget(item)}
         {/if}
       {/each}
     </div>
   {/if}
+  {#if !widget && !node.collapsed && hasAdvancedWidgets && !node.alwaysShowAdvanced}
+    <div class="card-footer p-0">
+      <button
+        type="button"
+        class="btn btn-sm w-100 d-flex align-items-center justify-content-center gap-2"
+        aria-expanded={node.showAdvanced}
+        onclick={() => (node.showAdvanced = !node.showAdvanced)}
+      >
+        {$t(node.showAdvanced ? 'node.hide_advanced' : 'node.show_advanced')}
+        {#if node.showAdvanced}<ChevronUp size={16} />{:else}<ChevronDown size={16} />{/if}
+      </button>
+    </div>
+  {/if}
 </div>
-
-<style lang="scss">
-  .btn-sm {
-    padding: 0.25rem !important;
-  }
-  .card-header {
-    padding: 0.15rem 0.25rem !important;
-  }
-
-  .node-title {
-    width: 100%;
-    text-align: center;
-  }
-
-  .node-title.floating {
-    user-select: none;
-    cursor: move;
-  }
-</style>

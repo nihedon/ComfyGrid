@@ -1,0 +1,61 @@
+.cg-menu.dropdown-menu {
+    position: relative;
+    margin: 0;
+    padding: 0.25rem 0;
+    width: max-content;
+    min-width: min(18rem, calc(100vw - 16px));
+    max-width: calc(100vw - 16px);
+    max-height: var(--bits-dropdown-menu-content-available-height, var(--bits-context-menu-content-available-height, calc(100vh - 16px)));
+    overflow-y: auto;
+    box-shadow: var(--bs-box-shadow-sm);
+    outline: none;
+    z-index: 9999;
+}
+
+.cg-menu.cg-menu-sub.dropdown-menu {
+    min-width: min(8rem, calc(100vw - 16px));
+}
+
+.cg-menu .cg-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.35rem 0.75rem;
+    color: var(--bs-body-color);
+    font-weight: 500;
+    opacity: 1;
+    cursor: default;
+    user-select: none;
+    outline: none;
+}
+
+.cg-menu .cg-menu-item[data-highlighted]:not([data-disabled]) {
+    background: var(--bs-dropdown-link-hover-bg, var(--bs-tertiary-bg));
+    color: var(--bs-dropdown-link-hover-color, var(--bs-body-color));
+}
+
+.cg-menu .cg-menu-item[data-disabled] {
+    color: color-mix(in srgb, var(--bs-body-color) 42%, var(--bs-body-bg)) !important;
+    background-color: transparent !important;
+    font-weight: 400;
+    cursor: not-allowed;
+}
+
+.cg-menu-item > svg {
+    flex-shrink: 0;
+}
+
+.cg-menu-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    flex: 0 0 16px;
+}
+
+.cg-menu-label {
+    flex: 1;
+    min-width: 0;
+    white-space: normal;
+    overflow-wrap: anywhere;
+}

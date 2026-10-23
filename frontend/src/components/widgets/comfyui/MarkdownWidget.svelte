@@ -1,7 +1,6 @@
 <script lang="ts">
   import { tick } from 'svelte';
-  import DOMPurify from 'dompurify';
-  import { marked } from 'marked';
+  import MarkdownContent from '@/components/common/MarkdownContent.svelte';
   import type { ComfyGridWidget } from '@/states/model-state.svelte';
 
   let { widget }: { widget: ComfyGridWidget } = $props();
@@ -9,17 +8,6 @@
   let isEditing = $state(false);
   let editValue = $state('');
   let textareaRef = $state<HTMLTextAreaElement | null>(null);
-
-  const renderedHtml = $derived.by(() => {
-    const rawValue = String(widget.value ?? '');
-    if (!rawValue) return '';
-    try {
-      const parsed = marked.parse(rawValue, { async: false }) as string;
-      return DOMPurify.sanitize(parsed);
-    } catch {
-      return DOMPurify.sanitize(rawValue);
-    }
-  });
 
   function adjustTextareaHeight() {
     if (!textareaRef) return;
@@ -79,8 +67,7 @@
       rows={Math.max(3, editValue.split('\n').length)}></textarea>
   {:else}
     <div class="p-2">
-      <!-- eslint-disable-next-line svelte/no-at-html-tags -->
-      {@html renderedHtml}
+      <MarkdownContent value={String(widget.value ?? '')} />
     </div>
   {/if}
 </div>
@@ -88,33 +75,5 @@
 <style>
   .markdown-content {
     display: initial !important;
-  }
-  .markdown-content :global(p:last-child) {
-    margin-bottom: 0;
-  }
-  .markdown-content :global(img) {
-    max-width: 100%;
-    height: auto;
-  }
-  .markdown-content :global(pre) {
-    background-color: var(--bs-tertiary-bg);
-    padding: 0.5rem;
-    border-radius: 0.25rem;
-    overflow-x: auto;
-  }
-  .markdown-content :global(code) {
-    font-family: var(--bs-font-monospace);
-  }
-  .markdown-content :global(table) {
-    border: 1px solid var(--bs-border-color);
-    border-collapse: collapse;
-  }
-  .markdown-content :global(th) {
-    border: 1px solid var(--bs-border-color);
-    padding: 0 0.5rem;
-  }
-  .markdown-content :global(td) {
-    border: 1px solid var(--bs-border-color);
-    padding: 0 0.5rem;
   }
 </style>

@@ -24,16 +24,29 @@
 
   const modalState = appState.modalState;
 
-  const valueSet = $derived(select ? new Set(select) : null);
+  function getCurrentWidget() {
+    if (!(widget instanceof ComfyGridWidget)) return widget;
+    return (
+      appState.workspaceState
+        .getRealNode(widget.node.id)
+        ?.widgets.find((w) => w.id === widget.id) ?? widget
+    );
+  }
+
+  function getValueSet() {
+    if (!select) return null;
+    const options = getCurrentWidget().options as { values?: Iterable<string | number> };
+    return new Set(Array.from(options?.values ?? select, String));
+  }
 
   function openModelModal() {
     modalState.setup(
       String(widget.value ?? ''),
       modelDir,
       modelSubdirs,
-      valueSet,
+      getValueSet,
       (model: Model) => {
-        handleInput?.(new CustomEvent('modal'), widget, model);
+        handleInput?.(new CustomEvent('modal'), getCurrentWidget(), model);
       },
     );
   }

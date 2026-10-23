@@ -12,17 +12,17 @@
     if (!modalElement) return;
     bsModal = Modal.getOrCreateInstance(modalElement);
 
-    const handleHidden = () => {
+    const handleHide = () => {
       modalState.clearModelDir();
     };
     const handleShown = () => {
       const selected = modalElement.querySelector<HTMLElement>('.card.selected');
       selected?.scrollIntoView({ behavior: 'instant', block: 'center' });
     };
-    modalElement.addEventListener('hidden.bs.modal', handleHidden);
+    modalElement.addEventListener('hide.bs.modal', handleHide);
     modalElement.addEventListener('shown.bs.modal', handleShown);
     return () => {
-      modalElement!.removeEventListener('hidden.bs.modal', handleHidden);
+      modalElement!.removeEventListener('hide.bs.modal', handleHide);
       modalElement!.removeEventListener('shown.bs.modal', handleShown);
     };
   });

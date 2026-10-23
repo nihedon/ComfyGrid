@@ -1,10 +1,16 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { GridStack } from 'gridstack';
-  import { applyFloatingPositions, gs, syncAndSaveLayout } from '@/services/gridstack-service';
+  import {
+    applyFloatingPositions,
+    gs,
+    isApplyingFloatingPositions,
+    syncAndSaveLayout,
+  } from '@/services/gridstack-service';
   import { appState } from '@/states/app-state.svelte';
   import { ComfyGridGroup, ComfyGridNode } from '@/states/model-state.svelte';
   import type { BoardId } from '@/types/board';
+  import { createGridBackgroundPaths } from '@/utils/gridstack-background';
   import logger from '@/utils/logger';
   import { debounceOnTick } from '@/utils/schedule';
   import NodeWidget from '../widgets/NodeWidget.svelte';
@@ -30,9 +36,8 @@
 
   type FlatNodeEntry = { group: ComfyGridGroup; node: ComfyGridNode };
 
-  const commonTabBoard = $derived(
-    (appState.optionState.get('ComfyGrid.ui.common_tab_board') as boolean) ?? false,
-  );
+  const commonTabBoard = $derived(workspaceState.layout.commonTabBoard);
+  const tabId = $derived(commonTabBoard ? undefined : (groupId ?? '__ungrouped__'));
 
   const groups = $derived.by(() => {
     let filteredGroups: ReadonlyArray<ComfyGridGroup>;
@@ -74,38 +79,12 @@
   }
 
   const nodesInBoard = $derived.by(() => {
-    const effectiveNodes = workspaceState.getEffectiveNodes(boardId, groupId);
+    const effectiveNodes = workspaceState.getEffectiveNodes(boardId, tabId);
     const nodeSet = new Set(effectiveNodes.map((n) => n.id));
     return flattenNodes(groups).filter((entry) => nodeSet.has(entry.node.id));
   });
 
-  const floatingWidgetsInBoard = $derived.by(() => {
-    const result: Array<{
-      group: ComfyGridGroup;
-      node: ComfyGridNode;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      widget: any;
-    }> = [];
-    const allEntries = flattenNodes(workspaceState.groups);
-
-    for (const entry of allEntries) {
-      for (const widget of entry.node.widgets) {
-        if (widget.type === 'customtext') {
-          const targetBoard = workspaceState.layout?.floatingWidgets?.get(widget.id);
-          if (!targetBoard) continue;
-
-          if (boardId === 'Global' && targetBoard === 'Global') {
-            result.push({ group: entry.group, node: entry.node, widget });
-          } else if (boardId === 'Tab' && targetBoard === 'Tab') {
-            if (commonTabBoard || groupId === undefined || entry.group.id === groupId) {
-              result.push({ group: entry.group, node: entry.node, widget });
-            }
-          }
-        }
-      }
-    }
-    return result;
-  });
+  const floatingWidgetsInBoard = $derived(workspaceState.getEffectiveWidgets(boardId, tabId));
 
   function getGSParams(id: string, node: ComfyGridNode) {
     const saved = workspaceState.layout?.floatingPositions?.get(boardId)?.[String(id)];
@@ -119,6 +98,49 @@
   }
 
   let gridInstance = $state<GridStack | null>(null);
+  const backgroundMode = $derived(
+    appState.optionState.get('ComfyGrid.ui.gridstack_background') as
+      'none' | 'grid' | 'dots' | undefined,
+  );
+  const showGridBackground = $derived(backgroundMode === 'grid' || backgroundMode === 'dots');
+  let backgroundSize = $state({
+    width: 0,
+    height: 0,
+    columns: GRID_COLUMNS,
+    cellHeight: GRID_CELL_HEIGHT,
+  });
+  const backgroundPaths = $derived(
+    showGridBackground
+      ? createGridBackgroundPaths(
+          backgroundSize.width,
+          backgroundSize.height,
+          backgroundSize.columns,
+          backgroundSize.cellHeight,
+          backgroundMode === 'dots' ? 'dots' : 'grid',
+        )
+      : { major: '', minor: '' },
+  );
+
+  function updateGridBackground() {
+    if (!showGridBackground || !gridInstance) return;
+    const bounds = container.getBoundingClientRect();
+    const style = getComputedStyle(container);
+    backgroundSize = {
+      width: bounds.width - parseFloat(style.borderLeftWidth) - parseFloat(style.borderRightWidth),
+      height:
+        bounds.height - parseFloat(style.borderTopWidth) - parseFloat(style.borderBottomWidth),
+      columns: gridInstance.getColumn(),
+      cellHeight: gridInstance.getCellHeight(true),
+    };
+  }
+
+  $effect(() => {
+    if (!showGridBackground || !gridInstance) return;
+    const observer = new ResizeObserver(updateGridBackground);
+    observer.observe(container);
+    updateGridBackground();
+    return () => observer.disconnect();
+  });
 
   onMount(() => {
     logger.log(`gridstack init: board "${gridKey}"`);
@@ -140,8 +162,11 @@
     gridInstance = grid;
     workspaceState.setGridStackBoard(gridKey, grid);
     applyFloatingPositions(gridKey);
+    updateGridBackground();
 
     const handleGridChange = (event: Event, items?: unknown) => {
+      updateGridBackground();
+      if (isApplyingFloatingPositions(grid)) return;
       logger.trace(`[LAYOUT_LOG] GridStack event: type="${event.type}", board="${gridKey}"`, items);
 
       const logicalKey = gridKey.split('-')[0];
@@ -217,7 +242,20 @@
   });
 </script>
 
-<div id="grid-stack-{gridKey}" class="grid-stack w-100" bind:this={container}>
+<div id="grid-stack-{gridKey}" class="grid-stack" bind:this={container}>
+  {#if showGridBackground && backgroundSize.width > 0 && backgroundSize.height > 0}
+    <svg
+      class="grid-background"
+      class:dots={backgroundMode === 'dots'}
+      aria-hidden="true"
+      focusable="false"
+      viewBox="0 0 {backgroundSize.width} {backgroundSize.height}"
+      preserveAspectRatio="none"
+    >
+      <path class="major" d={backgroundPaths.major} />
+      <path class="minor" d={backgroundPaths.minor} />
+    </svg>
+  {/if}
   {#each nodesInBoard as { group, node } (`node-${group.id}-${node.id}`)}
     {#if workspaceState.layout.floatingNodes.get(node.id) === boardId}
       <div class="grid-stack-item" use:gs={getGSParams(node.id, node)} data-id={node.id}>
@@ -233,6 +271,44 @@
 </div>
 
 <style lang="scss">
+  .grid-stack {
+    box-sizing: content-box;
+  }
+
+  .grid-background {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    fill: none;
+    stroke: var(--bs-body-color);
+    stroke-width: 1;
+    shape-rendering: crispEdges;
+  }
+
+  .major {
+    stroke-opacity: 0.14;
+  }
+
+  .minor {
+    stroke-opacity: 0.03;
+  }
+
+  .grid-background.dots {
+    stroke-width: 2;
+    stroke-linecap: round;
+    shape-rendering: geometricPrecision;
+  }
+
+  .dots .major {
+    stroke-opacity: 0.3;
+  }
+
+  .dots .minor {
+    stroke-opacity: 0.14;
+  }
+
   :global(.grid-stack-item > .ui-resizable-handle) {
     opacity: 0 !important;
   }

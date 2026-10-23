@@ -191,6 +191,8 @@ export class ComfyGridNode {
     readonly #comfyNode: ComfyNode;
     #title: string = $state();
     #collapsed: boolean = $state();
+    #showAdvanced: boolean = $state(false);
+    #alwaysShowAdvanced: boolean = $state(false);
     #mode: ComfyNodeMode = $state();
     #bgcolor: string | null = $state();
     readonly #widgets: ComfyGridWidget[] = $state([]);
@@ -237,8 +239,12 @@ export class ComfyGridNode {
 
     readonly isVisible = $derived.by(() => {
         const isFloating = Boolean(appState.workspaceState.layout.floatingNodes.get(this.id));
-        return isFloating || this.isGroupVisible;
+        return isFloating ? this.isFloatingVisible : this.isGroupVisible;
     });
+
+    get isFloatingVisible(): boolean {
+        return appState.workspaceState.hasErrorNode(this.id) || !this.#collapsed || appState.workspaceState.layout.showCollapsedNodes;
+    }
 
     constructor(comfyNode: ComfyNode, app: ComfyApp) {
         this.#comfyNode = comfyNode;
@@ -348,10 +354,14 @@ export class ComfyGridNode {
     }
 
     updateWidgets(app: ComfyApp) {
+        this.#showAdvanced = Boolean(this.#comfyNode.showAdvanced);
+        this.#alwaysShowAdvanced = app?.ui?.settings?.getSettingValue?.('Comfy.Node.AlwaysShowAdvancedWidgets') === true;
         const unusedWidgets = [...this.#widgets];
         const newWidgets: ComfyGridWidget[] = [];
         const configs = this.#buildWidgetConfigList();
         for (const config of configs) {
+            // Preserve config indices used by saved layouts and widget values.
+            if (config.widget.hidden) continue;
             const targetType = config.overrides?.type ?? config.widget.type;
             const existingIdx = unusedWidgets.findIndex((w) => w.comfyWidget === config.widget && w.type === targetType);
             if (existingIdx !== -1) {
@@ -385,6 +395,12 @@ export class ComfyGridNode {
     }
     get collapsed() {
         return this.#collapsed;
+    }
+    get showAdvanced() {
+        return this.#showAdvanced || this.#alwaysShowAdvanced;
+    }
+    get alwaysShowAdvanced() {
+        return this.#alwaysShowAdvanced;
     }
     get hasOutputNode() {
         return this.#comfyNode.constructor.nodeData?.output_node;
@@ -425,8 +441,12 @@ export class ComfyGridNode {
         this.#comfyNode.title = title;
     }
     set collapsed(collapsed: boolean) {
+        this.#comfyNode.flags.collapsed = collapsed;
         this.#collapsed = collapsed;
-        this.#comfyNode.collapsed = collapsed;
+    }
+    set showAdvanced(showAdvanced: boolean) {
+        this.#comfyNode.showAdvanced = showAdvanced;
+        this.#showAdvanced = showAdvanced;
     }
     set mode(mode: ComfyNodeMode) {
         this.#mode = mode;
@@ -486,8 +506,9 @@ export class ComfyGridWidget<V = string, O = undefined> {
     #label: string | undefined = $state();
     #name: string = $state();
     #type: string = $state();
+    #advanced: boolean = $state(false);
     #value: V = $state();
-    #rawValue: string = $state();
+    #rawValue: string | undefined = $state();
     #image: ImageInfo = $state({ filename: '', subfolder: '', type: '' });
     #element: HTMLElement | null = $state();
     #input: { id: string; slot: string } | null = $state();
@@ -535,6 +556,9 @@ export class ComfyGridWidget<V = string, O = undefined> {
     }
     get type() {
         return this.#type;
+    }
+    get advanced() {
+        return this.#advanced;
     }
     get value() {
         return this.#value;
@@ -593,6 +617,27 @@ export class ComfyGridWidget<V = string, O = undefined> {
     }
     set rawValue(rawValue: string | undefined) {
         this.#rawValue = rawValue;
+        if (this.#type === 'customtext' && appState.workspaceState.layout.isTranslateWidget(this.id)) {
+            this.#rawValue = rawValue ?? '';
+            this.#saveRawDraft();
+        }
+    }
+
+    #saveRawDraft() {
+        const properties = this.#node.comfyNode.properties;
+        properties.rawDraftValues ??= {};
+        properties.rawDraftValues[this.#index] = this.#rawValue ?? '';
+    }
+
+    initializeRawValue() {
+        if (this.#type === 'customtext' && (this.#rawValue == null || this.#rawValue === '')) {
+            this.rawValue = (this.#value as string) ?? '';
+        }
+    }
+
+    invalidateTranslation() {
+        this.#isDirty = true;
+        if (this.#type === 'customtext' && this.#rawValue != null) this.#saveRawDraft();
     }
     set image(image: ImageInfo) {
         this.#image = { filename: '', subfolder: '', type: '', ...image };
@@ -624,8 +669,11 @@ export class ComfyGridWidget<V = string, O = undefined> {
         this.#label = this.#comfyWidget.label;
         this.#name = this.#comfyWidget.name;
         this.#type = overrides?.type ?? this.#comfyWidget.type;
+        this.#advanced = this.#comfyWidget.options?.advanced ?? this.#comfyWidget.advanced ?? false;
         this.#value = (typeof this.#comfyWidget.value === 'object' ? safeClone(this.#comfyWidget.value) : this.#comfyWidget.value) as V;
-        this.#rawValue = this.#node.comfyNode.properties.rawValues?.[this.#index] ?? this.#value;
+        const draft = this.#type === 'customtext' ? this.#node.comfyNode.properties.rawDraftValues?.[this.#index] : undefined;
+        this.#rawValue = draft ?? this.#node.comfyNode.properties.rawValues?.[this.#index] ?? (this.#type === 'customtext' ? undefined : this.#value);
+        if (draft !== undefined) this.#isDirty = true;
         this.#image = image ? { filename: '', subfolder: '', type: '', ...image } : { filename: '', subfolder: '', type: '' };
         this.#element = this.#comfyWidget.inputEl || this.#comfyWidget.element || null;
         this.#input = input;
@@ -677,6 +725,10 @@ export class ComfyGridWidget<V = string, O = undefined> {
 
     updateRawValue(payload?: { rawValue?: V }) {
         const rawValue = payload?.rawValue;
+        const drafts = this.#node.comfyNode.properties.rawDraftValues;
+        if (drafts && (rawValue === undefined || drafts[this.#index] === rawValue)) {
+            delete drafts[this.#index];
+        }
 
         if (rawValue === undefined) {
             if (this.#node.comfyNode.properties.rawValues) {

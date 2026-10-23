@@ -1,6 +1,9 @@
 <script lang="ts">
   import { FolderPlus, PencilLine, Play, Star, Trash2 } from '@lucide/svelte';
+  import { ContextMenu } from 'bits-ui';
+  import MenuItems from '@/components/common/MenuItems.svelte';
   import { workflowState } from '@/states/workflow-state.svelte';
+  import type { MenuEntry } from '@/types/menu';
   import type { WorkflowItem } from '@/types/workflow';
 
   let {
@@ -61,83 +64,77 @@
     }
     onClose();
   }
+
+  const anchor = $derived.by(() => {
+    const left = x,
+      top = y;
+    return { getBoundingClientRect: () => new DOMRect(left, top, 0, 0) };
+  });
+  const items = $derived.by((): MenuEntry[] => {
+    const items: MenuEntry[] = [];
+    if (item?.type === 'file') {
+      items.push({
+        id: 'load',
+        kind: 'action',
+        label: 'Load to Canvas',
+        icon: Play,
+        onSelect: handleLoad,
+      });
+      items.push({
+        id: 'favorite',
+        kind: 'action',
+        label: item.is_favorite ? 'Remove Favorite' : 'Add to Favorites',
+        icon: Star,
+        onSelect: handleToggleFavorite,
+      });
+    } else
+      items.push({
+        id: 'folder',
+        kind: 'action',
+        label: 'New Folder',
+        icon: FolderPlus,
+        onSelect: handleCreateFolder,
+      });
+    if (item && item.path !== '')
+      items.push(
+        { id: 'rename-separator', kind: 'separator' },
+        {
+          id: 'rename',
+          kind: 'action',
+          label: 'Rename',
+          icon: PencilLine,
+          onSelect: handleStartRename,
+        },
+        { id: 'delete-separator', kind: 'separator' },
+        {
+          id: 'delete',
+          kind: 'action',
+          label: 'Delete',
+          icon: Trash2,
+          danger: true,
+          onSelect: handleDelete,
+        },
+      );
+    return items;
+  });
 </script>
 
-<!-- Backdrop to capture clicks outside the menu -->
-<!-- svelte-ignore a11y_no_static_element_interactions -->
-<!-- svelte-ignore a11y_click_events_have_key_events -->
-<div
-  class="position-fixed top-0 start-0 w-100 h-100"
-  style="z-index: 1050;"
-  onclick={onClose}
-  oncontextmenu={(e) => {
-    e.preventDefault();
-    onClose();
+<ContextMenu.Root
+  open={true}
+  onOpenChange={(open) => {
+    if (!open) onClose();
   }}
-></div>
-
-<!-- svelte-ignore a11y_no_static_element_interactions -->
-<!-- svelte-ignore a11y_click_events_have_key_events -->
-<div
-  class="dropdown-menu show position-fixed shadow py-1"
-  style:left={`${x}px`}
-  style:top={`${y}px`}
-  style="z-index: 1051; min-width: 170px;"
-  onclick={(e) => e.stopPropagation()}
-  oncontextmenu={(e) => e.stopPropagation()}
 >
-  {#if item}
-    {#if item.type === 'file'}
-      <button class="dropdown-item d-flex align-items-center gap-2 py-1 fs-6" onclick={handleLoad}>
-        <Play size={14} />
-        <span>Load to Canvas</span>
-      </button>
-      <button
-        class="dropdown-item d-flex align-items-center gap-2 py-1 fs-6"
-        onclick={handleToggleFavorite}
-      >
-        <Star
-          size={14}
-          class={item.is_favorite ? 'text-warning' : ''}
-          fill={item.is_favorite ? 'currentColor' : 'none'}
-        />
-        <span>{item.is_favorite ? 'Remove Favorite' : 'Add to Favorites'}</span>
-      </button>
-    {:else}
-      <button
-        class="dropdown-item d-flex align-items-center gap-2 py-1 fs-6"
-        onclick={handleCreateFolder}
-      >
-        <FolderPlus size={14} />
-        <span>New Folder</span>
-      </button>
-    {/if}
-
-    {#if item.path !== ''}
-      <div class="dropdown-divider my-1"></div>
-      <button
-        class="dropdown-item d-flex align-items-center gap-2 py-1 fs-6"
-        onclick={handleStartRename}
-      >
-        <PencilLine size={14} />
-        <span>Rename</span>
-      </button>
-      <div class="dropdown-divider my-1"></div>
-      <button
-        class="dropdown-item d-flex align-items-center gap-2 py-1 fs-6 text-danger"
-        onclick={handleDelete}
-      >
-        <Trash2 size={14} />
-        <span>Delete</span>
-      </button>
-    {/if}
-  {:else}
-    <button
-      class="dropdown-item d-flex align-items-center gap-2 py-1 fs-6"
-      onclick={handleCreateFolder}
+  <ContextMenu.Portal>
+    <ContextMenu.Content
+      class="dropdown-menu show cg-menu"
+      customAnchor={anchor}
+      side="bottom"
+      align="start"
+      collisionPadding={8}
+      preventScroll={false}
     >
-      <FolderPlus size={14} />
-      <span>New Folder</span>
-    </button>
-  {/if}
-</div>
+      <MenuItems {items} context />
+    </ContextMenu.Content>
+  </ContextMenu.Portal>
+</ContextMenu.Root>

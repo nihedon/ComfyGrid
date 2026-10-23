@@ -15,13 +15,23 @@ import { mediaProcessor } from './media-processor';
  *
  * **When `executionState` progress is reset (`handleTaskFinished`):** the server reports an empty
  * queue (`handleStatus`), or the last tracked job completes while the queue is empty
- * (`handleExecutionSuccess`), or a new prompt is queued after no jobs were active
- * (`handlePromptQueued` via {@link GallerySession.beginQueuedPrompt}).
+ * (`handleExecutionSuccess`).
  */
 
 class ExecutionManager {
     #lastQueueRemaining: number = -1;
     #isRestoring = false;
+
+    beginExecutionRequest(): () => void {
+        const shouldClearGallery = gallerySession.beginExecutionRequest();
+        try {
+            if (shouldClearGallery) appState.galleryState.clearViewedJobs();
+        } catch (error) {
+            gallerySession.finishExecutionRequest();
+            throw error;
+        }
+        return () => gallerySession.finishExecutionRequest();
+    }
 
     handleSamplingInfo(payload: { jobId: string; [key: string]: string }) {
         const { jobId, ...metadata } = payload;
@@ -150,6 +160,22 @@ class ExecutionManager {
         gallerySession.trackFinished(jobId);
         this.#removeJob(jobId);
         appState.executionState.progress.status = 'interrupted';
+    }
+
+    handleQueueDeleted(jobIds: string[]) {
+        const executionState = appState.executionState;
+        for (const jobId of jobIds) {
+            // Execution events may arrive before the queue API response.
+            if (jobId === executionState.processingJobId || appState.galleryState.isJobCompleted(jobId)) continue;
+            executionState.deleteQueueJobId(jobId);
+            executionState.progress.deleteNodeSet(jobId);
+            executionState.progress.deleteExecutedNodeSet(jobId);
+            gallerySession.trackFinished(jobId);
+            this.#removeJob(jobId);
+        }
+        if (executionState.queueJobIds.size === 0 && !executionState.processingJobId) {
+            this.handleTaskFinished();
+        }
     }
 
     handleExecuting(payload: { jobId: string; nodeIds: string[]; nodeNames: Record<string, string> }) {

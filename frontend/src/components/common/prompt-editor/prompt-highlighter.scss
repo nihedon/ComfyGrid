@@ -1,0 +1,36 @@
+.cm-prompt-word {
+    color: var(--word-color, inherit) !important;
+    font-weight: normal !important;
+}
+.cm-prompt-bracket {
+    color: var(--prompt-bracket-color, #b91c1c) !important;
+    font-weight: 500 !important;
+}
+.cm-prompt-weight {
+    color: var(--prompt-weight-color, #1d4ed8) !important;
+    font-weight: 500 !important;
+}
+.cm-prompt-comma {
+    color: var(--bs-secondary-color);
+    opacity: 0.7;
+}
+.cm-prompt-escape {
+    color: var(--bs-secondary-color);
+    opacity: 0.6;
+}
+.cm-prompt-duplicate {
+    text-decoration: line-through;
+    text-decoration-thickness: 1.5px;
+    opacity: 0.5;
+}
+.cm-prompt-error {
+    text-decoration: underline var(--bs-danger, #ef4444) 1.5px !important;
+    text-underline-offset: 1px;
+    background-color: rgba(239, 68, 68, 0.12);
+    border-radius: 2px;
+}
+.cm-prompt-trailing-space {
+    background-color: rgba(128, 128, 128, 0.25) !important;
+    display: inline-block;
+    border-radius: 2px !important;
+}

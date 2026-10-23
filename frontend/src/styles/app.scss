@@ -1,6 +1,8 @@
 @use 'bootstrap/dist/css/bootstrap.min.css';
 @use 'gridstack/dist/gridstack.min.css';
 @use 'lucide-static/font/lucide.css';
+@use './menus';
+@use './buttons';
 
 @layer base, utilities, components;
 
@@ -66,6 +68,13 @@
         @extend .align-items-center;
         @extend .justify-content-center;
         @extend .p-1;
+        border-width: 1px 1px 1px 1px !important;
+
+        &.active {
+            --bs-btn-active-color: #fff;
+            --bs-btn-active-bg: var(--bs-primary);
+            --bs-btn-active-border-color: var(--bs-primary);
+        }
     }
     .model-info-icon-btn {
         @extend .position-absolute;
@@ -154,6 +163,17 @@
         }
     }
 
+    .node-widget > .widget-stack:has(> .dom-container.fit-node) {
+        flex: 1 1 0;
+        height: auto !important;
+        min-height: 0;
+        overflow: hidden !important;
+
+        > :not(.dom-container.fit-node) {
+            flex-shrink: 0;
+        }
+    }
+
     .node-widget {
         @extend .card;
         @extend .grid-stack-item-content;
@@ -163,7 +183,7 @@
             scrollbar-width: thin;
         }
 
-        :not(textarea).form-control {
+        :not(textarea, .form-control-color).form-control {
             padding: 0.15rem 0.75rem !important;
         }
 

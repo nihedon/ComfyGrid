@@ -1,7 +1,10 @@
 import { ComfyUiApiHook } from '@/bridge/comfyui-api-hook';
+import { NodeDuplicationError, duplicateNodeAfter } from '@/bridge/node-duplication';
 import { nodeQueueManager } from '@/bridge/node-queue-manager';
+import { executionManager } from '@/managers/execution-manager';
 import { translationManager } from '@/services/translation-service.svelte';
 import type { ComfyGraph, ComfyNode } from '@/types/comfy-model';
+import type { OpenWorkflowInfo, OpenWorkflowSnapshot, WorkflowCapture, WorkflowSaveResult } from '@/types/comfy-workflow';
 import logger from '@/utils/logger';
 import { appState } from './app-state.svelte';
 
@@ -20,12 +23,6 @@ async function waitOnDrawBackgroundAll(graph: ComfyGraph) {
     await new Promise((resolve) => requestAnimationFrame(resolve));
 }
 
-export type WorkflowTabItem = {
-    label: string;
-    tab: HTMLButtonElement;
-    selected: boolean;
-};
-
 export class ComfyUiBridge {
     static #instance: ComfyUiBridge;
 
@@ -40,22 +37,72 @@ export class ComfyUiBridge {
 
     private constructor() {}
 
-    /**
-     * Get list of all workflow tab items in ComfyUI.
-     */
-    getWorkflowTabs(): WorkflowTabItem[] {
-        const doc = appState.comfyUiState.window?.document || appState.comfyUiState.iframe?.contentDocument || document;
-        const buttons = doc.querySelectorAll<HTMLButtonElement>('.workflow-tabs > button');
-        const items: WorkflowTabItem[] = [];
+    getOpenWorkflows(): OpenWorkflowInfo[] {
+        return appState.comfyUiState.app?.comfyGridWorkflows?.listWorkflows() ?? [];
+    }
 
-        buttons.forEach((btn) => {
-            const labelEl = btn.querySelector('.workflow-label');
-            const label = labelEl?.textContent?.trim() || 'Untitled';
-            const selected = btn.classList.contains('p-togglebutton-checked');
-            items.push({ label, tab: btn, selected });
-        });
+    async selectWorkflow(path: string): Promise<void> {
+        const api = appState.comfyUiState.app?.comfyGridWorkflows;
+        if (!api?.selectWorkflow) throw new Error('ComfyGrid workflow extension is unavailable. Restart ComfyUI to update it.');
+        await api.selectWorkflow(path);
+    }
 
-        return items;
+    async saveWorkflow(promptName: (defaultName: string) => string | null): Promise<WorkflowSaveResult | null> {
+        const api = appState.comfyUiState.app?.comfyGridWorkflows;
+        if (!api?.saveWorkflow) throw new Error('ComfyGrid workflow extension is unavailable. Restart ComfyUI to update it.');
+        return api.saveWorkflow(promptName);
+    }
+
+    async getOpenWorkflowSnapshots(paths?: string[]): Promise<OpenWorkflowSnapshot[]> {
+        const api = appState.comfyUiState.app?.comfyGridWorkflows;
+        if (!api) throw new Error('ComfyGrid workflow extension is unavailable. Restart ComfyUI to update it.');
+        return api.getWorkflows(paths);
+    }
+
+    getWorkflowCapture(path: string): WorkflowCapture | null {
+        return appState.comfyUiState.app?.comfyGridWorkflows?.getWorkflowCapture(path) ?? null;
+    }
+
+    captureWorkflow(path?: string): WorkflowCapture | null {
+        return appState.comfyUiState.app?.comfyGridWorkflows?.captureWorkflow(path) ?? null;
+    }
+
+    duplicateNode(payload: { nodeId: string }): ComfyNode {
+        const source = appState.workspaceState.getRealNode(payload.nodeId)?.comfyNode;
+        if (!source) throw new NodeDuplicationError('unavailable');
+        return duplicateNodeAfter(source);
+    }
+
+    toggleNodeCollapsed(payload: { nodeId: string }): void {
+        const node = appState.workspaceState.getRealNode(payload.nodeId);
+        const source = node?.comfyNode;
+        const graph = source?.graph;
+        if (!node || !source || !graph || graph.getNodeById(source.id) !== source) throw new Error('Node is no longer available');
+        graph.beforeChange(source);
+        try {
+            source.collapse(false);
+            node.collapsed = Boolean(source.flags.collapsed ?? source.collapsed);
+        } finally {
+            graph.afterChange(source);
+            graph.setDirtyCanvas(true, true);
+        }
+    }
+
+    deleteNode(payload: { nodeId: string }): void {
+        const source = appState.workspaceState.getRealNode(payload.nodeId)?.comfyNode;
+        const graph = source?.graph;
+        if (!source || !graph || graph.getNodeById(source.id) !== source) throw new Error('Node is no longer available');
+        if (source.block_delete || source.ignore_remove) throw new Error('Node cannot be deleted');
+        graph.beforeChange(source);
+        try {
+            // Match ComfyUI's canvas deletion; let the native method decide how to reconnect.
+            source.connectInputToOutput?.();
+            graph.remove(source);
+            if (graph.getNodeById(source.id) === source) throw new Error('Node cannot be deleted');
+        } finally {
+            graph.afterChange(source);
+            graph.setDirtyCanvas(true, true);
+        }
     }
 
     async getWorkflow(): Promise<{
@@ -73,9 +120,8 @@ export class ComfyUiBridge {
             ComfyUiApiHook.hookForWidgetCallback(topNode);
         }
 
-        const tabs = this.getWorkflowTabs();
-        const activeTab = tabs.find((t) => t.selected);
-        const title = activeTab?.label || 'Untitled';
+        const activeWorkflow = this.getOpenWorkflows().find((workflow) => workflow.selected);
+        const title = activeWorkflow?.name || 'Untitled';
 
         return {
             graphId: app.rootGraph.id,
@@ -89,33 +135,41 @@ export class ComfyUiBridge {
      * @param batchCount - Number of batches to queue
      */
     async queuePrompt(batchCount: number): Promise<void> {
-        const isWaiting = translationManager.isTranslating || translationManager.hasPendingTasks;
-        if (isWaiting) {
-            translationManager.incrementPendingQueue(batchCount);
-        }
+        const finishRequest = executionManager.beginExecutionRequest();
+        let signal: AbortSignal | undefined;
+        let isWaiting = false;
         try {
-            await translationManager.waitForAllTranslations();
-            this.#app.queuePrompt(0, batchCount);
+            translationManager.registerPendingTranslations();
+            signal = translationManager.cancellationSignal;
+            isWaiting = translationManager.isTranslating || translationManager.hasPendingTasks;
+            if (isWaiting) translationManager.incrementPendingQueue(batchCount);
+            if (!(await translationManager.waitForAllTranslations(signal)) || signal.aborted) return;
+            await this.#app.queuePrompt(0, batchCount);
         } finally {
-            if (isWaiting) {
+            if (isWaiting && !signal?.aborted) {
                 translationManager.decrementPendingQueue(batchCount);
             }
+            finishRequest();
         }
     }
 
     async nodeQueue(payload: { nodeId: string }): Promise<void> {
-        const isWaiting = translationManager.isTranslating || translationManager.hasPendingTasks;
-        if (isWaiting) {
-            translationManager.incrementPendingQueue(1);
-        }
+        const finishRequest = executionManager.beginExecutionRequest();
+        let signal: AbortSignal | undefined;
+        let isWaiting = false;
         try {
-            await translationManager.waitForAllTranslations();
+            translationManager.registerPendingTranslations();
+            signal = translationManager.cancellationSignal;
+            isWaiting = translationManager.isTranslating || translationManager.hasPendingTasks;
+            if (isWaiting) translationManager.incrementPendingQueue(1);
+            if (!(await translationManager.waitForAllTranslations(signal)) || signal.aborted) return;
             const { nodeId } = payload;
             await nodeQueueManager.queueOutputNodes(this.#app, nodeId);
         } finally {
-            if (isWaiting) {
+            if (isWaiting && !signal?.aborted) {
                 translationManager.decrementPendingQueue(1);
             }
+            finishRequest();
         }
     }
 

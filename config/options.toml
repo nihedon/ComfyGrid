@@ -13,7 +13,7 @@ default = true
 
 [ComfyGrid.ui.node_color]
 type = "radio"
-default = "group"
+default = "none"
 choices = ["none", "node", "group", "node_priority"]
 
 [ComfyGrid.ui.group_tabify]
@@ -21,17 +21,18 @@ type = "dropdown"
 choices = ["none", "all_top_groups"]
 default = "all_top_groups"
 
-[ComfyGrid.ui.common_tab_board]
-type = "checkbox"
-default = true
-
 [ComfyGrid.ui.always_show_node_focus_button]
 type = "checkbox"
-default = false
+default = true
 
 [ComfyGrid.ui.simple_node_mode]
 type = "checkbox"
 default = false
+
+[ComfyGrid.ui.gridstack_background]
+type = "dropdown"
+choices = ["none", "grid", "dots"]
+default = "none"
 
 [ComfyGrid.ui.model_thumbnail_width]
 type = "slider"
@@ -126,6 +127,11 @@ type = "dropdown"
 choices = ["on_generate", "on_blur", "manual"]
 default = "on_generate"
 
+[ComfyGrid.ollama.seed_mode]
+type = "dropdown"
+choices = ["fixed", "random"]
+default = "fixed"
+
 [ComfyGrid.prompt_pilot.enabled]
 type = "checkbox"
 default = true
@@ -208,4 +214,3 @@ default = "score_9, score_8_up, score_8, score_7_up, score_7, score_6_up, score_
 [ComfyGrid.prompt_pilot.always_space_tags]
 type = "textarea"
 default = ""
-

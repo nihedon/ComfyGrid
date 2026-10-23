@@ -12,8 +12,8 @@ interface DialogData {
 class DialogState {
     current = $state<DialogData | null>(null);
 
-    showDialog(payload: { type: DialogType; title: string; message: string; traceback?: string[] }) {
-        if (appState.uiState.activePageId !== 'grid') return;
+    showDialog(payload: { type: DialogType; title: string; message: string; traceback?: string[]; showOutsideGrid?: boolean }) {
+        if (appState.uiState.activePageId !== 'grid' && !payload.showOutsideGrid) return;
         const { type, title, message, traceback } = payload;
         const errorType = type || 'TypeError';
         const errorTitle = title || 'Execution failed';
@@ -21,9 +21,8 @@ class DialogState {
         this.current = { type: errorType, title: errorTitle, message: errorMessage, traceback: traceback ?? [] };
     }
 
-    showErrorDialog(payload: { title: string; message: string; traceback?: string[] }) {
-        const { title, message, traceback } = payload;
-        this.showDialog({ type: 'TypeError', title: title, message: message, traceback: traceback ?? [] });
+    showErrorDialog(payload: { title: string; message: string; traceback?: string[]; showOutsideGrid?: boolean }) {
+        this.showDialog({ ...payload, type: 'TypeError' });
     }
 
     showFatalDialog(payload: { title: string; message: string; traceback?: string[] }) {

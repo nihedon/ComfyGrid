@@ -1,9 +1,7 @@
 <script lang="ts">
-  import { t } from '@/i18n/i18n';
+  import { fetchModelDetails } from '@/services/models-service';
   import { appState } from '@/states/app-state.svelte';
-  import type { ComfyGridGroup, ComfyGridNode } from '@/states/model-state.svelte';
   import type { Model } from '@/states/storage-state.svelte';
-  import { toastState } from '@/states/toast-state.svelte';
   import InnerTab from '../common/InnerTab.svelte';
   import InnerTabContainer from '../common/InnerTabContainer.svelte';
   import ModelList from '../common/ModelList.svelte';
@@ -16,7 +14,6 @@
   };
 
   const uiState = appState.uiState;
-  const workspaceState = appState.workspaceState;
 
   let activeTabId: string = $state('workflows');
 
@@ -27,77 +24,30 @@
     models: {
       title: 'Models',
       subdirs: ['checkpoints', 'unet', 'diffusion_models'],
-      action: () => {},
+      action: (model: Model) => showDescription(model, ['checkpoints', 'unet', 'diffusion_models']),
     },
     loras: {
       title: 'LoRAs',
       subdirs: ['loras'],
-      action: (model: Model) => appendModelTagToPrompt('lora', model),
+      action: (model: Model) => showDescription(model, ['loras']),
     },
     embeddings: {
       title: 'Embeddings',
       subdirs: ['embeddings'],
-      action: appendKeywordToPrompt,
+      action: (model: Model) => showDescription(model, ['embeddings']),
     },
     hypernetworks: {
       title: 'Hypernetworks',
       subdirs: ['hypernetworks'],
-      action: (model: Model) => appendModelTagToPrompt('hypernet', model),
+      action: (model: Model) => showDescription(model, ['hypernetworks']),
     },
   };
 
   const activeTab = $derived(tabs[activeTabId]);
 
-  function collectAllNodes(groups: readonly ComfyGridGroup[]): ComfyGridNode[] {
-    return groups.flatMap((g) => [...g.nodes, ...collectAllNodes(g.children)]);
-  }
-
-  const positivePromptWidget = $derived.by(() => {
-    return collectAllNodes(workspaceState.groups)
-      .flatMap((n) => n.widgets)
-      .find((w) => w.id === workspaceState.layout.positivePromptWidgetId);
-  });
-
-  function appendKeywordToPrompt(model: Model) {
-    const widget = positivePromptWidget;
-    if (!widget) {
-      alert($t('alert_no_positive_prompt_selected'));
-      return;
-    }
-    const name = model.name;
-    const current = String(widget.value ?? '').trim();
-    widget.value = current ? `${current}, embedding:${name}` : `embedding:${name}`;
-    widget.updateValue({ value: widget.value });
-    toastState.addToast({
-      type: 'success',
-      message: $t('toast.append_embedding_tag_to_positive_prompt'),
-    });
-  }
-
-  function appendModelTagToPrompt(tag: string, model: Model) {
-    const widget = positivePromptWidget;
-    if (!widget) {
-      alert($t('alert_no_positive_prompt_selected'));
-      return;
-    }
-    const normalizedPath = model.path.replaceAll('\\', '/');
-    const modelTag = normalizedPath.replace(/\.[^/.]+$/, '');
-    const current = String(widget.value ?? '').trim();
-    const tagText = `<${tag}:${modelTag}:1.0>`;
-    widget.value = current ? `${current} ${tagText}` : tagText;
-    widget.updateValue({ value: widget.value });
-
-    if (tag === 'lora') {
-      toastState.addToast({
-        type: 'success',
-        message: $t('toast.append_lora_tag_to_positive_prompt'),
-      });
-    } else {
-      toastState.addToast({
-        type: 'success',
-        message: $t('toast.append_hypernetwork_tag_to_positive_prompt'),
-      });
-    }
+  async function showDescription(model: Model, subdirs: string[]) {
+    await fetchModelDetails(model);
+    appState.descriptionModalState.show(model, subdirs);
   }
 </script>
 

@@ -2,10 +2,12 @@ import type { Model } from '@/states/storage-state.svelte';
 import type { Job } from '@/types/job';
 import type { ExtensionManifest } from '@/types/manifest';
 import type { ImageInfo } from '@/types/model-shared';
-import type { SetupConfig } from '@/types/setup';
+import type { SetupConfig, WorkspaceInfo } from '@/types/setup';
 import type { Version } from '@/types/verion';
 import type { WorkflowListResponse } from '@/types/workflow';
 import logger from '@/utils/logger';
+
+const TRANSLATION_TIMEOUT_MS = 125_000;
 
 type ApiResult = {
     ok: boolean;
@@ -24,16 +26,19 @@ type ApiResultBlob = ApiResult & {
     blob: Blob;
 };
 
-async function fetchApiJson<T = unknown>(url: string, options: RequestInit = {}): Promise<ApiResultJson<T>> {
+async function fetchApiJson<T = unknown>(url: string, options: RequestInit = {}, readErrorBody = false): Promise<ApiResultJson<T>> {
     try {
         const res = await fetch(url, options);
         if (res.ok) {
             const json = await res.json().catch(() => ({}) as T);
             return { ok: true, status: res.status, json };
         }
-        return { ok: false, status: res.status, json: {} as T };
+        const json = readErrorBody ? await res.json().catch(() => ({}) as T) : ({} as T);
+        return { ok: false, status: res.status, json };
     } catch (e) {
+        if (options.signal?.aborted) throw e;
         logger.error(url, e);
+        if (readErrorBody) throw e;
         return { ok: false, status: 500, json: {} as T };
     }
 }
@@ -69,7 +74,7 @@ class ComfyGridApiClient {
         return await fetchApiJson('/comfygrid/api/restart', { method: 'POST' });
     }
 
-    async getSetupStatus(): Promise<ApiResultJson<{ mode: string }>> {
+    async getSetupStatus(): Promise<ApiResultJson<{ mode: 'launch' | 'connect' | null; launched: boolean }>> {
         return await fetchApiJson('/comfygrid/api/setup/status');
     }
 
@@ -81,13 +86,31 @@ class ComfyGridApiClient {
         return await fetchApiJson('/comfygrid/api/version_info');
     }
 
-    async postImageInfo(file: File): Promise<ApiResultJson<{ metadata?: string; prompt?: string; workflow?: string; comfygrid?: string }>> {
+    async postImageInfo(file: File): Promise<ApiResultJson<{ metadata?: string; prompt?: string; workflow?: string; comfygrid?: string } | null>> {
         const formData = new FormData();
         formData.append('file', file);
         return await fetchApiJson('/comfygrid/api/image_info', {
             method: 'POST',
             body: formData,
         });
+    }
+
+    async fetchWorkflowUrl(url: string): Promise<ApiResult & { file?: File }> {
+        try {
+            const response = await fetch('/comfygrid/api/workflow/import-url', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ url }),
+                signal: AbortSignal.timeout(40_000),
+            });
+            if (!response.ok) return { ok: false, status: response.status };
+            const filename = decodeURIComponent(response.headers.get('X-ComfyGrid-Filename') ?? 'workflow.json');
+            const blob = await response.blob();
+            return { ok: true, status: response.status, file: new File([blob], filename, { type: blob.type }) };
+        } catch (error) {
+            logger.error('Failed to fetch remote workflow:', error);
+            return { ok: false, status: 0 };
+        }
     }
 
     private encodePath(path: string): string {
@@ -135,16 +158,36 @@ class ComfyGridApiClient {
         });
     }
 
-    async getSetupConfig(): Promise<ApiResultJson<SetupConfig>> {
-        return await fetchApiJson('/comfygrid/api/setup/config');
+    async getSetupConfig(signal?: AbortSignal): Promise<ApiResultJson<SetupConfig>> {
+        return await fetchApiJson('/comfygrid/api/setup/config', { signal });
+    }
+
+    async saveSetupProfile(profile: WorkspaceInfo, id?: string): Promise<ApiResultJson<WorkspaceInfo & { error?: string; detail?: unknown }>> {
+        return await fetchApiJson(
+            `/comfygrid/api/setup/profiles${id ? `/${encodeURIComponent(id)}` : ''}`,
+            {
+                method: id ? 'PUT' : 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(profile),
+            },
+            true,
+        );
+    }
+
+    async deleteSetupProfile(id: string): Promise<ApiResultJson<{ error?: string }>> {
+        return await fetchApiJson(`/comfygrid/api/setup/profiles/${encodeURIComponent(id)}`, { method: 'DELETE' }, true);
     }
 
     async postSetupLaunch(body: string): Promise<ApiResultJson<{ error: string }>> {
-        return await fetchApiJson('/comfygrid/api/setup/launch', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body,
-        });
+        return await fetchApiJson(
+            '/comfygrid/api/setup/launch',
+            {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body,
+            },
+            true,
+        );
     }
 
     async getUpdateCheck(): Promise<
@@ -281,12 +324,18 @@ class ComfyGridApiClient {
         });
     }
 
+    async postPaintData(image: Blob, signal?: AbortSignal): Promise<ApiResultJson<{ image: string; mask: string; error?: string }>> {
+        const formData = new FormData();
+        formData.append('file', image, 'paint-image');
+        return await fetchApiJson('/comfygrid/api/paint_data', { method: 'POST', body: formData, signal }, true);
+    }
+
     async postApplyMask(payload: {
         file: { blob: Blob; filename: string };
         mask: { blob: Blob; filename: string };
         filename: string;
         subfolder: string;
-    }): Promise<ApiResultJson<{ message: string }>> {
+    }): Promise<ApiResultJson<{ message: string; error?: string }>> {
         // Create FormData
         const { file, mask, filename, subfolder } = payload;
         const formData = new FormData();
@@ -295,10 +344,14 @@ class ComfyGridApiClient {
         formData.append('filename', filename);
         formData.append('subfolder', subfolder);
 
-        return await fetchApiJson('/comfygrid/api/apply_mask', {
-            method: 'POST',
-            body: formData,
-        });
+        return await fetchApiJson(
+            '/comfygrid/api/apply_mask',
+            {
+                method: 'POST',
+                body: formData,
+            },
+            true,
+        );
     }
 
     async getExtensionResources(): Promise<ApiResultJson<Array<string>>> {
@@ -338,16 +391,47 @@ class ComfyGridApiClient {
         return await fetchApiJson('/comfygrid/api/pages');
     }
 
-    async getLlmStatus(): Promise<ApiResultJson<{ available: boolean; models: string[] }>> {
-        return await fetchApiJson('/comfygrid/api/llm/status');
+    async getLlmStatus(): Promise<ApiResultJson<{ available: boolean; models: string[]; model_sizes?: Record<string, number | null>; detail?: string }>> {
+        return await fetchApiJson('/comfygrid/api/llm/status', {}, true);
     }
 
-    async translate(model: string, text: string, system?: string): Promise<ApiResultJson<{ ok: boolean; translated_text: string }>> {
-        return await fetchApiJson('/comfygrid/api/llm/translate', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ model, text, system }),
-        });
+    async translate(
+        model: string,
+        text: string,
+        system?: string,
+        signal?: AbortSignal,
+        seedMode?: 'fixed' | 'random',
+    ): Promise<ApiResultJson<{ ok?: boolean; translated_text?: string; detail?: unknown }>> {
+        const controller = new AbortController();
+        const cancel = () => controller.abort(signal?.reason);
+        if (signal?.aborted) cancel();
+        else signal?.addEventListener('abort', cancel, { once: true });
+        const timeout = setTimeout(() => controller.abort(new DOMException('Translation request timed out.', 'TimeoutError')), TRANSLATION_TIMEOUT_MS);
+        let rejectOnAbort: (() => void) | undefined;
+        try {
+            if (controller.signal.aborted) throw controller.signal.reason;
+            const cancelled = new Promise<never>((_, reject) => {
+                rejectOnAbort = () => reject(controller.signal.reason);
+                controller.signal.addEventListener('abort', rejectOnAbort, { once: true });
+            });
+            return await Promise.race([
+                fetchApiJson<{ ok?: boolean; translated_text?: string; detail?: unknown }>(
+                    '/comfygrid/api/llm/translate',
+                    {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ model, text, system, seed_mode: seedMode }),
+                        signal: controller.signal,
+                    },
+                    true,
+                ),
+                cancelled,
+            ]);
+        } finally {
+            clearTimeout(timeout);
+            signal?.removeEventListener('abort', cancel);
+            if (rejectOnAbort) controller.signal.removeEventListener('abort', rejectOnAbort);
+        }
     }
 }
 
