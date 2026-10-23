@@ -1,5 +1,5 @@
 [ffmpeg]
-url = "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip"
+url = "https://github.com/GyanD/codexffmpeg/releases/download/2026-10-22-git-bf0e831606/ffmpeg-2026-10-22-git-bf0e831606-essentials_build.zip"
 bin_dir = "bin/ffmpeg"
 
 [caddy]
