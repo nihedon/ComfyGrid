@@ -162,6 +162,16 @@
             {/if}
           {/if}
           {#if widget || (isTextareaOnly && !node.isNote)}
+            {#if alwaysShowFocusButton}
+              <button
+                type="button"
+                class="btn btn-xs btn-icon btn-secondary"
+                title={$t('node.focus')}
+                onclick={focusNodeInComfyUI}
+              >
+                <Locate size={12} />
+              </button>
+            {/if}
             <TextareaCategory widget={widget ?? node.widgets[0]} />
           {/if}
         </div>
