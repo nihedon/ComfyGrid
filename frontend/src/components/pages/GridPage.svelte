@@ -181,7 +181,7 @@
 
 <style lang="scss">
   hr {
-    margin: 0.5rem 0;
+    margin: 0.5rem 0 0.75rem 0;
     &.no-border {
       border: none;
       margin: 0.25rem 0;

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import type { Snippet } from 'svelte';
   import { CircleDot } from '@lucide/svelte';
   import { appState } from '@/states/app-state.svelte';
   import { ComfyGridGroup, ComfyGridNode } from '@/states/model-state.svelte';
@@ -12,11 +13,13 @@
     columnCount,
     depth = 0,
     alwaysExpanded = false,
+    leadingContent,
   }: {
     group: ComfyGridGroup;
     columnCount: number;
     depth?: number;
     alwaysExpanded?: boolean;
+    leadingContent?: Snippet;
   } = $props();
 
   const workspaceState = appState.workspaceState;
@@ -158,6 +161,7 @@
     </h2>
   {/if}
   {#snippet contents()}
+    {@render leadingContent?.()}
     {#if masonryNodes.length > 0}
       <div class="masonry-grid" style:column-count={columnCount}>
         {#each masonryNodes as node (node.id)}

@@ -33,16 +33,25 @@
   );
 </script>
 
+{#snippet tabBoard()}
+  <div>
+    <GridStackBoard boardId="Tab" groupId={effectiveGroupId} />
+    <hr />
+  </div>
+{/snippet}
+
 <div bind:clientWidth={containerWidth}>
-  {#if showBoard}
-    <div class="mb-1 px-1">
-      <GridStackBoard boardId="Tab" groupId={effectiveGroupId}></GridStackBoard>
-    </div>
+  {#if showBoard && !group}
+    {@render tabBoard()}
   {/if}
   <div class="vstack gap-2">
     {#each sortedGroups as g (g.id)}
       {#snippet widgetGroup()}
-        <NodeWidgetGroup group={g} {columnCount} alwaysExpanded={!g.id || group !== undefined}
+        <NodeWidgetGroup
+          group={g}
+          {columnCount}
+          alwaysExpanded={!g.id || group !== undefined}
+          leadingContent={group && showBoard ? tabBoard : undefined}
         ></NodeWidgetGroup>
       {/snippet}
       {#if !group}
@@ -55,3 +64,9 @@
     {/each}
   </div>
 </div>
+
+<style lang="scss">
+  hr {
+    margin: 0.5rem 0 0.25rem 0;
+  }
+</style>
