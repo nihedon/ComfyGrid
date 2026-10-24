@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
   import { CircleDot } from '@lucide/svelte';
+  import StableMasonry from '@/components/common/StableMasonry.svelte';
   import { appState } from '@/states/app-state.svelte';
   import { ComfyGridGroup, ComfyGridNode } from '@/states/model-state.svelte';
   import type { ComfyNodeMode } from '@/types/model-shared';
@@ -163,13 +164,9 @@
   {#snippet contents()}
     {@render leadingContent?.()}
     {#if masonryNodes.length > 0}
-      <div class="masonry-grid" style:column-count={columnCount}>
-        {#each masonryNodes as node (node.id)}
-          <div class="masonry-item">
-            <NodeWidget {node} />
-          </div>
-        {/each}
-      </div>
+      <StableMasonry items={masonryNodes} {columnCount}>
+        {#snippet children(node)}<NodeWidget {node} />{/snippet}
+      </StableMasonry>
     {/if}
     {#if listNodes.length > 0}
       <div class="list-group">
@@ -213,14 +210,5 @@
     &:not(.collapsed) {
       background-color: inherit !important;
     }
-  }
-
-  .masonry-grid {
-    column-gap: 0.5rem;
-  }
-
-  .masonry-item {
-    break-inside: avoid;
-    margin-bottom: 0.5rem;
   }
 </style>

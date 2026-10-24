@@ -17,8 +17,8 @@
 
   const modelDirInfo = $derived.by(() => {
     const name = widget.name.toLowerCase();
-    if (name.includes('unet_name') || name.includes('ckpt_name')) {
-      return { dir: 'models', subdirs: ['checkpoints', 'diffusion_models'] };
+    if (name.includes('unet_name') || name.includes('ckpt_name') || name.includes('gguf_name')) {
+      return { dir: 'models', subdirs: ['checkpoints', 'diffusion_models', 'unet'] };
     } else if (name.includes('vae_name')) {
       return { dir: 'models', subdirs: ['vae'] };
     } else if (name.includes('clip_name')) {
