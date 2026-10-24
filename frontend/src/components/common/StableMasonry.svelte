@@ -17,6 +17,7 @@
   // eslint-disable-next-line svelte/prefer-svelte-reactivity
   const assignments = new Map<string, number>();
   let previousColumns = 0;
+  let previousItems = '';
   let observer: ResizeObserver | undefined;
   let frame: number | undefined;
   // eslint-disable-next-line svelte/prefer-svelte-reactivity
@@ -25,11 +26,13 @@
   function layout() {
     frame = undefined;
     if (!container?.clientWidth) return;
-    if (previousColumns !== columns) {
+    const elements = Array.from(container.children) as HTMLElement[];
+    const itemKey = JSON.stringify(elements.map((element) => element.dataset.masonryId));
+    if (previousColumns !== columns || previousItems !== itemKey) {
       assignments.clear();
       previousColumns = columns;
+      previousItems = itemKey;
     }
-    const elements = Array.from(container.children) as HTMLElement[];
     const ids = new Set(elements.map((element) => element.dataset.masonryId!));
     for (const id of assignments.keys()) if (!ids.has(id)) assignments.delete(id);
     for (const element of observed) {
