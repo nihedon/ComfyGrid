@@ -162,7 +162,7 @@
             {/if}
           {/if}
           {#if widget || (isTextareaOnly && !node.isNote)}
-            {#if alwaysShowFocusButton}
+            {#if widget && (alwaysShowFocusButton || isInvalid)}
               <button
                 type="button"
                 class="btn btn-xs btn-icon btn-secondary"
