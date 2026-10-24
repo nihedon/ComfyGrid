@@ -5,6 +5,7 @@ import { workflowManager } from '@/managers/workflow-manager';
 import { appState } from '@/states/app-state.svelte';
 import type { LayoutType } from '@/types/layout';
 import logger from '@/utils/logger';
+import { getWorkflowLayout } from '@/utils/workflow-layout';
 
 class FileManager {
     isValidDragData(e: DragEvent): boolean {
@@ -51,14 +52,7 @@ class FileManager {
                 return;
             }
 
-            let layout = undefined;
-            if (json.comfygrid) {
-                if (typeof json.comfygrid === 'string') {
-                    layout = JSON.parse(json.comfygrid);
-                } else {
-                    layout = json.comfygrid;
-                }
-            }
+            const layout = getWorkflowLayout(json);
 
             let workflowLoaded = false;
             if (keySize > 1) {
@@ -91,16 +85,7 @@ class FileManager {
             const metadata = res.json;
             let workflowLoaded = false;
 
-            const comfygridData = metadata.comfygrid;
-
-            let layout = undefined;
-            if (comfygridData) {
-                if (typeof comfygridData === 'string') {
-                    layout = JSON.parse(comfygridData);
-                } else {
-                    layout = comfygridData;
-                }
-            }
+            const layout = getWorkflowLayout(metadata.workflow, metadata.comfygrid);
 
             if (metadata.workflow) {
                 try {

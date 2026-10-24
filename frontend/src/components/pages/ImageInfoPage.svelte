@@ -7,6 +7,7 @@
   import { workflowManager } from '@/managers/workflow-manager';
   import { appState } from '@/states/app-state.svelte';
   import logger from '@/utils/logger';
+  import { getWorkflowLayout } from '@/utils/workflow-layout';
 
   const uiState = appState.uiState;
   const toastState = appState.toastState;
@@ -208,12 +209,10 @@
       return;
     }
 
-    const comfygridData = (metadataJson as Record<string, unknown>).comfygrid;
-    const layout = comfygridData
-      ? typeof comfygridData === 'string'
-        ? JSON.parse(comfygridData)
-        : comfygridData
-      : undefined;
+    const layout = getWorkflowLayout(
+      currentWorkflowJson,
+      (metadataJson as Record<string, unknown>).comfygrid,
+    );
 
     const ret = await appState.bridge?.loadWorkflow({
       filename: currentFileName,
