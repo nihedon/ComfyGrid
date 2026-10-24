@@ -9,6 +9,7 @@ import type { BoardId } from '@/types/board';
 import type { FloatingPosition, LayoutType } from '@/types/layout';
 import logger from '@/utils/logger';
 import { waitForDom } from '@/utils/schedule';
+import { getWorkflowLayout } from '@/utils/workflow-layout';
 
 const restoringGrids = new WeakSet<object>();
 
@@ -130,8 +131,9 @@ export function openLayout() {
             try {
                 const fileData = e.target?.result as string;
                 const json = JSON.parse(fileData);
-                if (json.comfygrid) {
-                    await importLayout(JSON.stringify(json.comfygrid));
+                const layout = getWorkflowLayout(json);
+                if (layout) {
+                    await importLayout(JSON.stringify(layout));
                 } else {
                     appState.toastState.addToast({ type: 'warning', message: get(t)('toast.no_layout_found') });
                 }
