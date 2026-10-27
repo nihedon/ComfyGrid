@@ -1,5 +1,12 @@
 <script lang="ts">
-  import { ArrowBigDown, ArrowBigUp, Locate, PictureInPicture, Shrink } from '@lucide/svelte';
+  import {
+    ArrowBigDown,
+    ArrowBigUp,
+    ChevronsLeftRight,
+    Locate,
+    PictureInPicture,
+    Shrink,
+  } from '@lucide/svelte';
   import { t } from '@/i18n/i18n';
   import {
     activateTabForNode,
@@ -207,6 +214,26 @@
       {/if}
       {#if !isTitleEditing}
         <div class="card-header-right">
+          {#if !widget && !isFloating && (isInvalid || (!node.collapsed && node.widgets.length > 0))}
+            {@const isWideNode = workspaceState.layout.isWideNode(node.id)}
+            <button
+              type="button"
+              class="btn btn-xs btn-icon"
+              class:active={isWideNode}
+              aria-pressed={isWideNode}
+              aria-label={$t('node.wide')}
+              title={$t('node.wide')}
+              onclick={() => {
+                workspaceState.layout.setWideNode(
+                  node.id,
+                  !workspaceState.layout.isWideNode(node.id),
+                );
+                saveLayoutObject(workspaceState.layout);
+              }}
+            >
+              <ChevronsLeftRight size={12} />
+            </button>
+          {/if}
           {#if isFloating && hasDomWidget}
             <button
               type="button"

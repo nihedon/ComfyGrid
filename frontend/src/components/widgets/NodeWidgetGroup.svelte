@@ -164,7 +164,11 @@
   {#snippet contents()}
     {@render leadingContent?.()}
     {#if masonryNodes.length > 0}
-      <StableMasonry items={masonryNodes} {columnCount}>
+      <StableMasonry
+        items={masonryNodes}
+        {columnCount}
+        isWide={(node) => workspaceState.layout.isWideNode(node.id)}
+      >
         {#snippet children(node)}<NodeWidget {node} />{/snippet}
       </StableMasonry>
     {/if}

@@ -229,6 +229,7 @@
     "node.show_advanced": "詳細入力を表示",
     "node.fit_dom": "DOMコンテンツをノード内に収める",
     "node.hide_advanced": "詳細入力を非表示",
+    "node.wide": "ワイド表示",
     "node.menu.mode": "モード",
     "node.menu.execute": "このノードを実行",
     "node.menu.text_type": "テキスト種類",

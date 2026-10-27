@@ -229,6 +229,7 @@
     "node.show_advanced": "Show advanced inputs",
     "node.fit_dom": "Fit DOM content to node",
     "node.hide_advanced": "Hide advanced inputs",
+    "node.wide": "Wide view",
     "node.menu.mode": "Mode",
     "node.menu.execute": "Execute this node",
     "node.menu.text_type": "Text type",

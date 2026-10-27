@@ -13,6 +13,7 @@ export class Layout {
     readonly #floatingPositions = new SvelteMap<string, Record<string, FloatingPosition>>();
     readonly #tagWidgetIds = new SvelteSet<string>();
     readonly #fitDomNodeIds = new SvelteSet<string>();
+    readonly #wideNodeIds = new SvelteSet<string>();
     readonly #jsonWidgetIds = new SvelteSet<string>();
     readonly #promptEditorWidgetIds = new SvelteSet<string>();
     readonly #translateWidgetIds = new SvelteSet<string>();
@@ -43,6 +44,13 @@ export class Layout {
     }
     isDomFitNode(nodeId: string): boolean {
         return this.#fitDomNodeIds.has(nodeId);
+    }
+    isWideNode(nodeId: string): boolean {
+        return this.#wideNodeIds.has(nodeId);
+    }
+    setWideNode(nodeId: string, enabled: boolean) {
+        if (enabled) this.#wideNodeIds.add(nodeId);
+        else this.#wideNodeIds.delete(nodeId);
     }
     setDomFitNode(nodeId: string, enabled: boolean) {
         if (enabled) this.#fitDomNodeIds.add(nodeId);
@@ -229,6 +237,9 @@ export class Layout {
             for (const id of this.#fitDomNodeIds) {
                 if (!validNodeIds.has(id)) this.#fitDomNodeIds.delete(id);
             }
+            for (const id of this.#wideNodeIds) {
+                if (!validNodeIds.has(id)) this.#wideNodeIds.delete(id);
+            }
             for (const key of Array.from(this.#floatingWidgets.keys())) {
                 if (!validWidgetIds.has(key)) this.#floatingWidgets.delete(key);
             }
@@ -263,6 +274,7 @@ export class Layout {
         const exported = {
             graphId: this.#graphId,
             fitDomNodeIds: [...this.#fitDomNodeIds],
+            wideNodeIds: [...this.#wideNodeIds],
             floatingPositions: allBoardLayouts,
             floatingNodes: Object.fromEntries(Array.from(this.#floatingNodes.entries()).filter(([, boardId]) => Boolean(boardId))),
             floatingWidgets: Object.fromEntries(Array.from(this.#floatingWidgets.entries()).filter(([, boardId]) => Boolean(boardId))),
@@ -287,6 +299,8 @@ export class Layout {
     import(layout: LayoutType & { codeMirrorWidgetIds?: string[] }) {
         logger.trace('[LAYOUT_LOG] Layout.import payload:', layout);
         this.#graphId = layout.graphId;
+        this.#wideNodeIds.clear();
+        for (const id of layout.wideNodeIds ?? []) this.#wideNodeIds.add(id);
         this.#fitDomNodeIds.clear();
         for (const id of layout.fitDomNodeIds ?? []) this.#fitDomNodeIds.add(id);
         this.#floatingNodes.clear();

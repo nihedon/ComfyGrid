@@ -15,6 +15,7 @@ export type LayoutType = {
     floatingWidgets: Record<string, BoardId>;
     floatingPositions: Record<string, Record<string, FloatingPosition>>;
     fitDomNodeIds?: string[];
+    wideNodeIds?: string[];
     tagWidgetIds?: string[];
     jsonWidgetIds?: string[];
     promptEditorWidgetIds?: string[];

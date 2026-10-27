@@ -5,10 +5,12 @@
     items,
     columnCount,
     children,
+    isWide = () => false,
   }: {
     items: readonly T[];
     columnCount: number;
     children: Snippet<[T]>;
+    isWide?: (item: T) => boolean;
   } = $props();
   let container: HTMLDivElement;
   const columns = $derived(Math.max(1, Math.floor(columnCount) || 1));
@@ -27,7 +29,9 @@
     frame = undefined;
     if (!container?.clientWidth) return;
     const elements = Array.from(container.children) as HTMLElement[];
-    const itemKey = JSON.stringify(elements.map((element) => element.dataset.masonryId));
+    const itemKey = JSON.stringify(
+      elements.map((element) => [element.dataset.masonryId, element.dataset.masonryWide]),
+    );
     if (previousColumns !== columns || previousItems !== itemKey) {
       assignments.clear();
       previousColumns = columns;
@@ -49,6 +53,17 @@
     );
     for (const element of elements) {
       const id = element.dataset.masonryId!;
+      if (element.dataset.masonryWide === 'true') {
+        const top = Math.max(...heights);
+        element.style.left = '0px';
+        element.style.top = `${top}px`;
+        heights.fill(top + itemHeights.get(element)! + gap);
+        if (!observed.has(element)) {
+          observer?.observe(element);
+          observed.add(element);
+        }
+        continue;
+      }
       let column = assignments.get(id);
       if (column === undefined) {
         const shortest = Math.min(...heights);
@@ -73,7 +88,7 @@
   $effect(() => {
     void columns;
     // Heights are observed separately: changes must not reset column assignments.
-    items.map((item) => item.id);
+    items.map((item) => [item.id, isWide(item)]);
     schedule();
   });
 
@@ -90,7 +105,12 @@
 
 <div class="masonry-grid" bind:this={container} style:--masonry-columns={columns}>
   {#each items as item (item.id)}
-    <div class="masonry-item" data-masonry-id={item.id}>
+    <div
+      class="masonry-item"
+      class:wide={isWide(item)}
+      data-masonry-id={item.id}
+      data-masonry-wide={isWide(item)}
+    >
       {@render children(item)}
     </div>
   {/each}
@@ -109,5 +129,8 @@
     min-width: 0;
     display: flow-root;
     width: calc((100% - (var(--masonry-columns) - 1) * 0.5rem) / var(--masonry-columns));
+  }
+  .masonry-item.wide {
+    width: 100%;
   }
 </style>
