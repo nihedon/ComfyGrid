@@ -186,6 +186,8 @@
     "opts.ComfyGrid.prompt_pilot.word_coloring.choice.word": "By Word",
     "opts.ComfyGrid.prompt_pilot.word_coloring.choice.category": "By Dictionary Category",
     "opts.ComfyGrid.prompt_pilot.tag_delimiter.label": "Tag Word Delimiter",
+    "opts.ComfyGrid.prompt_pilot.append_comma.label": "Append a comma after tag completion",
+    "opts.ComfyGrid.prompt_pilot.append_comma.hint": "Automatically append a comma when completing a tag. Existing commas are reused. Does not apply to LoRA completion.",
     "opts.ComfyGrid.prompt_pilot.tag_delimiter.hint": "Specifies whether multi-word tags use spaces ('blue eyes') or underscores ('blue_eyes'). Tags in prompt are separated by commas.",
     "opts.ComfyGrid.prompt_pilot.tag_delimiter.choice.auto": "Auto (detect from input)",
     "opts.ComfyGrid.prompt_pilot.tag_delimiter.choice.space": "Space (blue eyes)",

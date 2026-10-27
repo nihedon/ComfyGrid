@@ -18,6 +18,7 @@ import { ensurePromptPilotModelsLoaded, getActiveTagSource } from './services/lo
 import { searchLora } from './services/lora-service';
 import { fetchTagsFromDanbooruApi, getTagModel, searchTag } from './services/tag-service';
 import './styles/completion.scss';
+import { promptRegion, tagInsertion } from './tag-insertion';
 import type { ItemProps, PilotCompletion } from './types';
 
 const CATEGORY_TABS = [
@@ -84,8 +85,6 @@ function formatTagDelimiter(tag: string, inputtingString: string, delimiter: str
 
 function createCompletionItem(
     item: ItemProps,
-    needPrependComma: boolean,
-    needPrependSpace: boolean,
     inputtingString: string,
     delimiter: string,
     alwaysUnderscoreSet: Set<string>,
@@ -103,14 +102,7 @@ function createCompletionItem(
         baseTag = `@${baseTag}`;
     }
 
-    let insertText = isLora ? `${rawTag}:1.0>` : baseTag;
-    if (!isLora) {
-        if (needPrependComma) {
-            insertText = `, ${insertText}`;
-        } else if (needPrependSpace) {
-            insertText = ` ${insertText}`;
-        }
-    }
+    const insertText = isLora ? `${rawTag}:1.0>` : baseTag;
 
     const catClass = isLora ? 'cat-lora' : `cat-${item.category ?? '0'}`;
     const sourceClass = item.source ? `source-${item.source}` : '';
@@ -140,8 +132,31 @@ function createCompletionItem(
                         endPos = endPos + 1;
                     }
                 } else if (isArtist) {
-                    if (startPos > 0 && view.state.doc.sliceString(startPos - 1, startPos) === '@' && !needPrependComma && !needPrependSpace) {
+                    if (startPos > 0 && view.state.doc.sliceString(startPos - 1, startPos) === '@') {
                         startPos = startPos - 1;
+                    }
+                }
+
+                if (!isLora) {
+                    const region = promptRegion(view.state, range.to);
+                    if (region.formatSeparators) {
+                        startPos = Math.max(region.from, startPos);
+                        const text = view.state.doc.sliceString(region.from, region.to);
+                        const { insertionInfo } = updatePromptState(text, range.to - region.from);
+                        const change = tagInsertion(
+                            text,
+                            startPos - region.from,
+                            endPos - region.from,
+                            insertText,
+                            appState.optionState.get('ComfyGrid.prompt_pilot.append_comma') === true,
+                            insertionInfo.needPrependComma,
+                            insertionInfo.needPrependSpace,
+                            view.state.selection.ranges.filter((other) => other !== range).map((other) => other.to - region.from),
+                        );
+                        return {
+                            changes: { from: region.from + change.from, to: region.from + change.to, insert: change.insert },
+                            range: EditorSelection.cursor(region.from + change.cursor),
+                        };
                     }
                 }
 
@@ -325,8 +340,9 @@ const promptPilotSource: CompletionSource = async (context: CompletionContext): 
     const isLoaded = await ensurePromptPilotModelsLoaded();
     if (!isLoaded) return null;
 
-    const docText = context.state.doc.toString();
-    const caret = context.pos;
+    const region = promptRegion(context.state, context.pos);
+    const docText = context.state.doc.sliceString(region.from, region.to);
+    const caret = context.pos - region.from;
 
     const { promptInfo, insertionInfo } = updatePromptState(docText, caret);
 
@@ -349,7 +365,7 @@ const promptPilotSource: CompletionSource = async (context: CompletionContext): 
         const onlineQuery = query.substring(1).trim();
         if (onlineQuery.length < 1) {
             return {
-                from: activeWord.position,
+                from: region.from + activeWord.position,
                 options: [
                     {
                         label: 'Type keyword to search online tags (*...)',
@@ -375,7 +391,7 @@ const promptPilotSource: CompletionSource = async (context: CompletionContext): 
             });
 
             return {
-                from: activeWord.position,
+                from: region.from + activeWord.position,
                 options: [
                     {
                         label: `Searching online tags for "*${onlineQuery}"...`,
@@ -389,7 +405,7 @@ const promptPilotSource: CompletionSource = async (context: CompletionContext): 
 
         if (items.length === 0) {
             return {
-                from: activeWord.position,
+                from: region.from + activeWord.position,
                 options: [
                     {
                         label: `No online tags found for "*${onlineQuery}"`,
@@ -415,10 +431,8 @@ const promptPilotSource: CompletionSource = async (context: CompletionContext): 
     const alwaysUnderscoreSet = parseTagSet(appState.optionState.get('ComfyGrid.prompt_pilot.always_underscore_tags') as string);
     const alwaysSpaceSet = parseTagSet(appState.optionState.get('ComfyGrid.prompt_pilot.always_space_tags') as string);
 
-    const from = activeWord.position;
-    const options: Completion[] = items.map((item) =>
-        createCompletionItem(item, insertionInfo.needPrependComma, insertionInfo.needPrependSpace, query, delimiter, alwaysUnderscoreSet, alwaysSpaceSet),
-    );
+    const from = region.from + activeWord.position;
+    const options: Completion[] = items.map((item) => createCompletionItem(item, query, delimiter, alwaysUnderscoreSet, alwaysSpaceSet));
 
     // Schedule tab bar update on next animation frame
     requestAnimationFrame(() => {
