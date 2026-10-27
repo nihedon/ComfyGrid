@@ -55,43 +55,18 @@
     <Power size={12} />
   </button>
 {:else}
-  <ul class="pagination pagination-xs {className}">
+  <div class="btn-group {className}" role="group">
     {#each modeOptions as { value: selectMode, icon: Icon } (selectMode)}
-      <!-- svelte-ignore a11y_click_events_have_key_events -->
-      <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-      <li
-        class="page-item"
+      <button
+        class="btn btn-icon"
+        class:active={mode.has(selectMode as ComfyNodeMode)}
+        class:btn-secondary={!mode.has(selectMode as ComfyNodeMode)}
         onclick={(e) => handleChange(e, selectMode as ComfyNodeMode)}
         title={$t('node.mode.title', { mode: $t(`node.mode.mode_type_${selectMode}`) })}
-        class:active={mode.has(selectMode as ComfyNodeMode)}
+        aria-label={$t('node.mode.title', { mode: $t(`node.mode.mode_type_${selectMode}`) })}
       >
-        <!-- svelte-ignore a11y_invalid_attribute -->
-        <a
-          class="page-link"
-          href="#"
-          aria-label={$t('node.mode.title', { mode: $t(`node.mode.mode_type_${selectMode}`) })}
-          ><Icon size={12} /></a
-        >
-      </li>
+        <Icon size={12} />
+      </button>
     {/each}
-  </ul>
+  </div>
 {/if}
-
-<style lang="scss">
-  .pagination {
-    margin: 0;
-    &.pagination-xs {
-      --bs-pagination-padding-x: 0.4rem !important;
-      --bs-pagination-padding-y: 0.16rem !important;
-      --bs-pagination-font-size: 0.8rem !important;
-    }
-
-    .page-link {
-      display: flex;
-      height: 100%;
-      align-items: center;
-      padding: 0.25rem !important;
-      border-width: 1px 1px 1px 1px !important;
-    }
-  }
-</style>
