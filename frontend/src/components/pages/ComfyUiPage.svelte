@@ -2,6 +2,7 @@
   import { onDestroy } from 'svelte';
   import { appState } from '@/states/app-state.svelte';
   import type { ComfyWindow } from '@/states/comfyui-state.svelte';
+  import logger from '@/utils/logger';
 
   let iframeRef = $state<HTMLIFrameElement>();
   let registeredFrame: HTMLIFrameElement | undefined;
@@ -10,10 +11,31 @@
   const uiState = appState.uiState;
   const comfyUiState = appState.comfyUiState;
   let frameStarted = $state(false);
+  let refreshingWidgets = $state(false);
   let lastReloadVersion = comfyUiState.frameReloadVersion;
 
   $effect(() => {
     if (comfyUiState.started) frameStarted = true;
+  });
+
+  $effect(() => {
+    const active = uiState.activePageId === 'comfyui';
+    const api = comfyUiState.window?.comfyAPI?.app?.app?.comfyGridDomWidgets;
+    let cancelled = false;
+    if (active && api?.refreshInvalidatedWidgets) {
+      refreshingWidgets = true;
+      api
+        .refreshInvalidatedWidgets()
+        .catch((error) => {
+          logger.warn('Failed to refresh ComfyUI widgets', error);
+        })
+        .finally(() => {
+          if (!cancelled) refreshingWidgets = false;
+        });
+    } else refreshingWidgets = false;
+    return () => {
+      cancelled = true;
+    };
   });
 
   $effect(() => {
@@ -59,7 +81,7 @@
 <div
   id="comfyui-page"
   class="position-absolute w-100 h-100 top-0 start-0"
-  class:active={uiState.activePageId === 'comfyui'}
+  class:active={uiState.activePageId === 'comfyui' && !refreshingWidgets}
 >
   <iframe
     class="w-100 h-100 d-block"

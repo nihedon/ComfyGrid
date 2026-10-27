@@ -19,6 +19,7 @@
     value = $bindable(''),
     readonly = false,
     placeholder = '',
+    ariaLabel = '',
     enablePromptPilot = false,
     oninput,
     onblur,
@@ -26,6 +27,7 @@
     value?: string;
     readonly?: boolean;
     placeholder?: string;
+    ariaLabel?: string;
     enablePromptPilot?: boolean;
     oninput?: (event: Event) => void;
     onblur?: (event: FocusEvent) => void;
@@ -112,6 +114,7 @@
           EditorView.lineWrapping,
           configuration.of([
             EditorState.readOnly.of(readonly),
+            EditorView.contentAttributes.of({ 'aria-label': ariaLabel }),
             EditorView.editable.of(!readonly),
             cmPlaceholder(placeholder),
           ]),
@@ -196,6 +199,7 @@
     view?.dispatch({
       effects: configuration.reconfigure([
         EditorState.readOnly.of(readonly),
+        EditorView.contentAttributes.of({ 'aria-label': ariaLabel }),
         EditorView.editable.of(!readonly),
         cmPlaceholder(placeholder),
       ]),

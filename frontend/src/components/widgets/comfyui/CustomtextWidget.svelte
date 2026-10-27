@@ -2,8 +2,7 @@
   import { onDestroy, untrack } from 'svelte';
   import { comfyGridApiClient } from '@/api/api-client';
   import AppMenu from '@/components/common/AppMenu.svelte';
-  import JsonEditor from '@/components/common/JsonEditor.svelte';
-  import PromptEditor from '@/components/common/PromptEditor.svelte';
+  import CodeEditor from '@/components/common/CodeEditor.svelte';
   import { t } from '@/i18n/i18n';
   import {
     activateTabForNode,
@@ -332,8 +331,9 @@
 
 {#snippet textarea()}
   {#if category === 'json'}
-    <JsonEditor
-      enablePromptPilot={layout.isTagWidget(widget.id)}
+    <CodeEditor
+      mode="json"
+      enableTags={layout.isTagWidget(widget.id)}
       bind:value={widget.value}
       readonly={widget.readonly}
       placeholder={widget.placeholder}
@@ -341,24 +341,23 @@
       onblur={handleBlur}
     />
   {:else if isTranslate}
-    <PromptEditor
+    <CodeEditor
       rows={options.isFloating ? 1 : 6}
       readonly={widget.readonly}
       placeholder={widget.placeholder}
       bind:value={getRawInputValue, setRawInputValue}
-      enablePromptPilot={false}
-      highlightMode="segments"
+      enableTags={false}
       oninput={handleInput}
       onblur={handleBlur}
     />
   {:else if category === 'prompt'}
-    <PromptEditor
+    <CodeEditor
+      mode="prompt"
       rows={options.isFloating ? 1 : 6}
       readonly={widget.readonly}
       placeholder={widget.placeholder}
       bind:value={widget.value}
-      enablePromptPilot={layout.isTagWidget(widget.id)}
-      highlightMode={layout.isTagWidget(widget.id) ? 'prompt' : 'segments'}
+      enableTags={layout.isTagWidget(widget.id)}
       oninput={handleInput}
       onblur={handleBlur}
     />
