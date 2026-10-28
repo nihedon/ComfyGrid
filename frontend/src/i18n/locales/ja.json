@@ -186,6 +186,8 @@
     "opts.ComfyGrid.prompt_pilot.word_coloring.choice.word": "単語ごとに色分け",
     "opts.ComfyGrid.prompt_pilot.word_coloring.choice.category": "辞書カテゴリーで色分け",
     "opts.ComfyGrid.prompt_pilot.tag_delimiter.label": "タグ内の単語区切り",
+    "opts.ComfyGrid.prompt_pilot.append_comma.label": "タグ挿入後にカンマを自動補完",
+    "opts.ComfyGrid.prompt_pilot.append_comma.hint": "タグ補完時に末尾へカンマを追加します。既存のカンマは重複させません。LoRAの補完には適用しません。",
     "opts.ComfyGrid.prompt_pilot.tag_delimiter.hint": "「blue eyes」のように複数単語で構成されるタグ内の区切り文字を指定します（スペース、アンダースコア、または入力に応じた自動判定）。※タグ同士の区切りはカンマです。",
     "opts.ComfyGrid.prompt_pilot.tag_delimiter.choice.auto": "自動判定（入力に合わせて自動切り替え）",
     "opts.ComfyGrid.prompt_pilot.tag_delimiter.choice.space": "スペース (blue eyes)",

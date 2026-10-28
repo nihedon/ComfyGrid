@@ -29,6 +29,31 @@
     background-color: rgba(239, 68, 68, 0.12);
     border-radius: 2px;
 }
+// CodeMirror's cursor buffer otherwise increases the line height.
+.cm-widgetBuffer:has(+ .cm-prompt-missing-comma) {
+    height: 0 !important;
+    vertical-align: baseline !important;
+}
+.cm-prompt-missing-comma {
+    display: inline-block;
+    position: relative;
+    width: 0;
+    height: 0;
+    pointer-events: none;
+    user-select: none;
+
+    &::after {
+        content: '';
+        position: absolute;
+        left: 0;
+        bottom: -0.15em;
+        width: 0.65ch;
+        height: 1em;
+        border-bottom: 1.5px solid var(--bs-danger, #ef4444);
+        border-radius: 2px;
+        background-color: rgba(239, 68, 68, 0.12);
+    }
+}
 .cm-prompt-trailing-space {
     background-color: rgba(128, 128, 128, 0.25) !important;
     display: inline-block;

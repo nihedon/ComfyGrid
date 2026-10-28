@@ -207,6 +207,10 @@ type = "dropdown"
 choices = ["auto", "space", "underscore"]
 default = "auto"
 
+[ComfyGrid.prompt_pilot.append_comma]
+type = "checkbox"
+default = "false"
+
 [ComfyGrid.prompt_pilot.always_underscore_tags]
 type = "textarea"
 default = "score_9, score_8_up, score_8, score_7_up, score_7, score_6_up, score_6, score_5_up, score_5, score_4_up, score_4\nsource_pony, source_furry, source_cartoon, source_anime\nrating_safe, rating_questionable, rating_explicit"
