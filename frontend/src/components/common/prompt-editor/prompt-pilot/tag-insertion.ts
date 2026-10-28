@@ -49,8 +49,10 @@ export function tagInsertion(
     }
 
     let suffix = '';
-    if (appendComma) {
-        const after = text.slice(to);
+    const after = text.slice(to);
+    if (after && !/^[\s,.:)\]}>]/u.test(after)) {
+        suffix = ', ';
+    } else if (appendComma) {
         const existingComma = /^[ \t]*,/.exec(after);
         if (existingComma) {
             to += existingComma[0].length;
