@@ -1,20 +1,26 @@
 """
 Video metadata embedding and utility functions.
-Uses ffmpeg/ffprobe for metadata operations.
+Uses mutagen for MP4 metadata and ffmpeg/ffprobe for other operations.
 """
 
+import io
 import logging
 import os
+import shutil
 import subprocess
 import tempfile
+from typing import BinaryIO
 
 import orjson
+from mutagen.mp4 import MP4
 
 from comfygrid.infrastructure.ffmpeg import find_ffmpeg, find_ffprobe
 
 VIDEO_EXTENSIONS = {".webm", ".m4v", ".mp4", ".mkv", ".gif"}
 
 METADATA_EMBEDDABLE_EXTENSIONS = {".mp4", ".m4v", ".mkv", ".webm"}
+_MP4_EXTENSIONS = {".mp4", ".m4v"}
+_METADATA_KEYS = ("prompt", "workflow", "comfygrid")
 
 
 def is_video_file(filename: str) -> bool:
@@ -100,7 +106,71 @@ def embed_video_metadata(
                 os.unlink(p)
 
 
+def _extract_video_metadata(tags: dict[str, str]) -> dict[str, str]:
+    tags = {key.lower(): value for key, value in tags.items() if isinstance(value, str)}
+    result = {key: tags[key] for key in _METADATA_KEYS if tags.get(key)}
+    comment = tags.get("comment", "")
+    comment_json = None
+    try:
+        comment_json = orjson.loads(comment)
+    except orjson.JSONDecodeError:
+        pass
+    if isinstance(comment_json, dict):
+        for key in _METADATA_KEYS:
+            value = comment_json.get(key)
+            if value is not None and key not in result:
+                result[key] = value if isinstance(value, str) else orjson.dumps(value).decode()
+
+    description = tags.get("description", "")
+    try:
+        description_json = orjson.loads(description)
+    except orjson.JSONDecodeError:
+        description_json = None
+    if isinstance(description_json, (dict, list)):
+        result.setdefault("workflow", description)
+        # ComfyGrid writes the API prompt itself into comment, rather than a wrapper.
+        if isinstance(comment_json, dict) and not any(key in comment_json for key in _METADATA_KEYS):
+            result.setdefault("prompt", comment)
+    return result
+
+
+def _read_mp4_metadata(file_obj: BinaryIO) -> dict[str, str]:
+    try:
+        tags = MP4(file_obj).tags
+        if not tags:
+            return {}
+        mapped = {}
+        names = [("\xa9cmt", "comment"), ("desc", "description"), ("ldes", "description")]
+        names.extend((f"----:com.apple.iTunes:{key}", key) for key in _METADATA_KEYS)
+        for source, target in names:
+            values = tags.get(source)
+            if not values:
+                continue
+            value = values[0]
+            if isinstance(value, bytes):
+                value = value.decode("utf-8")
+            if isinstance(value, str):
+                mapped.setdefault(target, value)
+        return _extract_video_metadata(mapped)
+    except Exception:
+        # Other MP4 tag layouts (such as mdta), or unreadable MP4s, use ffprobe.
+        return {}
+
+
 def read_video_metadata(video_path: str) -> dict[str, str]:
+    """Read MP4 tags directly, with ffprobe as the compatibility fallback."""
+    if os.path.splitext(video_path)[1].lower() in _MP4_EXTENSIONS:
+        try:
+            with open(video_path, "rb") as file_obj:
+                metadata = _read_mp4_metadata(file_obj)
+            if metadata:
+                return metadata
+        except OSError:
+            pass
+    return _read_video_metadata_with_ffprobe(video_path)
+
+
+def _read_video_metadata_with_ffprobe(video_path: str) -> dict[str, str]:
     """
     Read metadata from a video file using ffprobe.
 
@@ -133,24 +203,7 @@ def read_video_metadata(video_path: str) -> dict[str, str]:
         info = orjson.loads(proc.stdout)
         tags = info.get("format", {}).get("tags", {})
 
-        result = {}
-
-        prompt = tags.get("prompt", None)
-        if prompt:
-            result["prompt"] = prompt
-
-        workflow = tags.get("workflow", None)
-        if workflow:
-            result["workflow"] = workflow
-
-        if not workflow and not prompt:
-            comment = tags.get("COMMENT", None) or tags.get("comment", None)
-            if comment:
-                comment_json = orjson.loads(comment)
-                result["workflow"] = orjson.dumps(comment_json["workflow"]).decode()
-                result["prompt"] = orjson.dumps(comment_json["prompt"]).decode()
-
-        return result
+        return _extract_video_metadata(tags)
     except Exception:
         return {}
 
@@ -158,27 +211,37 @@ def read_video_metadata(video_path: str) -> dict[str, str]:
 def read_video_metadata_from_bytes(
     video_bytes: bytes,
 ) -> dict[str, str] | None:
-    """
-    Read metadata from video bytes using ffprobe.
+    """Read metadata from bytes using the same fast path as uploaded files."""
+    return read_video_metadata_from_file(io.BytesIO(video_bytes), "video.mp4")
 
-    Args:
-        video_bytes: Raw video bytes
 
-    Returns:
-        Dict with 'prompt' and/or 'workflow' keys
-    """
+def read_video_metadata_from_file(file_obj: BinaryIO, filename: str) -> dict[str, str] | None:
+    """Read a seekable upload without copying the entire video into memory."""
     tmp_path = None
+    position = file_obj.tell()
     try:
-        with tempfile.NamedTemporaryFile(
-            delete=False, suffix=".mp4"
-        ) as tmp:
-            tmp.write(video_bytes)
-            tmp_path = tmp.name
+        ext = os.path.splitext(filename)[1].lower()
+        file_obj.seek(0)
+        if ext in _MP4_EXTENSIONS:
+            metadata = _read_mp4_metadata(file_obj)
+            if metadata:
+                return metadata
 
-        return read_video_metadata(tmp_path)
+        file_obj.seek(0)
+        with tempfile.NamedTemporaryFile(
+            delete=False, suffix=ext if ext in VIDEO_EXTENSIONS else ".mp4"
+        ) as tmp:
+            tmp_path = tmp.name
+            shutil.copyfileobj(file_obj, tmp, length=1024 * 1024)
+
+        return _read_video_metadata_with_ffprobe(tmp_path)
     except Exception as e:
         logging.warning(f"Failed to read video metadata: {e}")
         return None
     finally:
+        try:
+            file_obj.seek(position)
+        except (OSError, ValueError):
+            pass
         if tmp_path and os.path.exists(tmp_path):
             os.unlink(tmp_path)
