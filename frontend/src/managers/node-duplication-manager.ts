@@ -15,6 +15,7 @@ class NodeDuplicationManager {
             const clone = appState.bridge.duplicateNode({ nodeId: source.id });
             const cloneId = String(clone.id);
             if (layout.floatingNodes[source.id]) layout.floatingNodes[cloneId] = layout.floatingNodes[source.id];
+            if (layout.wideNodeIds?.includes(source.id)) layout.wideNodeIds.push(cloneId);
             for (const widget of source.widgets) {
                 const copiedId = `${cloneId}_${widget.index}`;
                 if (layout.floatingWidgets[widget.id]) layout.floatingWidgets[copiedId] = layout.floatingWidgets[widget.id];
