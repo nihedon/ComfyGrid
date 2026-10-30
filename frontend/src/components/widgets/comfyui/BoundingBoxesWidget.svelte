@@ -477,11 +477,11 @@
     publish();
   }
 
-  function point(event: PointerEvent) {
+  function point(event: PointerEvent, bounded = true) {
     const matrix = svg?.getScreenCTM();
     if (!matrix) return null;
     const p = new DOMPoint(event.clientX, event.clientY).matrixTransform(matrix.inverse());
-    return { x: clamp(p.x, 0, width), y: clamp(p.y, 0, height) };
+    return bounded ? { x: clamp(p.x, 0, width), y: clamp(p.y, 0, height) } : { x: p.x, y: p.y };
   }
 
   function down(event: PointerEvent, index?: number, handle: BoxHandle = 'move') {
@@ -578,7 +578,9 @@
     )
       return;
     gesture.moved = true;
-    const p = point(event);
+    const resizing =
+      gesture.handle !== 'move' && gesture.handle !== 'create' && gesture.handle !== 'select';
+    const p = point(event, !resizing);
     if (!p) return;
     if (gesture.handle === 'select') {
       marquee = {
@@ -638,6 +640,25 @@
       snap ? snapBoxCoordinate(anchor + distance, size) - anchor : Math.round(distance);
     let dx = delta(anchorX, p.x - gesture.x, width),
       dy = delta(anchorY, p.y - gesture.y, height);
+    if (resizing) {
+      // The grab point can be outside the box edge, so align that edge at the canvas boundary.
+      const bounds = gesture.resizeAsGroup
+        ? selectedBoxBounds(gesture.before, gesture.dragIndices)
+        : base;
+      const matrix = svg?.getScreenCTM();
+      const xTolerance = matrix ? 1 / Math.hypot(matrix.a, matrix.b) : 0;
+      const yTolerance = matrix ? 1 / Math.hypot(matrix.c, matrix.d) : 0;
+      if (bounds) {
+        if (gesture.handle.includes('w') && p.x <= xTolerance && p.x < gesture.x)
+          dx = Math.min(dx, -bounds.x);
+        if (gesture.handle.includes('e') && p.x >= width - xTolerance && p.x > gesture.x)
+          dx = Math.max(dx, width - bounds.x - bounds.width);
+        if (gesture.handle.includes('n') && p.y <= yTolerance && p.y < gesture.y)
+          dy = Math.min(dy, -bounds.y);
+        if (gesture.handle.includes('s') && p.y >= height - yTolerance && p.y > gesture.y)
+          dy = Math.max(dy, height - bounds.y - bounds.height);
+      }
+    }
     if (gesture.handle === 'move' && event.shiftKey) {
       if (Math.abs(dx) >= Math.abs(dy)) dy = 0;
       else dx = 0;
