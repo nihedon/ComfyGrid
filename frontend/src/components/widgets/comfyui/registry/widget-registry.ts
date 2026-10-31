@@ -1,6 +1,7 @@
 import type { Component } from 'svelte';
 import { ComfyGridNode, ComfyGridWidget } from '@/states/model-state.svelte';
 import AudioPlayerWidget from '../AudioPlayerWidget.svelte';
+import BoundingBoxesWidget from '../BoundingBoxesWidget.svelte';
 import ButtonWidget from '../ButtonWidget.svelte';
 import ColorWidget from '../ColorWidget.svelte';
 import ComboWidget from '../ComboWidget.svelte';
@@ -40,7 +41,7 @@ const widgetRegistry: Record<string, Component> = {
     ImagePreviewWidget: ImagePreviewWidget,
     DOMWidget: DOMWidget,
     DOMWidgetImpl: DOMWidget,
-    boundingboxes: DOMWidget,
+    boundingboxes: BoundingBoxesWidget,
     load3D: DOMWidget,
     load3DAdvanced: DOMWidget,
     cameraAngle: DOMWidget,

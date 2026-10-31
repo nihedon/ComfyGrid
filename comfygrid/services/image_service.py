@@ -15,7 +15,7 @@ from comfygrid.domain import state
 from comfygrid.domain.image import get_metadata, resize_with_aspect_ratio
 from comfygrid.services.converters.image_converter import convert_image
 from comfygrid.services.converters.video_converter import (
-    embed_video_metadata, is_video_file, read_video_metadata_from_bytes)
+    embed_video_metadata, is_video_file, read_video_metadata_from_file)
 
 _FETCH_TIMEOUT_SECONDS = 15.0
 
@@ -54,7 +54,7 @@ def save_media(url: str, image_info: dict, output_dir: Path) -> bool:
 
 def read_uploaded_media_metadata(filename: str, file_obj) -> dict | None:
     if is_video_file(filename):
-        return read_video_metadata_from_bytes(file_obj.file.read())
+        return read_video_metadata_from_file(file_obj.file, filename)
     return get_metadata(file_obj)
 
 

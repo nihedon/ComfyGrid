@@ -1,5 +1,6 @@
-import { RangeSetBuilder, StateEffect } from '@codemirror/state';
-import { Decoration, type DecorationSet, EditorView, ViewPlugin, type ViewUpdate } from '@codemirror/view';
+import { syntaxTree } from '@codemirror/language';
+import { RangeSet, RangeSetBuilder, StateEffect, type Text } from '@codemirror/state';
+import { Decoration, type DecorationSet, EditorView, ViewPlugin, type ViewUpdate, WidgetType } from '@codemirror/view';
 import { appState } from '@/states/app-state.svelte';
 import { getTagModel } from './prompt-pilot/services/tag-service';
 
@@ -205,6 +206,17 @@ function parsePromptTokens(text: string): TokenRange[] {
     }
 
     parseRange(0, text.length);
+
+    let previousCommaEnd = 0;
+    let lastComma: TokenRange | undefined;
+    for (const token of tokens) {
+        if ((token.type !== 'comma' && token.type !== 'error') || text.slice(token.from, token.to) !== ',') continue;
+        if (!text.slice(previousCommaEnd, token.from).trim()) token.type = 'error';
+        previousCommaEnd = token.to;
+        lastComma = token;
+    }
+    if (lastComma && !text.slice(previousCommaEnd).trim()) lastComma.type = 'error';
+
     return tokens;
 }
 
@@ -253,6 +265,42 @@ function getTagCategory(rawWord: string): string | null {
     }
 
     return null;
+}
+
+class MissingCommaWidget extends WidgetType {
+    eq(): boolean {
+        return true;
+    }
+
+    toDOM(view: EditorView): HTMLElement {
+        const marker = view.dom.ownerDocument.createElement('span');
+        marker.className = 'cm-prompt-missing-comma';
+        marker.setAttribute('aria-hidden', 'true');
+        return marker;
+    }
+}
+
+function missingLineCommas(doc: Text): DecorationSet {
+    const builder = new RangeSetBuilder<Decoration>();
+    const error = Decoration.widget({ widget: new MissingCommaWidget(), side: 1 });
+    let previous: { from: number; text: string } | null = null;
+
+    for (let number = 1; number <= doc.lines; number++) {
+        const line = doc.line(number);
+        const content = line.text.trimEnd();
+        if (!content.trim()) continue;
+        if (previous) {
+            const last = previous.text.length - 1;
+            let backslashes = 0;
+            for (let i = last - 1; i >= 0 && previous.text[i] === '\\'; i--) backslashes++;
+            if (previous.text[last] !== ',' || backslashes % 2 !== 0) {
+                const position = previous.from + last + 1;
+                builder.add(position, position, error);
+            }
+        }
+        previous = { from: line.from, text: content };
+    }
+    return builder.finish();
 }
 
 function buildPromptDecorations(view: EditorView): DecorationSet {
@@ -356,7 +404,9 @@ function buildPromptDecorations(view: EditorView): DecorationSet {
         }
     }
 
-    return builder.finish();
+    const decorations = builder.finish();
+    // JSON formatting inserts structural line breaks, which are not prompt delimiters.
+    return syntaxTree(view.state).topNode.name === 'JsonText' ? decorations : RangeSet.join([decorations, missingLineCommas(view.state.doc)]);
 }
 
 export const promptHighlightPlugin = ViewPlugin.fromClass(

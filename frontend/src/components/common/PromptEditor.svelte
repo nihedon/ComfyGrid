@@ -34,6 +34,7 @@
   let {
     value = $bindable(''),
     placeholder = '',
+    ariaLabel = '',
     readonly = false,
     rows = 6,
     enablePromptPilot = true,
@@ -44,6 +45,7 @@
   }: {
     value?: string;
     placeholder?: string;
+    ariaLabel?: string;
     readonly?: boolean;
     rows?: number;
     enablePromptPilot?: boolean;
@@ -58,7 +60,19 @@
   let isInternalChange = false;
   let isExternalChange = false;
   const completionCompartment = new Compartment();
+  const configuration = new Compartment();
   const highlightCompartment = new Compartment();
+
+  $effect(() => {
+    view?.dispatch({
+      effects: configuration.reconfigure([
+        EditorState.readOnly.of(readonly),
+        EditorView.editable.of(!readonly),
+        EditorView.contentAttributes.of({ 'aria-label': ariaLabel }),
+        cmPlaceholder(placeholder),
+      ]),
+    });
+  });
 
   const minHeight = $derived(rows === 1 ? '38px' : `${rows * 24}px`);
 
@@ -101,8 +115,12 @@
           ...historyKeymap,
         ]),
         EditorView.lineWrapping,
-        EditorState.readOnly.of(readonly),
-        cmPlaceholder(placeholder),
+        configuration.of([
+          EditorState.readOnly.of(readonly),
+          EditorView.editable.of(!readonly),
+          EditorView.contentAttributes.of({ 'aria-label': ariaLabel }),
+          cmPlaceholder(placeholder),
+        ]),
         bracketMatchingPlugin,
         completionCompartment.of(
           enablePromptPilot ? [promptPilotCompletion(), loraHoverPlugin()] : [],

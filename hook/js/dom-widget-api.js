@@ -45,7 +45,102 @@ function findWidgetElement(root, node, widget) {
 export function installDomWidgetApi(app, host = window) {
   app.comfyGridDomWidgets?.dispose();
   let disposed = false;
+  const invalidated = new Map();
+  const restoring = new Set();
+  const finishWaits = new Set();
+  let pendingRoot = app.rootGraph;
+  let refreshing = null;
+
+  function isLive(node, widget) {
+    return node?.graph?.getNodeById(node.id) === node && node.widgets?.includes(widget);
+  }
+
+  function nextRender() {
+    return new Promise((resolve, reject) => {
+      let frame;
+      let timer;
+      const finish = () => {
+        host.cancelAnimationFrame(frame);
+        host.clearTimeout(timer);
+        finishWaits.delete(finish);
+        resolve();
+      };
+      finishWaits.add(finish);
+      try {
+        frame = host.requestAnimationFrame(finish);
+        // Background tabs may suspend animation frames, but Vue still flushes microtasks.
+        timer = host.setTimeout(finish, 100);
+      } catch (error) {
+        host.cancelAnimationFrame(frame);
+        host.clearTimeout(timer);
+        finishWaits.delete(finish);
+        reject(error);
+      }
+    });
+  }
+
+  async function refreshInvalidated() {
+    const entries = [...invalidated];
+    for (const [widget] of entries) invalidated.delete(widget);
+    const restores = [];
+    const targets = [];
+    let refreshed = 0;
+    try {
+      for (const [widget, node] of entries) {
+        if (disposed || !isLive(node, widget)) continue;
+        const element = api.getWidgetElement(node, widget);
+        if (!element) continue;
+        const suppression = widget.visibility?.suppression;
+        // Use the canonical visibility state without changing registration options.
+        if (!suppression || suppression.byExtension !== false) continue;
+        targets.push({ widget, node, element });
+        const restore = () => {
+          suppression.byExtension = false;
+          restoring.delete(restore);
+        };
+        restores.push(restore);
+        restoring.add(restore);
+        suppression.byExtension = true;
+        refreshed++;
+      }
+      if (restores.length) await nextRender();
+    } catch (error) {
+      for (const [widget, node] of entries) if (!disposed && isLive(node, widget)) invalidated.set(widget, node);
+      throw error;
+    } finally {
+      for (const restore of restores) restore();
+    }
+    if (restores.length && !disposed) await nextRender();
+    let failed = false;
+    for (const { widget, node, element } of targets) {
+      if (!disposed && isLive(node, widget) && api.getWidgetElement(node, widget) === element) {
+        invalidated.set(widget, node);
+        failed = true;
+      }
+    }
+    if (failed) throw new Error("ComfyUI bounding boxes view did not remount");
+    return refreshed;
+  }
+
   const api = {
+    invalidateWidget(node, widget) {
+      if (disposed || widget?.type !== "boundingboxes" || !isLive(node, widget)) return;
+      if (pendingRoot !== app.rootGraph) {
+        invalidated.clear();
+        pendingRoot = app.rootGraph;
+      }
+      for (const [previous, owner] of invalidated) {
+        if (!isLive(owner, previous)) invalidated.delete(previous);
+      }
+      invalidated.set(widget, node);
+    },
+    refreshInvalidatedWidgets() {
+      if (disposed) return Promise.resolve(0);
+      if (!refreshing) {
+        refreshing = refreshInvalidated().finally(() => { refreshing = null; });
+      }
+      return refreshing;
+    },
     getWidgetElement(node, widget) {
       if (
         disposed ||
@@ -60,6 +155,9 @@ export function installDomWidgetApi(app, host = window) {
     },
     dispose() {
       disposed = true;
+      invalidated.clear();
+      for (const restore of restoring) restore();
+      for (const finish of finishWaits) finish();
       if (app.comfyGridDomWidgets === api) delete app.comfyGridDomWidgets;
     },
   };

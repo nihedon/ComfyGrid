@@ -2,7 +2,14 @@ import { appState } from '@/states/app-state.svelte';
 import type { ItemProps, ResponseData, TagModel } from '../types';
 
 let tagModels: Record<string, TagModel> = Object.create(null);
-let tagIndex: Record<string, Record<string, TagModel>> = Object.create(null);
+let tagIndex: Record<string, TagModel[]> = Object.create(null);
+const searchCache = new Map<string, ItemProps[]>();
+
+interface TagMatch {
+    model: TagModel;
+    matchedWords: ItemProps['matchedWords'];
+    matchCount: number;
+}
 export const alwaysUnderscoreTags: Set<string> = new Set();
 export const alwaysSpaceTags: Set<string> = new Set();
 
@@ -19,15 +26,16 @@ function getPrefixes(tag: string, maxLen = 3): Set<string> {
 }
 
 export function buildTagIndex(models: Record<string, TagModel>): void {
+    searchCache.clear();
     tagIndex = Object.create(null);
     for (const tagModel of Object.values(models)) {
         if (!tagModel?.value) continue;
         const prefixes = getPrefixes(tagModel.value, 3);
         for (const p of prefixes) {
             if (!(p in tagIndex)) {
-                tagIndex[p] = Object.create(null);
+                tagIndex[p] = [];
             }
-            tagIndex[p][tagModel.value] = tagModel;
+            tagIndex[p].push(tagModel);
         }
     }
 }
@@ -136,6 +144,22 @@ export function getTagModel(tag: string): TagModel | undefined {
 }
 
 export function searchTag(query: string, maxResults = 30, categoryFilter?: string): ItemProps[] {
+    const postCountThreshold = Number(appState.optionState.get('ComfyGrid.prompt_pilot.post_count_threshold') ?? 10);
+    const maxResultsByGroup: Record<string, number> = {
+        '0': Number(appState.optionState.get('ComfyGrid.prompt_pilot.max_results_group0') ?? 30),
+        '1': Number(appState.optionState.get('ComfyGrid.prompt_pilot.max_results_group1') ?? 10),
+        '3': Number(appState.optionState.get('ComfyGrid.prompt_pilot.max_results_group3') ?? 10),
+        '4': Number(appState.optionState.get('ComfyGrid.prompt_pilot.max_results_group4') ?? 10),
+        '5': Number(appState.optionState.get('ComfyGrid.prompt_pilot.max_results_group5') ?? 10),
+        custom: Number(appState.optionState.get('ComfyGrid.prompt_pilot.max_results_groupcustom') ?? 20),
+    };
+    const cacheKey = JSON.stringify([query, String(maxResults), categoryFilter, String(postCountThreshold), ...Object.values(maxResultsByGroup).map(String)]);
+    const cached = searchCache.get(cacheKey);
+    if (cached) {
+        searchCache.delete(cacheKey);
+        searchCache.set(cacheKey, cached);
+        return cached;
+    }
     const queries = query
         .toLowerCase()
         .split(/[ _-]/g)
@@ -148,22 +172,20 @@ export function searchTag(query: string, maxResults = 30, categoryFilter?: strin
         joinedQuery = queries.join('');
     }
 
-    let resultList: ItemProps[] = [];
+    let resultList: TagMatch[] = [];
     const resultKeySet = new Set<string>();
-
-    const postCountThreshold = Number(appState.optionState.get('ComfyGrid.prompt_pilot.post_count_threshold') ?? 10);
 
     queries.forEach((queryForCandidate) => {
         const prefixKey = queryForCandidate.length > 3 ? queryForCandidate.slice(0, 3) : queryForCandidate;
         const candidateTagList = tagIndex[prefixKey];
         if (!candidateTagList) return;
 
-        for (const key in candidateTagList) {
-            if (resultKeySet.has(key)) {
-                continue;
+        for (const tagModel of candidateTagList) {
+            if (queries.length > 1) {
+                if (resultKeySet.has(tagModel.value)) continue;
+                resultKeySet.add(tagModel.value);
             }
-            const tagModel = candidateTagList[key];
-            if (!tagModel || (tagModel.postCount < postCountThreshold && tagModel.useCount === 0)) {
+            if (tagModel.postCount < postCountThreshold && tagModel.useCount === 0) {
                 continue;
             }
             if (categoryFilter && categoryFilter !== 'all' && tagModel.category !== categoryFilter) {
@@ -171,7 +193,11 @@ export function searchTag(query: string, maxResults = 30, categoryFilter?: strin
             }
             const matchedWords: { word: string; index: number }[] = [];
 
-            if (joinedQuery && tagModel.value.startsWith(joinedQuery)) {
+            if (queries.length === 1) {
+                const q = queries[0];
+                const index = tagModel.flatValue.startsWith(q) ? 0 : tagModel.values.findIndex((word) => word.startsWith(q));
+                if (index >= 0) matchedWords.push({ word: q, index });
+            } else if (joinedQuery && tagModel.value.startsWith(joinedQuery)) {
                 for (let i = 0; i < queries.length; i++) {
                     matchedWords.push({ word: queries[i], index: i });
                 }
@@ -194,90 +220,85 @@ export function searchTag(query: string, maxResults = 30, categoryFilter?: strin
             }
 
             if (matchedWords.length > 0) {
-                const props: ItemProps = {
-                    ...tagModel,
-                    consequentTagModel: tagModel.consequentTagModel ?? null,
-                    exists: false,
-                    matchedWords: matchedWords,
-                    previewFile: '',
-                };
-                resultList.push(props);
-                resultKeySet.add(key);
+                resultList.push({ model: tagModel, matchedWords, matchCount: 0 });
             }
         }
     });
 
     const consequentTagMatchCount = new Map<string, number>();
     for (const r of resultList) {
-        if (!r.consequentTagModel) {
-            consequentTagMatchCount.set(r.value, r.matchedWords.length);
+        if (!r.model.consequentTagModel) {
+            consequentTagMatchCount.set(r.model.value, r.matchedWords.length);
         }
     }
 
     resultList = resultList.filter((r) => {
-        if (!r.consequentTagModel) return true;
-        const consequentTag = r.consequentTagModel.value;
+        if (!r.model.consequentTagModel) return true;
+        const consequentTag = r.model.consequentTagModel.value;
         const count = consequentTagMatchCount.get(consequentTag);
         return count === undefined || count < r.matchedWords.length;
     });
 
     const resultTagCount = new Map<string, number>();
-    const resultCount = new Map<string, number>();
-    resultList.forEach((r) => {
-        r.matchedWords.forEach((m) => {
-            const current = resultTagCount.get(m.word) ?? 0;
-            resultTagCount.set(m.word, current + 1);
+    if (queries.length > 1) {
+        resultList.forEach((r) => {
+            r.matchedWords.forEach((m) => {
+                const current = resultTagCount.get(m.word) ?? 0;
+                resultTagCount.set(m.word, current + 1);
+            });
         });
-    });
 
-    resultList.forEach((r) => {
-        const total = r.matchedWords.reduce((acc, m) => acc + (resultTagCount.get(m.word) ?? 0), 0);
-        resultCount.set(r.value, total);
-    });
-
-    resultList = resultList.sort((a, b) => compare(a, b, query, joinedQuery, queries, resultCount));
-
-    const maxResultsByGroup: Record<string, number> = {
-        '0': Number(appState.optionState.get('ComfyGrid.prompt_pilot.max_results_group0') ?? 30),
-        '1': Number(appState.optionState.get('ComfyGrid.prompt_pilot.max_results_group1') ?? 10),
-        '3': Number(appState.optionState.get('ComfyGrid.prompt_pilot.max_results_group3') ?? 10),
-        '4': Number(appState.optionState.get('ComfyGrid.prompt_pilot.max_results_group4') ?? 10),
-        '5': Number(appState.optionState.get('ComfyGrid.prompt_pilot.max_results_group5') ?? 10),
-        custom: Number(appState.optionState.get('ComfyGrid.prompt_pilot.max_results_groupcustom') ?? 20),
-    };
-
-    const groupCount: Record<string, number> = {};
-    const filteredResults: ItemProps[] = [];
-    for (const item of resultList) {
-        const cat = String(item.category);
-        const limit = maxResultsByGroup[cat] ?? 30;
-        const currentCount = groupCount[cat] ?? 0;
-        if (currentCount < limit) {
-            groupCount[cat] = currentCount + 1;
-            filteredResults.push(item);
-        }
+        resultList.forEach((r) => {
+            const total = r.matchedWords.reduce((acc, m) => acc + (resultTagCount.get(m.word) ?? 0), 0);
+            r.matchCount = total;
+        });
     }
 
-    return maxResults ? filteredResults.slice(0, maxResults) : filteredResults;
+    const rank = (a: TagMatch, b: TagMatch) => compare(a, b, query, joinedQuery, queries);
+    const groups = new Map<string, TagMatch[]>();
+    // Retain the same per-category winners without sorting every matching dictionary entry.
+    for (const item of resultList) {
+        const cat = String(item.model.category);
+        const limit = maxResultsByGroup[cat] ?? 30;
+        if (!(limit > 0)) continue;
+        const group = groups.get(cat) ?? [];
+        if (!groups.has(cat)) groups.set(cat, group);
+        if (group.length >= limit && rank(item, group[group.length - 1]) >= 0) continue;
+        let low = 0,
+            high = group.length;
+        while (low < high) {
+            const middle = (low + high) >>> 1;
+            if (rank(item, group[middle]) < 0) high = middle;
+            else low = middle + 1;
+        }
+        group.splice(low, 0, item);
+        if (group.length > Math.ceil(limit)) group.pop();
+    }
+    const winners = Array.from(groups.values()).flat().sort(rank);
+    const results = (maxResults ? winners.slice(0, maxResults) : winners).map(({ model, matchedWords }) => ({
+        ...model,
+        consequentTagModel: model.consequentTagModel ?? null,
+        exists: false,
+        matchedWords,
+        previewFile: '',
+    }));
+    if (searchCache.size >= 100) searchCache.delete(searchCache.keys().next().value!);
+    searchCache.set(cacheKey, results);
+    return results;
 }
 
-function compare(
-    self: ItemProps,
-    other: ItemProps,
-    query: string,
-    joinedQuery: string | undefined,
-    queries: string[],
-    resultCount: Map<string, number>,
-): number {
+function compare(selfMatch: TagMatch, otherMatch: TagMatch, query: string, joinedQuery: string | undefined, queries: string[]): number {
+    const self = selfMatch.model,
+        other = otherMatch.model;
     if (self.value === query || (joinedQuery && self.value === joinedQuery)) return -1;
     if (other.value === query || (joinedQuery && other.value === joinedQuery)) return 1;
 
-    if (other.matchedWords.length !== self.matchedWords.length) {
-        return other.matchedWords.length - self.matchedWords.length;
-    } else if (queries.length === self.matchedWords.length) {
-        for (let i = 0; i < self.matchedWords.length; i++) {
-            if (self.matchedWords[i].index !== other.matchedWords[i].index) {
-                return self.matchedWords[i].index - other.matchedWords[i].index;
+    if (otherMatch.matchedWords.length !== selfMatch.matchedWords.length) {
+        return otherMatch.matchedWords.length - selfMatch.matchedWords.length;
+    } else if (queries.length === selfMatch.matchedWords.length) {
+        for (let i = 0; i < selfMatch.matchedWords.length; i++) {
+            if (selfMatch.matchedWords[i].index !== otherMatch.matchedWords[i].index) {
+                return selfMatch.matchedWords[i].index - otherMatch.matchedWords[i].index;
             }
         }
     }
@@ -285,9 +306,7 @@ function compare(
     if (other.useCount !== self.useCount) {
         return other.useCount - self.useCount;
     }
-    const selfCount = resultCount.get(self.value) ?? 0;
-    const otherCount = resultCount.get(other.value) ?? 0;
-    const count = selfCount - otherCount;
+    const count = selfMatch.matchCount - otherMatch.matchCount;
     if (count !== 0) {
         return count;
     }
@@ -302,30 +321,32 @@ export function appendTagModel(tagModel: TagModel): void {
     if (tagModel.value && tagModel.value in tagModels) {
         return;
     }
+    searchCache.clear();
     tagModels[tagModel.value] = tagModel;
     const prefixes = getPrefixes(tagModel.value, 3);
     for (const p of prefixes) {
         if (!(p in tagIndex)) {
-            tagIndex[p] = Object.create(null);
+            tagIndex[p] = [];
         }
-        tagIndex[p][tagModel.value] = tagModel;
+        tagIndex[p].push(tagModel);
     }
 }
 
-export async function fetchTagsFromDanbooruApi(query: string, maxResults = 50, categoryFilter?: string): Promise<ItemProps[]> {
+export async function fetchTagsFromDanbooruApi(query: string, maxResults = 50, categoryFilter?: string, signal?: AbortSignal): Promise<ItemProps[]> {
     const trimmed = query.trim();
     if (!trimmed) return [];
 
     const endpoint = `https://danbooru.donmai.us/autocomplete.json?search[query]=${encodeURIComponent(trimmed)}&search[type]=tag&limit=${maxResults}&version=1`;
 
     try {
-        const res = await fetch(endpoint);
+        const res = await fetch(endpoint, { signal });
         if (!res.ok) {
             console.error('[PromptPilot] Error fetching online tag data:', res.statusText);
             return [];
         }
 
         const json = (await res.json()) as Array<{ label: string; category: number; post_count: number; antecedent?: string }>;
+        if (signal?.aborted) return [];
         let results: ItemProps[] = json.map((item) => {
             let tag = item.label;
             let consequentTagModel: TagModel | null = null;
@@ -363,6 +384,7 @@ export async function fetchTagsFromDanbooruApi(query: string, maxResults = 50, c
 
         return results;
     } catch (err) {
+        if (signal?.aborted) return [];
         console.error('[PromptPilot] Error fetching tag data from API:', err);
         return [];
     }

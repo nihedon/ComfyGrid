@@ -40,6 +40,8 @@ export interface ComfyApp {
 
 export interface ComfyDomWidgetApi {
     getWidgetElement(node: ComfyNode, widget: ComfyWidget): HTMLElement | null;
+    invalidateWidget?(node: ComfyNode, widget: ComfyWidget): void;
+    refreshInvalidatedWidgets?(): Promise<number>;
     dispose(): void;
 }
 

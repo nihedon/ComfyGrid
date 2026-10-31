@@ -7,6 +7,7 @@
   import type { ComfyGridNode, ComfyGridWidget } from '@/states/model-state.svelte';
   import { COMFY_NODE_MODE } from '@/types/model-shared';
   import NodeWidgetHeader from './NodeWidgetHeader.svelte';
+  import BoundingBoxesWidget from './comfyui/BoundingBoxesWidget.svelte';
   import DOMWidget from './comfyui/DOMWidget.svelte';
   import DimensionPairWidget from './comfyui/DimensionPairWidget.svelte';
   import { getWidgetComponentWithMeta } from './comfyui/registry/widget-registry';
@@ -91,7 +92,11 @@
 
   const hasAdvancedWidgets = $derived(availableWidgets.some((item) => item.widget.advanced));
   const hasDomWidget = $derived(
-    availableWidgets.some((item) => item.type === 'single' && item.component === DOMWidget),
+    availableWidgets.some(
+      (item) =>
+        item.type === 'single' &&
+        (item.component === DOMWidget || item.component === BoundingBoxesWidget),
+    ),
   );
   const fitDomToNode = $derived(workspaceState.layout.isDomFitNode(node.id));
   const renderableWidgets = $derived(

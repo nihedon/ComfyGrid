@@ -13,11 +13,14 @@ import { deleteCharBackward, deleteCharForward } from '@codemirror/commands';
 import { EditorSelection, type Extension, Prec, SelectionRange } from '@codemirror/state';
 import { Direction, EditorView, ViewPlugin, type ViewUpdate, keymap } from '@codemirror/view';
 import { appState } from '@/states/app-state.svelte';
+import type { Model } from '@/states/storage-state.svelte';
 import { updatePromptState } from './parsers/prompt-parser';
 import { ensurePromptPilotModelsLoaded, getActiveTagSource } from './services/loader-service';
 import { searchLora } from './services/lora-service';
+import { OnlineTagSearch } from './services/online-search';
 import { fetchTagsFromDanbooruApi, getTagModel, searchTag } from './services/tag-service';
 import './styles/completion.scss';
+import { promptRegion, tagInsertion } from './tag-insertion';
 import type { ItemProps, PilotCompletion } from './types';
 
 const CATEGORY_TABS = [
@@ -32,7 +35,10 @@ const CATEGORY_TABS = [
 const DANBOORU_ICON_URL = '/comfygrid/icons/danbooru.donmai.us.favicon.png';
 const E621_ICON_URL = '/comfygrid/icons/e621.net.favicon.png';
 
-let activeCategory = 'all';
+const optionModels = new WeakMap<HTMLElement, Model>();
+const popoverOwners = new WeakMap<EditorView, HTMLElement>();
+const tagSetCache = new Map<string, Set<string>>();
+const onlineSearch = new OnlineTagSearch((query, signal) => fetchTagsFromDanbooruApi(query, 50, undefined, signal));
 
 function formatPostCount(count: number): string {
     if (!count) return '';
@@ -50,14 +56,18 @@ function escapeParentheses(str: string): string {
 }
 
 function parseTagSet(rawConfig: string | undefined): Set<string> {
+    const key = rawConfig ?? '';
+    const cached = tagSetCache.get(key);
+    if (cached) return cached;
     const tags = new Set<string>();
-    if (!rawConfig) return tags;
-    rawConfig.split(/[\n,]/).forEach((tag) => {
+    key.split(/[\n,]/).forEach((tag) => {
         const normalized = tag.trim().replaceAll('_', ' ').toLowerCase();
         if (normalized) {
             tags.add(normalized);
         }
     });
+    if (tagSetCache.size >= 10) tagSetCache.delete(tagSetCache.keys().next().value!);
+    tagSetCache.set(key, tags);
     return tags;
 }
 
@@ -84,8 +94,6 @@ function formatTagDelimiter(tag: string, inputtingString: string, delimiter: str
 
 function createCompletionItem(
     item: ItemProps,
-    needPrependComma: boolean,
-    needPrependSpace: boolean,
     inputtingString: string,
     delimiter: string,
     alwaysUnderscoreSet: Set<string>,
@@ -103,14 +111,7 @@ function createCompletionItem(
         baseTag = `@${baseTag}`;
     }
 
-    let insertText = isLora ? `${rawTag}:1.0>` : baseTag;
-    if (!isLora) {
-        if (needPrependComma) {
-            insertText = `, ${insertText}`;
-        } else if (needPrependSpace) {
-            insertText = ` ${insertText}`;
-        }
-    }
+    const insertText = isLora ? `${rawTag}:1.0>` : baseTag;
 
     const catClass = isLora ? 'cat-lora' : `cat-${item.category ?? '0'}`;
     const sourceClass = item.source ? `source-${item.source}` : '';
@@ -124,7 +125,8 @@ function createCompletionItem(
         sources: item.sources,
         model: item.model,
         apply: (view, _completion, fromPos, toPos) => {
-            activeCategory = 'all';
+            const ui = view.plugin(tabSyncPlugin);
+            if (ui) ui.category = 'all';
             if (appState.popoverState.visible) {
                 appState.popoverState.hidePopover();
             }
@@ -140,8 +142,31 @@ function createCompletionItem(
                         endPos = endPos + 1;
                     }
                 } else if (isArtist) {
-                    if (startPos > 0 && view.state.doc.sliceString(startPos - 1, startPos) === '@' && !needPrependComma && !needPrependSpace) {
+                    if (startPos > 0 && view.state.doc.sliceString(startPos - 1, startPos) === '@') {
                         startPos = startPos - 1;
+                    }
+                }
+
+                if (!isLora) {
+                    const region = promptRegion(view.state, range.to);
+                    if (region.formatSeparators) {
+                        startPos = Math.max(region.from, startPos);
+                        const text = view.state.doc.sliceString(region.from, region.to);
+                        const { insertionInfo } = updatePromptState(text, range.to - region.from);
+                        const change = tagInsertion(
+                            text,
+                            startPos - region.from,
+                            endPos - region.from,
+                            insertText,
+                            appState.optionState.get('ComfyGrid.prompt_pilot.append_comma') === true,
+                            insertionInfo.needPrependComma,
+                            insertionInfo.needPrependSpace,
+                            view.state.selection.ranges.filter((other) => other !== range).map((other) => other.to - region.from),
+                        );
+                        return {
+                            changes: { from: region.from + change.from, to: region.from + change.to, insert: change.insert },
+                            range: EditorSelection.cursor(region.from + change.cursor),
+                        };
                     }
                 }
 
@@ -160,7 +185,7 @@ function createCompletionItem(
 }
 
 function applyCategoryFilter(tooltip: HTMLElement, categoryId: string): void {
-    tooltip.dataset.activeCategory = categoryId;
+    if (tooltip.dataset.activeCategory !== categoryId) tooltip.dataset.activeCategory = categoryId;
 
     // Update tab buttons selection state
     const tabs = tooltip.querySelectorAll<HTMLButtonElement>('.pilot-tab');
@@ -204,57 +229,38 @@ function attachTooltipListeners(tooltip: HTMLElement, view: EditorView): void {
             return;
         }
 
-        const labelEl = li.querySelector('.cm-completionLabel');
-        const label = labelEl?.textContent?.trim();
-        if (!label) return;
-
-        const model = Array.from(appState.storageState.models.values()).find(
-            (m) => m.category === 'loras' && (m.name === label || m.path.replaceAll('\\', '/').replace(/\.[^/.]+$/, '') === label),
-        );
-        if (model) {
-            const showNsfw = Boolean(appState.optionState.get('ComfyGrid.ui.show_nsfw'));
-            if (showNsfw || !model.nsfw) {
-                appState.popoverState.showModelPopover(tooltip, model, 'models');
-            }
-        }
+        if (e.relatedTarget instanceof Node && li.contains(e.relatedTarget)) return;
+        const marker = li.querySelector<HTMLElement>('[data-pilot-model]');
+        showLoraPopover(view, tooltip, marker ? optionModels.get(marker) : undefined);
     });
 
     tooltip.addEventListener('mouseleave', () => {
-        updateLoraPopover(view);
+        view.plugin(tabSyncPlugin)?.schedule();
     });
 }
 
-function updateLoraPopover(view: EditorView): void {
-    const tooltip = view.dom.ownerDocument.querySelector<HTMLElement>('.cm-tooltip-autocomplete');
-    if (!tooltip) {
-        if (appState.popoverState.visible) {
-            appState.popoverState.hidePopover();
-        }
-        return;
-    }
+function hideOwnPopover(view: EditorView) {
+    const target = appState.popoverState.targetElement;
+    if (appState.popoverState.visible && target && (view.dom.contains(target) || target === popoverOwners.get(view))) appState.popoverState.hidePopover();
+    popoverOwners.delete(view);
+}
 
-    const rect = tooltip.getBoundingClientRect();
-    if (rect.width === 0 || rect.height === 0 || (rect.top === 0 && rect.left === 0)) {
-        requestAnimationFrame(() => updateLoraPopover(view));
-        return;
-    }
-
-    const selected = selectedCompletion(view.state) as PilotCompletion | null;
-    if (selected?.model) {
+function showLoraPopover(view: EditorView, tooltip: HTMLElement, model?: Model): void {
+    if (model) {
         const showNsfw = Boolean(appState.optionState.get('ComfyGrid.ui.show_nsfw'));
-        if (showNsfw || !selected.model.nsfw) {
-            appState.popoverState.showModelPopover(tooltip, selected.model, 'models');
+        if (showNsfw || !model.nsfw) {
+            popoverOwners.set(view, tooltip);
+            if (!appState.popoverState.visible || appState.popoverState.model !== model || appState.popoverState.targetElement !== tooltip) {
+                appState.popoverState.showModelPopover(tooltip, model, 'models');
+            }
             return;
         }
     }
-
-    if (appState.popoverState.visible) {
-        appState.popoverState.hidePopover();
-    }
+    hideOwnPopover(view);
 }
 
-function ensureTabBar(view: EditorView, isLora?: boolean): void {
-    const tooltip = view.dom.ownerDocument.querySelector<HTMLElement>('.cm-tooltip-autocomplete');
+function ensureTabBar(view: EditorView, category: string): void {
+    const tooltip = view.dom.querySelector<HTMLElement>('.cm-tooltip-autocomplete');
     if (!tooltip) return;
 
     attachTooltipListeners(tooltip, view);
@@ -277,14 +283,15 @@ function ensureTabBar(view: EditorView, isLora?: boolean): void {
             const btn = document.createElement('button');
             btn.type = 'button';
             btn.dataset.cat = tab.id;
-            btn.className = `pilot-tab group-${tab.id} ${activeCategory === tab.id ? 'selected' : ''}`;
+            btn.className = `pilot-tab group-${tab.id} ${category === tab.id ? 'selected' : ''}`;
             btn.textContent = tab.label;
 
             btn.addEventListener('pointerdown', (e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                activeCategory = tab.id;
-                applyCategoryFilter(tooltip, activeCategory);
+                const ui = view.plugin(tabSyncPlugin);
+                if (ui) ui.category = tab.id;
+                applyCategoryFilter(tooltip, tab.id);
             });
 
             tabContainer!.appendChild(btn);
@@ -294,28 +301,13 @@ function ensureTabBar(view: EditorView, isLora?: boolean): void {
     }
 
     const hasLoraOption = tooltip.querySelector('li.cat-lora') !== null;
-    const isLoraMode = isLora ?? hasLoraOption;
-
-    if (isLoraMode) {
-        tabContainer.style.display = 'none';
+    if (hasLoraOption) {
+        if (tabContainer.style.display !== 'none') tabContainer.style.display = 'none';
         delete tooltip.dataset.activeCategory;
     } else {
-        tabContainer.style.display = 'flex';
-        applyCategoryFilter(tooltip, activeCategory);
+        if (tabContainer.style.display !== 'flex') tabContainer.style.display = 'flex';
+        applyCategoryFilter(tooltip, category);
     }
-}
-
-const onlineSearchCache = new Map<string, ItemProps[]>();
-let latestOnlineRequestId = 0;
-
-function setOnlineSearchCache(key: string, value: ItemProps[]): void {
-    if (onlineSearchCache.size >= 100) {
-        const firstKey = onlineSearchCache.keys().next().value;
-        if (firstKey !== undefined) {
-            onlineSearchCache.delete(firstKey);
-        }
-    }
-    onlineSearchCache.set(key, value);
 }
 
 const promptPilotSource: CompletionSource = async (context: CompletionContext): Promise<CompletionResult | null> => {
@@ -323,10 +315,11 @@ const promptPilotSource: CompletionSource = async (context: CompletionContext): 
     if (!isEnabled) return null;
 
     const isLoaded = await ensurePromptPilotModelsLoaded();
-    if (!isLoaded) return null;
+    if (!isLoaded || context.aborted) return null;
 
-    const docText = context.state.doc.toString();
-    const caret = context.pos;
+    const region = promptRegion(context.state, context.pos);
+    const docText = context.state.doc.sliceString(region.from, region.to);
+    const caret = context.pos - region.from;
 
     const { promptInfo, insertionInfo } = updatePromptState(docText, caret);
 
@@ -338,6 +331,7 @@ const promptPilotSource: CompletionSource = async (context: CompletionContext): 
     if (!activeWord) return null;
 
     const query = promptInfo.inputtingString;
+    if (!query.startsWith('*') && context.view) onlineSearch.cancel(context.view);
     if (query.trim().length < 1) return null;
 
     const isLora = activeWord.type === 'lora';
@@ -349,7 +343,7 @@ const promptPilotSource: CompletionSource = async (context: CompletionContext): 
         const onlineQuery = query.substring(1).trim();
         if (onlineQuery.length < 1) {
             return {
-                from: activeWord.position,
+                from: region.from + activeWord.position,
                 options: [
                     {
                         label: 'Type keyword to search online tags (*...)',
@@ -361,21 +355,15 @@ const promptPilotSource: CompletionSource = async (context: CompletionContext): 
             };
         }
 
-        if (onlineSearchCache.has(onlineQuery)) {
-            items = onlineSearchCache.get(onlineQuery)!;
-        } else {
-            const requestId = ++latestOnlineRequestId;
-            const view = context.view;
-
-            void fetchTagsFromDanbooruApi(onlineQuery, 50).then((fetchedItems) => {
-                setOnlineSearchCache(onlineQuery, fetchedItems);
-                if (requestId === latestOnlineRequestId && view) {
-                    startCompletion(view);
-                }
-            });
-
+        const view = context.view;
+        const found = onlineSearch.request(view ?? context, onlineQuery, () => {
+            if (view?.hasFocus && view.state.doc === context.state.doc && view.state.selection.main.head === context.pos) {
+                view.plugin(tabSyncPlugin)?.restartCompletion();
+            }
+        });
+        if (!found) {
             return {
-                from: activeWord.position,
+                from: region.from + activeWord.position,
                 options: [
                     {
                         label: `Searching online tags for "*${onlineQuery}"...`,
@@ -386,10 +374,11 @@ const promptPilotSource: CompletionSource = async (context: CompletionContext): 
                 filter: false,
             };
         }
+        items = found;
 
         if (items.length === 0) {
             return {
-                from: activeWord.position,
+                from: region.from + activeWord.position,
                 options: [
                     {
                         label: `No online tags found for "*${onlineQuery}"`,
@@ -405,7 +394,7 @@ const promptPilotSource: CompletionSource = async (context: CompletionContext): 
         if (artistQuery.length < 1) return null;
         items = searchTag(artistQuery, undefined, '1');
     } else {
-        // Fetch full results so tabs can filter them instantly without closing the menu
+        // Category tabs reuse these suggestions without issuing another search.
         items = searchTag(query);
     }
 
@@ -415,18 +404,8 @@ const promptPilotSource: CompletionSource = async (context: CompletionContext): 
     const alwaysUnderscoreSet = parseTagSet(appState.optionState.get('ComfyGrid.prompt_pilot.always_underscore_tags') as string);
     const alwaysSpaceSet = parseTagSet(appState.optionState.get('ComfyGrid.prompt_pilot.always_space_tags') as string);
 
-    const from = activeWord.position;
-    const options: Completion[] = items.map((item) =>
-        createCompletionItem(item, insertionInfo.needPrependComma, insertionInfo.needPrependSpace, query, delimiter, alwaysUnderscoreSet, alwaysSpaceSet),
-    );
-
-    // Schedule tab bar update on next animation frame
-    requestAnimationFrame(() => {
-        if (context.view) {
-            ensureTabBar(context.view, isLora);
-            updateLoraPopover(context.view);
-        }
-    });
+    const from = region.from + activeWord.position;
+    const options: Completion[] = items.map((item) => createCompletionItem(item, query, delimiter, alwaysUnderscoreSet, alwaysSpaceSet));
 
     return {
         from,
@@ -439,35 +418,102 @@ const tabSyncPlugin = ViewPlugin.fromClass(
     class {
         view: EditorView;
         wasActive = false;
+        category = 'all';
+        private frame: number | null = null;
+        private completionFrame: number | null = null;
+        private selected: Completion | null = null;
+        private status: ReturnType<typeof completionStatus> = null;
+        private readonly resize: ResizeObserver;
+        private readonly visibility = () => {
+            if (this.view.dom.ownerDocument.hidden) {
+                onlineSearch.cancel(this.view);
+                hideOwnPopover(this.view);
+            } else this.schedule();
+        };
 
         constructor(view: EditorView) {
             this.view = view;
+            this.resize = new ResizeObserver(() => this.schedule());
+            this.resize.observe(view.dom);
+            view.dom.ownerDocument.addEventListener('visibilitychange', this.visibility);
+        }
+
+        schedule() {
+            if (this.frame !== null) return;
+            this.frame = requestAnimationFrame(() => {
+                this.frame = null;
+                if (
+                    completionStatus(this.view.state) === null ||
+                    !this.view.hasFocus ||
+                    this.view.dom.ownerDocument.hidden ||
+                    !this.view.dom.isConnected ||
+                    !this.view.dom.getClientRects().length
+                ) {
+                    onlineSearch.cancel(this.view);
+                    hideOwnPopover(this.view);
+                    return;
+                }
+                ensureTabBar(this.view, this.category);
+                this.view.requestMeasure({
+                    key: this,
+                    read: () => {
+                        const tooltip = this.view.dom.querySelector<HTMLElement>('.cm-tooltip-autocomplete');
+                        const rect = tooltip?.getBoundingClientRect();
+                        return tooltip && rect?.width && rect.height ? tooltip : null;
+                    },
+                    write: (tooltip) => {
+                        if (tooltip && this.view.hasFocus)
+                            showLoraPopover(this.view, tooltip, (selectedCompletion(this.view.state) as PilotCompletion | null)?.model);
+                        else hideOwnPopover(this.view);
+                    },
+                });
+            });
+        }
+
+        restartCompletion() {
+            if (this.completionFrame !== null) return;
+            this.completionFrame = requestAnimationFrame(() => {
+                this.completionFrame = null;
+                if (this.view.hasFocus && this.view.dom.isConnected) startCompletion(this.view);
+            });
         }
 
         update(update: ViewUpdate) {
             const status = completionStatus(update.state);
             const isActive = status !== null;
+            const selected = selectedCompletion(update.state);
+            if (update.docChanged || update.selectionSet || (update.focusChanged && !this.view.hasFocus)) onlineSearch.cancel(this.view);
 
             if (this.wasActive && !isActive) {
-                activeCategory = 'all';
-                if (appState.popoverState.visible) {
-                    appState.popoverState.hidePopover();
-                }
+                if (this.completionFrame !== null) cancelAnimationFrame(this.completionFrame);
+                this.completionFrame = null;
+                this.category = 'all';
+                hideOwnPopover(this.view);
+                onlineSearch.cancel(this.view);
             }
             this.wasActive = isActive;
 
-            if (isActive) {
-                requestAnimationFrame(() => {
-                    ensureTabBar(this.view);
-                    updateLoraPopover(this.view);
-                });
-            }
+            if (
+                isActive &&
+                (selected !== this.selected ||
+                    status !== this.status ||
+                    update.docChanged ||
+                    update.selectionSet ||
+                    update.geometryChanged ||
+                    update.focusChanged)
+            )
+                this.schedule();
+            this.selected = selected;
+            this.status = status;
         }
 
         destroy() {
-            if (appState.popoverState.visible) {
-                appState.popoverState.hidePopover();
-            }
+            if (this.frame !== null) cancelAnimationFrame(this.frame);
+            if (this.completionFrame !== null) cancelAnimationFrame(this.completionFrame);
+            this.resize.disconnect();
+            this.view.dom.ownerDocument.removeEventListener('visibilitychange', this.visibility);
+            onlineSearch.cancel(this.view);
+            hideOwnPopover(this.view);
         }
     },
 );
@@ -590,23 +636,11 @@ function moveCaretWhileCompleting(view: EditorView, forward: boolean, byGroup = 
     return true;
 }
 
-const pasteCompletionPlugin = [
-    EditorView.domEventHandlers({
-        paste(_event, view) {
-            requestAnimationFrame(() => {
-                startCompletion(view);
-            });
-            return false;
-        },
-    }),
-    EditorView.updateListener.of((update) => {
-        if (update.docChanged && update.transactions.some((tr) => tr.isUserEvent('input.paste'))) {
-            requestAnimationFrame(() => {
-                startCompletion(update.view);
-            });
-        }
-    }),
-];
+const pasteCompletionPlugin = EditorView.updateListener.of((update) => {
+    if (update.docChanged && update.transactions.some((tr) => tr.isUserEvent('input.paste'))) {
+        update.view.plugin(tabSyncPlugin)?.restartCompletion();
+    }
+});
 
 export function promptPilotCompletion(): Extension {
     return [
@@ -676,6 +710,13 @@ export function promptPilotCompletion(): Extension {
             addToOptions: [
                 {
                     render: (completion) => {
+                        if ((completion as PilotCompletion).model) {
+                            const marker = document.createElement('span');
+                            marker.hidden = true;
+                            marker.dataset.pilotModel = '';
+                            optionModels.set(marker, (completion as PilotCompletion).model!);
+                            return marker;
+                        }
                         if (completion.type === 'cat-lora' || completion.type === 'pilot-notice') return null;
                         const pilotComp = completion as PilotCompletion;
                         const source = pilotComp.source;

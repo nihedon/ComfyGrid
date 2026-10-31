@@ -75,6 +75,11 @@
             --bs-btn-active-bg: var(--bs-primary);
             --bs-btn-active-border-color: var(--bs-primary);
         }
+
+        &:not(.disabled):hover {
+            margin-top: inherit !important;
+            margin-bottom: inherit !important;
+        }
     }
     .model-info-icon-btn {
         @extend .position-absolute;
@@ -163,13 +168,13 @@
         }
     }
 
-    .node-widget > .widget-stack:has(> .dom-container.fit-node) {
+    .node-widget > .widget-stack:has(> :is(.dom-container, .bounding-boxes-widget):is(.fit-node, .fill-json)) {
         flex: 1 1 0;
         height: auto !important;
         min-height: 0;
         overflow: hidden !important;
 
-        > :not(.dom-container.fit-node) {
+        > :not(:is(.dom-container, .bounding-boxes-widget):is(.fit-node, .fill-json)) {
             flex-shrink: 0;
         }
     }
@@ -289,6 +294,10 @@
     }
     .is-invalid {
         border: inherit !important;
+    }
+
+    .cm-content.cm-lineWrapping {
+        height: 100%;
     }
 }
 
